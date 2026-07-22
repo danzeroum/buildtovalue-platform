@@ -85,6 +85,14 @@ export {
   type InstancePage,
 } from './runtime/instances.js';
 export {
+  listVariables,
+  patchVariables,
+  revealVariable,
+  type PatchOutcome,
+  type RevealOutcome,
+  type VariableView,
+} from './runtime/variables.js';
+export {
   completeJob,
   failJob,
   lockJobs,

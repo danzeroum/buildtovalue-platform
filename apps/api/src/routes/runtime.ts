@@ -259,6 +259,103 @@ export function registerRuntimeRoutes(rawApp: ZodApp, deps: ApiDeps): void {
     },
   );
 
+  // ---- variables (shape §4, ADENDO §3) -----------------------------------
+  const variableViewSchema = z.object({
+    name: z.string(),
+    classification: z.enum(['none', 'personal', 'sensitive']),
+    value: z.unknown().optional(),
+    masked: z.literal(true).optional(),
+    updatedAt: z.string(),
+  });
+
+  app.get(
+    '/v1/instances/:id/variables',
+    {
+      preHandler: [app.authenticate, app.requirePermission('instances:read')],
+      schema: {
+        tags: ['variables'],
+        summary: 'Variáveis da instância — sensitive SEMPRE mascarada',
+        security: [{ bearerAuth: [] }],
+        params: z.object({ id: z.string().uuid() }),
+        response: { 200: z.object({ items: z.array(variableViewSchema) }), 404: problemSchema },
+      },
+    },
+    async (req, reply) => {
+      const instance = await runtime.get(req.auth!.tenantId, req.params.id);
+      if (!instance) {
+        return problem(reply, 404, PROBLEM_TYPES.notFound, 'Instância não encontrada', String(req.id));
+      }
+      return { items: await runtime.variables.list(req.auth!.tenantId, req.params.id) };
+    },
+  );
+
+  app.post(
+    '/v1/instances/:id/variables/:name/reveal',
+    {
+      preHandler: [app.authenticate, app.requirePermission('variables:reveal-sensitive')],
+      schema: {
+        tags: ['variables'],
+        summary: 'Revela UMA variável sensitive — motivo obrigatório, auditado (LGPD art. 37)',
+        security: [{ bearerAuth: [] }],
+        params: z.object({ id: z.string().uuid(), name: z.string().min(1) }),
+        body: z.object({
+          reason: z.string().min(1).max(500).describe('Motivo da revelação — vai para a auditoria'),
+        }),
+        response: {
+          200: z.object({ name: z.string(), value: z.unknown() }),
+          404: problemSchema,
+          409: problemSchema,
+        },
+      },
+    },
+    async (req, reply) => {
+      const instance = await runtime.get(req.auth!.tenantId, req.params.id);
+      if (!instance) {
+        return problem(reply, 404, PROBLEM_TYPES.notFound, 'Instância não encontrada', String(req.id));
+      }
+      const outcome = await runtime.variables.reveal(req.auth!.tenantId, req.params.id, req.params.name, {
+        actor: req.auth!.sub,
+        reason: req.body.reason,
+      });
+      if (!outcome.ok) {
+        if (outcome.reason === 'notFound') {
+          return problem(reply, 404, PROBLEM_TYPES.notFound, 'Variável não encontrada', String(req.id));
+        }
+        return problem(reply, 409, PROBLEM_TYPES.conflict, 'Revelação recusada', String(req.id), outcome.message);
+      }
+      return { name: outcome.name, value: outcome.value };
+    },
+  );
+
+  app.patch(
+    '/v1/instances/:id/variables',
+    {
+      preHandler: [app.authenticate, app.requirePermission('operate:act')],
+      schema: {
+        tags: ['variables'],
+        summary: 'Edição de variáveis pelo operador — sensitive cifrada na escrita, auditado',
+        security: [{ bearerAuth: [] }],
+        params: z.object({ id: z.string().uuid() }),
+        body: z.object({
+          set: z.record(z.string().min(1), z.unknown()),
+        }),
+        response: {
+          200: z.object({ updated: z.array(z.string()) }),
+          404: problemSchema,
+        },
+      },
+    },
+    async (req, reply) => {
+      const outcome = await runtime.variables.patch(req.auth!.tenantId, req.params.id, req.body.set, {
+        actor: req.auth!.sub,
+      });
+      if (!outcome.ok) {
+        return problem(reply, 404, PROBLEM_TYPES.notFound, 'Instância não encontrada', String(req.id));
+      }
+      return { updated: outcome.updated };
+    },
+  );
+
   // Sub-recurso de cancelamento (plano §6 + ADENDO-01 §2.3): motivo
   // OBRIGATÓRIO, que flui para history_events (payload do instanceCancelled
   // emitido pelo engine) — fecha o ciclo de auditoria do parecer.
