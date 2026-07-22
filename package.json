@@ -1,0 +1,36 @@
+{
+  "name": "buildtovalue-platform",
+  "private": true,
+  "version": "0.1.0",
+  "description": "BuildToValue SaaS platform — multi-tenant BPMS runtime, API, worker and Console",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "pnpm@10.33.0",
+  "scripts": {
+    "build": "pnpm -r run build",
+    "typecheck": "pnpm -r run typecheck",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "db:migrate": "pnpm --filter @platform/db run migrate",
+    "changeset": "changeset",
+    "version-packages": "changeset version"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  },
+  "devDependencies": {
+    "@changesets/cli": "^2.31.0",
+    "@types/node": "^22.20.1",
+    "@vitest/coverage-v8": "^3.2.4",
+    "eslint": "^9.39.0",
+    "tsx": "^4.23.1",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.63.0",
+    "vitest": "^3.2.4"
+  }
+}
