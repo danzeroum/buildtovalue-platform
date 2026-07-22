@@ -27,6 +27,16 @@ import {
   type InstanceRow,
 } from './advance.js';
 import {
+  listIncidents,
+  listTimers,
+  resolveIncident,
+  retryIncident,
+  type IncidentListItem,
+  type IncidentResolveOutcome,
+  type IncidentRetryOutcome,
+  type TimerListItem,
+} from './operate.js';
+import {
   assignUserTask,
   claimUserTask,
   completeUserTask,
@@ -81,6 +91,22 @@ export interface PlatformRuntime {
   idempotency: {
     get(tenantId: string, key: string): Promise<IdempotentHit | undefined>;
     put(tenantId: string, key: string, requestHash: string, statusCode: number, response: unknown): Promise<void>;
+  };
+  operate: {
+    timers(
+      tenantId: string,
+      options?: { cursor?: string; limit?: number; status?: string; instanceId?: string },
+    ): Promise<{ items: TimerListItem[]; nextCursor: string | null }>;
+    incidents(
+      tenantId: string,
+      options?: { cursor?: string; limit?: number; status?: string; kind?: string; instanceId?: string },
+    ): Promise<{ items: IncidentListItem[]; nextCursor: string | null }>;
+    retryIncident(tenantId: string, incidentId: string, actor: string): Promise<IncidentRetryOutcome>;
+    resolveIncident(
+      tenantId: string,
+      incidentId: string,
+      input: { reason: string; actor: string },
+    ): Promise<IncidentResolveOutcome>;
   };
   userTasks: {
     list(
@@ -171,6 +197,12 @@ export function createRuntime(
       get: (tenantId, key) => getIdempotentResponse(sql, tenantId, key),
       put: (tenantId, key, requestHash, statusCode, response) =>
         putIdempotentResponse(sql, tenantId, key, requestHash, statusCode, response),
+    },
+    operate: {
+      timers: (tenantId, options) => listTimers(sql, tenantId, options),
+      incidents: (tenantId, options) => listIncidents(sql, tenantId, options),
+      retryIncident: (tenantId, incidentId, actor) => retryIncident(sql, tenantId, incidentId, actor),
+      resolveIncident: (tenantId, incidentId, input) => resolveIncident(sql, tenantId, incidentId, input),
     },
     userTasks: {
       list: (tenantId, viewer, options) => listUserTasks(sql, tenantId, viewer, options),

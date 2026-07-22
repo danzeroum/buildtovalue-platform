@@ -85,6 +85,16 @@ export {
   type InstancePage,
 } from './runtime/instances.js';
 export {
+  listIncidents,
+  listTimers,
+  resolveIncident,
+  retryIncident,
+  type IncidentListItem,
+  type IncidentResolveOutcome,
+  type IncidentRetryOutcome,
+  type TimerListItem,
+} from './runtime/operate.js';
+export {
   assignUserTask,
   claimUserTask,
   completeUserTask,
