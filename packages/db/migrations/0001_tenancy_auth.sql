@@ -7,10 +7,15 @@
 -- As senhas abaixo são DEV-ONLY (bootstrap local/CI). Produção provisiona os
 -- papéis fora de banda com secret manager (docs/runbooks/database.md).
 
+-- EXCEPTION: papéis são objetos de CLUSTER — migrações rodando em paralelo
+-- (bancos de teste concorrentes) podem correr no IF-NOT-EXISTS; o estado
+-- desejado ("papel existe") é atingido de qualquer forma.
 DO $$ BEGIN
   IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'app_api') THEN
     CREATE ROLE app_api LOGIN PASSWORD 'app_api_dev' NOBYPASSRLS;
   END IF;
+EXCEPTION WHEN duplicate_object OR unique_violation THEN
+  NULL;
 END $$;
 
 -- ---------------------------------------------------------------- tenants
