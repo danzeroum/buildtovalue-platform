@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet">
+<style>body{margin:0;background:#e9e6dd}a{color:#1a6a54;text-decoration:none}a:hover{color:#9a7b1e;text-decoration:underline}</style>
+</helmet>
+<div style="padding:48px 40px;font-family:'IBM Plex Sans',sans-serif;color:#262220;display:flex;flex-direction:column;gap:36px;align-items:center">
+
+<header style="width:1360px" data-screen-label="Cabeçalho">
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:2.5px;color:#9a7b1e;margin-bottom:6px">BUILDTOVALUE · PROTÓTIPOS F3 (G-UX-3) · TELAS QUE NÃO EXISTEM NA BIBLIOTECA</div>
+  <h1 style="margin:0;font-family:'Source Serif 4',Georgia,serif;font-size:30px;font-weight:600;letter-spacing:-0.4px">Console da plataforma — /tasks · /forms · /operate · publicação no /studio</h1>
+  <p style="margin:8px 0 0;font-size:13px;color:#6f675a;max-width:900px;line-height:1.6">A biblioteca já fornece designer, galeria, simulador e copiloto. Estas são as superfícies novas do fluxo principal (F3 do plano v1.2): 4 rotas, o start de instância que fecha o fluxo-alvo e os estados não-ideais da matriz 3.1. Personas: usuário de negócio (/tasks), analista não-técnica (/forms), operador (/operate).</p>
+</header>
+
+<section style="width:1360px" data-screen-label="01 /tasks — Tasklist">
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6f675a;margin-bottom:8px">01 · <strong style="color:#262220">/tasks</strong> — minhas tarefas, claim persistente (D21), formulário pinado (D3) · F3.4</div>
+  <div style="background:#f3f1ea;border:1px solid #d8d3c6;border-radius:14px;overflow:hidden;box-shadow:0 2px 10px rgba(38,34,32,0.06)">
+    <div style="background:#ffffff;border-bottom:1px solid #e2ddd3;display:flex;align-items:center;gap:20px;padding:10px 20px">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:500;letter-spacing:1.5px">BUILDTOVALUE</div>
+      <nav style="display:flex;gap:4px;font-size:12.5px">
+        <span style="padding:6px 12px;border-radius:8px;color:#6f675a">/studio</span>
+        <span style="padding:6px 12px;border-radius:8px;background:#1a6a54;color:#fff">/tasks</span>
+        <span style="padding:6px 12px;border-radius:8px;color:#6f675a">/forms</span>
+        <span style="padding:6px 12px;border-radius:8px;color:#6f675a">/operate</span>
+      </nav>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:10px">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;background:#f3f1ea;border:1px solid #e2ddd3;border-radius:999px;padding:4px 12px;color:#44403a">tenant: acme-industria</span>
+        <span style="width:28px;height:28px;border-radius:50%;background:#1a6a54;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600">DC</span>
+      </div>
+    </div>
+    <div style="display:flex;height:720px">
+      <aside style="width:240px;flex-shrink:0;border-right:1px solid #e2ddd3;padding:16px;display:flex;flex-direction:column;gap:14px;background:#faf9f6">
+        <span style="font-size:12.5px;background:#1a6a54;color:#fff;border-radius:8px;padding:8px 12px;text-align:center;cursor:pointer">+ Iniciar processo</span>
+        <input placeholder="Buscar tarefa ou business key…" style="font-family:'IBM Plex Sans',sans-serif;font-size:12px;padding:8px 10px;border:1px solid #e2ddd3;border-radius:8px;background:#fff;color:#262220">
+        <div style="display:flex;flex-direction:column;gap:2px;font-size:12.5px">
+          <div style="display:flex;justify-content:space-between;padding:8px 10px;border-radius:8px;background:#e7f2ec;color:#1a6a54;font-weight:600">Minhas <span>3</span></div>
+          <div style="display:flex;justify-content:space-between;padding:8px 10px;border-radius:8px;color:#44403a">Do meu papel <span style="color:#6f675a">5</span></div>
+          <div style="display:flex;justify-content:space-between;padding:8px 10px;border-radius:8px;color:#44403a">Não atribuídas <span style="color:#6f675a">2</span></div>
+        </div>
+        <div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:1.5px;color:#9a7b1e;margin-bottom:6px">PROCESSO</div>
+          <div style="display:flex;flex-direction:column;gap:6px;font-size:12px;color:#44403a">
+            <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" checked> Reembolso de despesas</label>
+            <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" checked> Onboarding fornecedor</label>
+            <label style="display:flex;gap:8px;align-items:center"><input type="checkbox"> Aprovação de contrato</label>
+          </div>
+        </div>
+      </aside>
+      <div style="width:360px;flex-shrink:0;border-right:1px solid #e2ddd3;overflow:hidden;display:flex;flex-direction:column">
+        <div style="padding:12px 16px;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:1.5px;color:#6f675a;border-bottom:1px solid #e2ddd3">3 TAREFAS · ORDENAR: MAIS ANTIGAS</div>
+        <div style="display:flex;flex-direction:column">
+          <div style="padding:14px 16px;border-bottom:1px solid #e2ddd3;background:#ffffff;border-left:3px solid #1a6a54">
+            <div style="display:flex;justify-content:space-between;gap:8px"><strong style="font-size:13.5px">Aprovar reembolso</strong><span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#b3372f">2d atrás</span></div>
+            <div style="font-size:11.5px;color:#6f675a;margin-top:3px">Reembolso de despesas · <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px">RB-2026-0142</span></div>
+            <div style="display:flex;gap:6px;margin-top:8px"><span style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;background:#e7f2ec;color:#1a6a54;border-radius:999px;padding:2px 8px">minha</span><span style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;background:#f3f1ea;border:1px solid #e2ddd3;border-radius:999px;padding:2px 8px;color:#44403a">form: reembolso@v3</span></div>
+          </div>
+          <div style="padding:14px 16px;border-bottom:1px solid #e2ddd3">
+            <div style="display:flex;justify-content:space-between;gap:8px"><strong style="font-size:13.5px;font-weight:500">Conferir nota fiscal</strong><span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6f675a">5h atrás</span></div>
+            <div style="font-size:11.5px;color:#6f675a;margin-top:3px">Reembolso de despesas · <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px">RB-2026-0139</span></div>
+            <div style="display:flex;gap:6px;margin-top:8px"><span style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;background:#e7f2ec;color:#1a6a54;border-radius:999px;padding:2px 8px">minha</span></div>
+          </div>
+          <div style="padding:14px 16px;border-bottom:1px solid #e2ddd3">
+            <div style="display:flex;justify-content:space-between;gap:8px"><strong style="font-size:13.5px;font-weight:500">Validar dados bancários</strong><span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6f675a">1h atrás</span></div>
+            <div style="font-size:11.5px;color:#6f675a;margin-top:3px">Onboarding fornecedor · <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px">FN-0088</span></div>
+            <div style="display:flex;gap:6px;margin-top:8px"><span style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;background:#fdfaf1;border:1px solid #f6edd4;color:#9a7b1e;border-radius:999px;padding:2px 8px">não atribuída</span><span style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:#1a6a54;border:1px solid #1a6a54;border-radius:999px;padding:2px 8px;cursor:pointer">assumir</span></div>
+          </div>
+        </div>
+      </div>
+      <div style="flex:1;overflow:hidden;display:flex;flex-direction:column;background:#ffffff">
+        <div style="padding:16px 24px;border-bottom:1px solid #e2ddd3;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+          <div>
+            <div style="font-family:'Source Serif 4',Georgia,serif;font-size:19px;font-weight:600">Aprovar reembolso</div>
+            <div style="font-size:11.5px;color:#6f675a;margin-top:2px">instância <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px">inst_9f2c</span> · <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px">RB-2026-0142</span> · formulário pinado <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px">reembolso@v3</span></div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <span style="font-size:12px;border:1px solid #e2ddd3;border-radius:8px;padding:7px 14px;color:#44403a;cursor:pointer">Desatribuir…</span>
+            <span style="font-size:12px;border:1px solid #e2ddd3;border-radius:8px;padding:7px 14px;color:#44403a;cursor:pointer">Delegar…</span>
+          </div>
+        </div>
+        <div style="padding:10px 24px;background:#f4faf6;border-bottom:1px solid #dff0e6;font-size:11.5px;color:#1a6a54">Claim persistente — não expira; só você (ou um operador, com auditoria) pode liberar esta tarefa.</div>
+        <div style="padding:20px 24px;display:flex;flex-direction:column;gap:14px;overflow:hidden">
+          <sc-if value="{{ showServerError }}" hint-placeholder-val="{{ false }}">
+            <div style="border:1px solid #f0d9d6;background:#fdf7f6;border-radius:10px;padding:10px 14px;font-size:12px;color:#b3372f">Validação no servidor (mesmo schema): <strong>valor</strong> excede o limite da política (R$ 5.000,00) sem justificativa. Corrija e envie novamente.</div>
+          </sc-if>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px 18px;max-width:640px">
+            <label style="display:flex;flex-direction:column;gap:5px;font-size:12px;color:#44403a">Colaborador <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:#9a7b1e">PESSOAL</span><input value="Marina Duarte" style="font-size:13px;padding:9px 10px;border:1px solid #e2ddd3;border-radius:8px;background:#faf9f6" readonly></label>
+            <label style="display:flex;flex-direction:column;gap:5px;font-size:12px;color:#44403a">Valor (R$)<input value="6.240,00" style="font-size:13px;padding:9px 10px;border:1px solid #b3372f;border-radius:8px"></label>
+            <label style="display:flex;flex-direction:column;gap:5px;font-size:12px;color:#44403a">Categoria<select style="font-size:13px;padding:9px 10px;border:1px solid #e2ddd3;border-radius:8px;background:#fff"><option>Viagem — hospedagem</option></select></label>
+            <label style="display:flex;flex-direction:column;gap:5px;font-size:12px;color:#44403a">Data da despesa<input type="date" value="2026-07-14" style="font-size:13px;padding:8px 10px;border:1px solid #e2ddd3;border-radius:8px"></label>
+            <label style="display:flex;flex-direction:column;gap:5px;font-size:12px;color:#44403a;grid-column:1/-1">Justificativa <span style="font-size:10.5px;color:#6f675a">(visível porque valor &gt; 5.000 — visibleWhen S-FEEL)</span><textarea rows="3" style="font-family:'IBM Plex Sans',sans-serif;font-size:13px;padding:9px 10px;border:1px solid #e2ddd3;border-radius:8px;resize:none">Evento de 3 dias com diária acima do teto da cidade.</textarea></label>
+            <label style="display:flex;gap:8px;align-items:center;font-size:12.5px;color:#44403a;grid-column:1/-1"><input type="checkbox" checked> Declaro que os comprovantes anexados são legítimos</label>
+          </div>
+        </div>
+        <div style="margin-top:auto;padding:14px 24px;border-top:1px solid #e2ddd3;display:flex;justify-content:space-between;align-items:center;gap:12px">
+          <span style="font-size:11px;color:#6f675a">Submissão valida no servidor com o mesmo schema → avança a instância. «Reprovar…» conclui com approved=false (o gateway decide o rumo); ações com «…» confirmam com motivo auditado.</span>
+          <div style="display:flex;gap:8px">
+            <span style="font-size:12.5px;border:1px solid #b3372f;color:#b3372f;border-radius:8px;padding:8px 16px;cursor:pointer">Reprovar…</span>
+            <span style="font-size:12.5px;background:#1a6a54;color:#fff;border-radius:8px;padding:8px 16px;cursor:pointer">Aprovar e concluir</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section style="width:1360px" data-screen-label="02 /forms — Editor de formulários">
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6f675a;margin-bottom:8px">02 · <strong style="color:#262220">/forms</strong> — editor de schema + preview com o MESMO renderer · dataClassification obrigatória · F3.3</div>
+  <div style="background:#f3f1ea;border:1px solid #d8d3c6;border-radius:14px;overflow:hidden;box-shadow:0 2px 10px rgba(38,34,32,0.06)">
+    <div style="background:#ffffff;border-bottom:1px solid #e2ddd3;display:flex;align-items:center;gap:20px;padding:10px 20px">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:500;letter-spacing:1.5px">BUILDTOVALUE</div>
+      <nav style="display:flex;gap:4px;font-size:12.5px">
+        <span style="padding:6px 12px;border-radius:8px;color:#6f675a">/studio</span>
+        <span style="padding:6px 12px;border-radius:8px;color:#6f675a">/tasks</span>
+        <span style="padding:6px 12px;border-radius:8px;background:#1a6a54;color:#fff">/forms</span>
+        <span style="padding:6px 12px;border-radius:8px;color:#6f675a">/operate</span>
+      </nav>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:10px">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;background:#f3f1ea;border:1px solid #e2ddd3;border-radius:999px;padding:4px 12px;color:#44403a">tenant: acme-industria</span>
+        <span style="width:28px;height:28px;border-radius:50%;background:#1a6a54;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600">DC</span>
+      </div>
+    </div>
+    <div style="padding:12px 20px;background:#fff;border-bottom:1px solid #e2ddd3;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+      <div style="font-family:'Source Serif 4',Georgia,serif;font-size:17px;font-weight:600">Reembolso — solicitação</div>
+      <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;background:#fdfaf1;border:1px solid #f6edd4;color:#9a7b1e;border-radius:999px;padding:3px 10px">rascunho sobre reembolso@v3</span>
+      <div style="margin-left:auto;display:flex;gap:8px">
+        <span style="font-size:12px;border:1px solid #e2ddd3;border-radius:8px;padding:7px 14px;color:#44403a;cursor:pointer">Ver versões</span>
+        <span style="font-size:12px;background:#1a6a54;color:#fff;border-radius:8px;padding:7px 16px;cursor:pointer">Publicar no registry → v4</span>
+      </div>
+    </div>
+    <div style="display:flex;height:640px">
+      <aside style="width:260px;flex-shrink:0;border-right:1px solid #e2ddd3;padding:16px;background:#faf9f6;display:flex;flex-direction:column;gap:10px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:1.5px;color:#9a7b1e">CAMPOS · ↑↓ REORDENA</div>
+        <div style="display:flex;flex-direction:column;gap:6px;font-size:12.5px">
+          <div style="padding:9px 12px;border:1px solid #e2ddd3;border-radius:8px;background:#fff;display:flex;justify-content:space-between"><span>Colaborador</span><span style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:#6f675a">text</span></div>
+          <div style="padding:9px 12px;border:1px solid #1a6a54;border-radius:8px;background:#fff;display:flex;justify-content:space-between;box-shadow:0 1px 4px rgba(26,106,84,0.15)"><strong>Valor</strong><span style="display:flex;gap:8px;align-items:center"><span style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:#6f675a">number</span><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#1a6a54;cursor:pointer">↑</span><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#1a6a54;cursor:pointer">↓</span></span></div>
+          <div style="padding:9px 12px;border:1px solid #e2ddd3;border-radius:8px;background:#fff;display:flex;justify-content:space-between"><span>Categoria</span><span style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:#6f675a">select</span></div>
+          <div style="padding:9px 12px;border:1px solid #e2ddd3;border-radius:8px;background:#fff;display:flex;justify-content:space-between"><span>Data da despesa</span><span style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:#6f675a">date</span></div>
+          <div style="padding:9px 12px;border:1px solid #e2ddd3;border-radius:8px;background:#fff;display:flex;justify-content:space-between"><span>Justificativa</span><span style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:#6f675a">textarea</span></div>
+          <div style="padding:9px 12px;border:1px solid #e2ddd3;border-radius:8px;background:#fff;display:flex;justify-content:space-between"><span>Observações de saúde</span><span style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:#9a7b1e">textarea · sensível</span></div>
+          <div style="padding:9px 12px;border:1px solid #e2ddd3;border-radius:8px;background:#fff;display:flex;justify-content:space-between"><span>Declaração</span><span style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:#6f675a">checkbox</span></div>
+        </div>
+        <div style="margin-top:auto;border-top:1px solid #e2ddd3;padding-top:12px">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:1.5px;color:#9a7b1e;margin-bottom:8px">ADICIONAR</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;font-family:'IBM Plex Mono',monospace;font-size:10px">
+            <span style="border:1px solid #e2ddd3;border-radius:999px;padding:4px 10px;background:#fff;cursor:pointer">text</span><span style="border:1px solid #e2ddd3;border-radius:999px;padding:4px 10px;background:#fff;cursor:pointer">textarea</span><span style="border:1px solid #e2ddd3;border-radius:999px;padding:4px 10px;background:#fff;cursor:pointer">number</span><span style="border:1px solid #e2ddd3;border-radius:999px;padding:4px 10px;background:#fff;cursor:pointer">date</span><span style="border:1px solid #e2ddd3;border-radius:999px;padding:4px 10px;background:#fff;cursor:pointer">select</span><span style="border:1px solid #e2ddd3;border-radius:999px;padding:4px 10px;background:#fff;cursor:pointer">radio</span><span style="border:1px solid #e2ddd3;border-radius:999px;padding:4px 10px;background:#fff;cursor:pointer">checkbox</span>
+          </div>
+        </div>
+      </aside>
+      <div style="width:400px;flex-shrink:0;border-right:1px solid #e2ddd3;background:#fff;padding:18px 20px;display:flex;flex-direction:column;gap:13px;overflow:hidden">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:1.5px;color:#9a7b1e">PROPRIEDADES — VALOR</div>
+        <label style="display:flex;flex-direction:column;gap:5px;font-size:12px;color:#44403a">Rótulo<input value="Valor (R$)" style="font-size:13px;padding:8px 10px;border:1px solid #e2ddd3;border-radius:8px"></label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <label style="display:flex;flex-direction:column;gap:5px;font-size:12px;color:#44403a">Chave<input value="valor" style="font-family:'IBM Plex Mono',monospace;font-size:12px;padding:8px 10px;border:1px solid #e2ddd3;border-radius:8px"></label>
+          <label style="display:flex;flex-direction:column;gap:5px;font-size:12px;color:#44403a">Tipo<select style="font-size:13px;padding:8px 10px;border:1px solid #e2ddd3;border-radius:8px;background:#fff"><option>number</option></select></label>
+        </div>
+        <label style="display:flex;gap:8px;align-items:center;font-size:12.5px;color:#44403a"><input type="checkbox" checked> Obrigatório</label>
+        <label style="display:flex;flex-direction:column;gap:5px;font-size:12px;color:#44403a">Validação (S-FEEL)<input value="value &gt; 0 and value &lt;= 50000" style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;padding:8px 10px;border:1px solid #e2ddd3;border-radius:8px;background:#faf9f6"><span style="font-size:10px;color:#6f675a">«value» = este campo; outras chaves (ex.: «valor») referenciam outros campos — convenção a fixar na spec do @buildtovalue/forms</span></label>
+        <label style="display:flex;flex-direction:column;gap:5px;font-size:12px;color:#44403a">visibleWhen (S-FEEL)<input placeholder="sempre visível" style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;padding:8px 10px;border:1px solid #e2ddd3;border-radius:8px;background:#faf9f6"></label>
+        <label style="display:flex;flex-direction:column;gap:5px;font-size:12px;color:#44403a">Classificação de dados (obrigatória)
+          <div style="display:flex;gap:6px;font-size:11.5px">
+            <span style="background:#1a6a54;border:1px solid #1a6a54;border-radius:999px;padding:5px 12px;color:#fff;cursor:pointer">não pessoal</span>
+            <span style="border:1px solid #e2ddd3;border-radius:999px;padding:5px 12px;color:#44403a;cursor:pointer">pessoal</span>
+            <span style="border:1px solid #e2ddd3;border-radius:999px;padding:5px 12px;color:#44403a;cursor:pointer">sensível</span>
+          </div>
+        </label>
+        <div style="border:1px solid #f6edd4;background:#fdfaf1;border-radius:10px;padding:10px 12px;font-size:11.5px;color:#7a6218;line-height:1.55"><strong>Campos sensíveis</strong> (ex.: «Observações de saúde»): cifrados em repouso (KeyProvider), mascarados por padrão, fora de logs e exports, e <strong>não buscáveis por conteúdo</strong> no Operate — filtro só por metadados não sensíveis. Campo que o operador precisa buscar não pode ser sensível na v1.</div>
+      </div>
+      <div style="flex:1;padding:18px 24px;display:flex;flex-direction:column;gap:12px;overflow:hidden">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:1.5px;color:#9a7b1e">PREVIEW — MESMO RENDERER DE /tasks (@buildtovalue/forms-react)</div>
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;border:1px solid #e2ddd3;border-radius:999px;padding:3px 10px;background:#fff;color:#44403a;cursor:pointer">dados de exemplo ▾</span>
+        </div>
+        <div style="background:#fff;border:1px solid #e2ddd3;border-radius:12px;padding:20px;display:grid;grid-template-columns:1fr 1fr;gap:13px 16px;align-content:start">
+          <label style="display:flex;flex-direction:column;gap:5px;font-size:12px;color:#44403a">Colaborador<input style="font-size:13px;padding:9px 10px;border:1px solid #e2ddd3;border-radius:8px"></label>
+          <label style="display:flex;flex-direction:column;gap:5px;font-size:12px;color:#44403a">Valor (R$)<input value="-10" style="font-size:13px;padding:9px 10px;border:1px solid #b3372f;border-radius:8px"><span style="font-size:10.5px;color:#b3372f">falha na validação: value &gt; 0 and value &lt;= 50000</span></label>
+          <label style="display:flex;flex-direction:column;gap:5px;font-size:12px;color:#44403a">Categoria<select style="font-size:13px;padding:9px 10px;border:1px solid #e2ddd3;border-radius:8px;background:#fff"><option>Viagem — hospedagem</option></select></label>
+          <label style="display:flex;flex-direction:column;gap:5px;font-size:12px;color:#44403a">Data da despesa<input type="date" style="font-size:13px;padding:8px 10px;border:1px solid #e2ddd3;border-radius:8px"></label>
+          <label style="display:flex;flex-direction:column;gap:5px;font-size:12px;color:#44403a;grid-column:1/-1">Justificativa <span style="font-size:10.5px;color:#6f675a">(oculta até valor &gt; 5000)</span><textarea rows="2" style="font-family:'IBM Plex Sans',sans-serif;font-size:13px;padding:9px 10px;border:1px solid #e2ddd3;border-radius:8px;resize:none;opacity:0.45"></textarea></label>
+          <label style="display:flex;flex-direction:column;gap:5px;font-size:12px;color:#44403a;grid-column:1/-1">Observações de saúde · <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:#9a7b1e">SENSÍVEL 🔒</span><textarea rows="2" style="font-family:'IBM Plex Sans',sans-serif;font-size:13px;padding:9px 10px;border:1px solid #e2ddd3;border-radius:8px;resize:none"></textarea><span style="font-size:10px;color:#6f675a">mascarada por padrão; leitura sob permissão explícita</span></label>
+        </div>
+        <div style="font-size:11px;color:#6f675a">Schema é artefato versionado do registry — user tasks referenciam <span style="font-family:'IBM Plex Mono',monospace;font-size:10px">reembolso@v4</span>; instâncias antigas continuam exibindo a versão pinada.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section style="width:1360px" data-screen-label="03 /operate — Instâncias">
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6f675a;margin-bottom:8px">03 · <strong style="color:#262220">/operate</strong> — drill-down com posição no diagrama, incidentes, jobs/timers, XES · F3.5</div>
+  <div style="background:#f3f1ea;border:1px solid #d8d3c6;border-radius:14px;overflow:hidden;box-shadow:0 2px 10px rgba(38,34,32,0.06)">
+    <div style="background:#ffffff;border-bottom:1px solid #e2ddd3;display:flex;align-items:center;gap:20px;padding:10px 20px">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:500;letter-spacing:1.5px">BUILDTOVALUE</div>
+      <nav style="display:flex;gap:4px;font-size:12.5px">
+        <span style="padding:6px 12px;border-radius:8px;color:#6f675a">/studio</span>
+        <span style="padding:6px 12px;border-radius:8px;color:#6f675a">/tasks</span>
+        <span style="padding:6px 12px;border-radius:8px;color:#6f675a">/forms</span>
+        <span style="padding:6px 12px;border-radius:8px;background:#1a6a54;color:#fff">/operate</span>
+      </nav>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:10px">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;background:#f3f1ea;border:1px solid #e2ddd3;border-radius:999px;padding:4px 12px;color:#44403a">tenant: acme-industria</span>
+        <span style="width:28px;height:28px;border-radius:50%;background:#1a6a54;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600">DC</span>
+      </div>
+    </div>
+    <div style="display:flex;gap:12px;padding:14px 20px;border-bottom:1px solid #e2ddd3;background:#fff">
+      <div style="flex:1;border:1px solid #e2ddd3;border-radius:10px;padding:10px 14px"><div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1.5px;color:#6f675a">INSTÂNCIAS ATIVAS</div><div style="font-size:22px;font-weight:600;margin-top:2px">128</div></div>
+      <div style="flex:1;border:1px solid #f0d9d6;background:#fdf7f6;border-radius:10px;padding:10px 14px"><div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1.5px;color:#b3372f">INCIDENTES ABERTOS</div><div style="font-size:22px;font-weight:600;margin-top:2px;color:#b3372f">3</div></div>
+      <div style="flex:1;border:1px solid #e2ddd3;border-radius:10px;padding:10px 14px"><div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1.5px;color:#6f675a">JOBS ATRASADOS</div><div style="font-size:22px;font-weight:600;margin-top:2px">1</div></div>
+      <div style="flex:1;border:1px solid #e2ddd3;border-radius:10px;padding:10px 14px"><div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1.5px;color:#6f675a">TIMERS PRÓX. 1H</div><div style="font-size:22px;font-weight:600;margin-top:2px">12</div></div>
+      <div style="flex:1;border:1px solid #e2ddd3;border-radius:10px;padding:10px 14px"><div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1.5px;color:#6f675a">P95 ADVANCE</div><div style="font-size:22px;font-weight:600;margin-top:2px">38ms</div></div>
+    </div>
+    <div style="display:flex;height:600px">
+      <div style="width:420px;flex-shrink:0;border-right:1px solid #e2ddd3;display:flex;flex-direction:column;background:#faf9f6">
+        <div style="padding:12px 16px;display:flex;gap:8px;border-bottom:1px solid #e2ddd3">
+          <input placeholder="business key…" style="flex:1;font-size:12px;padding:7px 10px;border:1px solid #e2ddd3;border-radius:8px;background:#fff">
+          <select style="font-size:12px;padding:7px 8px;border:1px solid #e2ddd3;border-radius:8px;background:#fff"><option>status: todos</option></select>
+        </div>
+        <div style="padding:10px 16px;display:flex;gap:6px;flex-wrap:wrap;border-bottom:1px solid #e2ddd3;font-family:'IBM Plex Mono',monospace;font-size:10px">
+          <span style="background:#fdf7f6;border:1px solid #f0d9d6;color:#b3372f;border-radius:999px;padding:3px 10px;cursor:pointer">só incidentes</span>
+          <span style="border:1px solid #e2ddd3;border-radius:999px;padding:3px 10px;color:#44403a;cursor:pointer">últimas 24h</span>
+          <span style="border:1px solid #e2ddd3;border-radius:999px;padding:3px 10px;color:#44403a;cursor:pointer">por processo ▾</span>
+        </div>
+        <div style="display:flex;flex-direction:column;font-size:12px">
+          <div style="padding:12px 16px;border-bottom:1px solid #e2ddd3;background:#fff;border-left:3px solid #b3372f;display:flex;justify-content:space-between;align-items:center"><div><div style="font-family:'IBM Plex Mono',monospace;font-size:11px">RB-2026-0142 · inst_9f2c</div><div style="color:#6f675a;margin-top:2px">Reembolso de despesas · v7</div></div><span style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;background:#fdf7f6;color:#b3372f;border:1px solid #f0d9d6;border-radius:999px;padding:2px 8px">incidente</span></div>
+          <div style="padding:12px 16px;border-bottom:1px solid #e2ddd3;display:flex;justify-content:space-between;align-items:center"><div><div style="font-family:'IBM Plex Mono',monospace;font-size:11px">RB-2026-0139 · inst_8d11</div><div style="color:#6f675a;margin-top:2px">Reembolso de despesas · v7</div></div><span style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;background:#e7f2ec;color:#1a6a54;border-radius:999px;padding:2px 8px">ativa</span></div>
+          <div style="padding:12px 16px;border-bottom:1px solid #e2ddd3;display:flex;justify-content:space-between;align-items:center"><div><div style="font-family:'IBM Plex Mono',monospace;font-size:11px">FN-0088 · inst_77aa</div><div style="color:#6f675a;margin-top:2px">Onboarding fornecedor · v3</div></div><span style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;background:#e7f2ec;color:#1a6a54;border-radius:999px;padding:2px 8px">ativa</span></div>
+          <div style="padding:12px 16px;border-bottom:1px solid #e2ddd3;display:flex;justify-content:space-between;align-items:center;opacity:0.7"><div><div style="font-family:'IBM Plex Mono',monospace;font-size:11px">RB-2026-0135 · inst_61b0</div><div style="color:#6f675a;margin-top:2px">Reembolso de despesas · v6</div></div><span style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;background:#f3f1ea;border:1px solid #e2ddd3;color:#6f675a;border-radius:999px;padding:2px 8px">concluída</span></div>
+          <div style="padding:11px 16px;text-align:center;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6f675a;cursor:pointer">carregar mais · 124 restantes (cursor)</div>
+        </div>
+      </div>
+      <div style="flex:1;background:#fff;display:flex;flex-direction:column;overflow:hidden">
+        <div style="padding:14px 20px;border-bottom:1px solid #e2ddd3;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+          <div><span style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:500">inst_9f2c</span> <span style="font-size:12px;color:#6f675a">· engine 1.1.0 · state schema v2 · revision 14</span></div>
+          <div style="display:flex;gap:8px">
+            <span style="font-size:11.5px;border:1px solid #e2ddd3;border-radius:8px;padding:6px 12px;color:#44403a;cursor:pointer">Exportar XES</span>
+            <span style="font-size:11.5px;border:1px solid #b3372f;color:#b3372f;border-radius:8px;padding:6px 12px;cursor:pointer">Cancelar instância…</span>
+          </div>
+        </div>
+        <div style="padding:16px 20px;border-bottom:1px solid #e2ddd3">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1.5px;color:#9a7b1e;margin-bottom:10px">POSIÇÃO ATUAL (VIEWER DA BIBLIOTECA)</div>
+          <div style="display:flex;align-items:center;gap:0;padding:8px 4px">
+            <div style="width:30px;height:30px;border:2px solid #6f675a;border-radius:50%;flex-shrink:0"></div>
+            <div style="width:36px;height:2px;background:#6f675a"></div>
+            <div style="border:2px solid #6f675a;border-radius:8px;padding:8px 12px;font-size:11px;color:#44403a;position:relative">Registrar pedido</div>
+            <div style="width:36px;height:2px;background:#6f675a"></div>
+            <div style="border:2px solid #1a6a54;background:#f4faf6;border-radius:8px;padding:8px 12px;font-size:11px;font-weight:600;color:#1a6a54;position:relative">Aprovar reembolso<span style="position:absolute;top:-9px;right:-9px;width:16px;height:16px;background:#1a6a54;border-radius:50%;border:2px solid #fff"></span><span style="position:absolute;bottom:-11px;left:12px;width:18px;height:18px;border:2px solid #9a7b1e;border-radius:50%;background:#fdfaf1;display:flex;align-items:center;justify-content:center;font-size:8px;color:#9a7b1e">◷</span></div>
+            <div style="width:36px;height:2px;background:#6f675a"></div>
+            <div style="width:26px;height:26px;border:2px solid #6f675a;transform:rotate(45deg);flex-shrink:0;display:flex;align-items:center;justify-content:center"><span style="transform:rotate(-45deg);font-size:11px;color:#6f675a">×</span></div>
+            <div style="width:36px;height:2px;background:#6f675a"></div>
+            <div style="border:2px solid #b3372f;border-style:dashed;background:#fdf7f6;border-radius:8px;padding:8px 12px;font-size:11px;color:#b3372f">Chamada HTTP ⚠</div>
+            <div style="width:36px;height:2px;background:#6f675a"></div>
+            <div style="width:30px;height:30px;border:3px solid #6f675a;border-radius:50%;flex-shrink:0"></div>
+          </div>
+          <div style="font-size:10.5px;color:#6f675a;margin-top:6px">● token em <strong>Aprovar reembolso</strong> (user task, claim: Diego C.) · ◷ boundary timer não-interruptivo em 22h · ⚠ incidente no job <span style="font-family:'IBM Plex Mono',monospace;font-size:10px">http-call</span></div>
+        </div>
+        <div style="flex:1;padding:14px 20px;display:flex;flex-direction:column;gap:10px;overflow:hidden">
+          <div style="display:flex;gap:14px;font-size:12px;border-bottom:1px solid #e2ddd3;padding-bottom:8px">
+            <strong style="color:#1a6a54;border-bottom:2px solid #1a6a54;padding-bottom:8px;margin-bottom:-9px">Incidentes (1)</strong><span style="color:#6f675a">Jobs (1)</span><span style="color:#6f675a">Timers (1)</span><span style="color:#6f675a">Variáveis</span><span style="color:#6f675a">Histórico (seq 1–14)</span>
+          </div>
+          <div style="border:1px solid #f0d9d6;background:#fdf7f6;border-radius:10px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;gap:12px">
+            <div style="font-size:12px;color:#44403a;line-height:1.5"><strong style="color:#b3372f">job-failed-retries-exhausted</strong> · http-call → ERP timeout após 5 tentativas<br><span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6f675a">effect_key a91f…c2 · seq 13 · há 42min</span></div>
+            <div style="display:flex;gap:8px;flex-shrink:0">
+              <span style="font-size:11.5px;border:1px solid #e2ddd3;background:#fff;border-radius:8px;padding:6px 12px;color:#44403a;cursor:pointer">Repetir</span>
+              <span style="font-size:11.5px;border:1px solid #e2ddd3;background:#fff;border-radius:8px;padding:6px 12px;color:#44403a;cursor:pointer">Resolver…</span>
+            </div>
+          </div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:#6f675a;line-height:2;border-top:1px dashed #e2ddd3;padding-top:8px">seq 14 · incident.raised · job http-call<br>seq 13 · job.failed · attempts=5 · lock_token 7be2… expirado → devolvido à fila<br>seq 12 · timer.scheduled · boundary ◷ PT22H · wait aprovar:tok_r1</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section style="width:1360px" data-screen-label="04 /studio — Publicação com lint D19">
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6f675a;margin-bottom:8px">04 · <strong style="color:#262220">/studio</strong> — delta da plataforma: publicar no registry com lint D19 + vínculo formId@versão · F3.2 (designer = biblioteca)</div>
+  <div style="background:#e8e4db;border:1px solid #d8d3c6;border-radius:14px;overflow:hidden;box-shadow:0 2px 10px rgba(38,34,32,0.06);position:relative;height:660px">
+    <div style="background:#ffffff;border-bottom:1px solid #e2ddd3;display:flex;align-items:center;gap:20px;padding:10px 20px;opacity:0.5">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:500;letter-spacing:1.5px">BUILDTOVALUE</div>
+      <nav style="display:flex;gap:4px;font-size:12.5px"><span style="padding:6px 12px;border-radius:8px;background:#1a6a54;color:#fff">/studio</span><span style="padding:6px 12px;color:#6f675a">/tasks</span><span style="padding:6px 12px;color:#6f675a">/forms</span><span style="padding:6px 12px;color:#6f675a">/operate</span></nav>
+    </div>
+    <div style="position:absolute;inset:53px 0 0;background:repeating-linear-gradient(0deg,#e8e4db,#e8e4db 23px,#ddd8cc 24px),repeating-linear-gradient(90deg,#e8e4db,#e8e4db 23px,#ddd8cc 24px);opacity:0.6"></div>
+    <div style="position:absolute;inset:53px 0 0;display:flex;align-items:center;justify-content:center">
+      <div style="width:680px;background:#fff;border:1px solid #d8d3c6;border-radius:14px;box-shadow:0 18px 50px rgba(38,34,32,0.22);overflow:hidden">
+        <div style="padding:16px 22px;border-bottom:1px solid #e2ddd3">
+          <div style="font-family:'Source Serif 4',Georgia,serif;font-size:18px;font-weight:600">Publicar «Reembolso de despesas» no registry</div>
+          <div style="font-size:11.5px;color:#6f675a;margin-top:3px">draft → <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px">v8</span> · lint no perfil governado roda antes do deploy — elemento fora do escopo v1 é <strong>rejeitado, nunca ignorado</strong> (D19)</div>
+        </div>
+        <div style="padding:14px 22px;display:flex;flex-direction:column;gap:8px">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1.5px;color:#9a7b1e">RESULTADO DO LINT</div>
+          <sc-if value="{{ lintDirty }}" hint-placeholder-val="{{ true }}">
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <div style="border:1px solid #f0d9d6;background:#fdf7f6;border-radius:10px;padding:10px 14px;font-size:12px;color:#44403a;display:flex;gap:10px"><span style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;background:#b3372f;color:#fff;border-radius:999px;padding:2px 8px;height:fit-content">REJEIÇÃO</span><span><strong>Gateway_2</strong> é OR-merge — fora do escopo v1 (F5). Substitua por XOR/AND ou aguarde a F5.</span></div>
+              <div style="border:1px solid #f0d9d6;background:#fdf7f6;border-radius:10px;padding:10px 14px;font-size:12px;color:#44403a;display:flex;gap:10px"><span style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;background:#b3372f;color:#fff;border-radius:999px;padding:2px 8px;height:fit-content">REJEIÇÃO</span><span>Condição de <strong>Flow_7</strong> não compila no subset S-FEEL: <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px">valor between(a,b)</span>. Correção sugerida: <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px">valor &gt;= a and valor &lt;= b</span>.</span></div>
+              <div style="border:1px solid #f6edd4;background:#fdfaf1;border-radius:10px;padding:10px 14px;font-size:12px;color:#44403a;display:flex;gap:10px"><span style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;background:#9a7b1e;color:#fff;border-radius:999px;padding:2px 8px;height:fit-content">AVISO</span><span><span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px">LANE_BODY_TILING</span>: lane «Contabilidade» não particiona o corpo do pool — <a href="#">ajustar ao corpo</a>.</span></div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ lintClean }}" hint-placeholder-val="{{ false }}">
+            <div style="border:1px solid #dff0e6;background:#f4faf6;border-radius:10px;padding:10px 14px;font-size:12px;color:#1a6a54"><strong>0 rejeições · 0 avisos</strong> — definição dentro do escopo v1; pronta para publicar.</div>
+          </sc-if>
+        </div>
+        <div style="padding:0 22px 14px;display:flex;flex-direction:column;gap:8px">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1.5px;color:#9a7b1e">FORMULÁRIOS DAS USER TASKS (PINADOS POR VERSÃO)</div>
+          <div style="display:flex;flex-direction:column;gap:6px;font-size:12.5px">
+            <div style="display:flex;justify-content:space-between;align-items:center;border:1px solid #e2ddd3;border-radius:10px;padding:9px 14px"><span>Registrar pedido</span><select style="font-size:12px;padding:6px 8px;border:1px solid #e2ddd3;border-radius:8px;background:#fff"><option>solicitacao@v2</option></select></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;border:1px solid #e2ddd3;border-radius:10px;padding:9px 14px"><span>Aprovar reembolso</span><select style="font-size:12px;padding:6px 8px;border:1px solid #9a7b1e;border-radius:8px;background:#fdfaf1"><option>reembolso@v4 (nova)</option><option>reembolso@v3</option></select></div>
+          </div>
+        </div>
+        <div style="padding:14px 22px;border-top:1px solid #e2ddd3;display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:11px;color:#6f675a">Instâncias em voo permanecem na v7 (migração: F5).</span>
+          <div style="display:flex;gap:8px">
+            <span style="font-size:12.5px;border:1px solid #e2ddd3;border-radius:8px;padding:8px 16px;color:#44403a;cursor:pointer">Voltar ao designer</span>
+            <sc-if value="{{ lintDirty }}" hint-placeholder-val="{{ true }}"><span style="font-size:12.5px;background:#e2ddd3;color:#8b8478;border-radius:8px;padding:8px 16px;cursor:not-allowed">Publicar v8 (2 rejeições)</span></sc-if>
+            <sc-if value="{{ lintClean }}" hint-placeholder-val="{{ false }}"><span style="font-size:12.5px;background:#1a6a54;color:#fff;border-radius:8px;padding:8px 16px;cursor:pointer">Publicar v8</span></sc-if>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section style="width:1360px" data-screen-label="05 Iniciar instância">
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6f675a;margin-bottom:8px">05 · <strong style="color:#262220">/tasks → Iniciar processo</strong> — fecha o fluxo-alvo da F3 («iniciar» por pessoa não-desenvolvedora) · adição pós-revisão</div>
+  <div style="background:#e8e4db;border:1px solid #d8d3c6;border-radius:14px;overflow:hidden;box-shadow:0 2px 10px rgba(38,34,32,0.06);position:relative;height:560px">
+    <div style="background:#ffffff;border-bottom:1px solid #e2ddd3;display:flex;align-items:center;gap:20px;padding:10px 20px;opacity:0.5">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:500;letter-spacing:1.5px">BUILDTOVALUE</div>
+      <nav style="display:flex;gap:4px;font-size:12.5px"><span style="padding:6px 12px;color:#6f675a">/studio</span><span style="padding:6px 12px;border-radius:8px;background:#1a6a54;color:#fff">/tasks</span><span style="padding:6px 12px;color:#6f675a">/forms</span><span style="padding:6px 12px;color:#6f675a">/operate</span></nav>
+    </div>
+    <div style="position:absolute;inset:53px 0 0;background:repeating-linear-gradient(0deg,#e8e4db,#e8e4db 23px,#ddd8cc 24px);opacity:0.6"></div>
+    <div style="position:absolute;inset:53px 0 0;display:flex;align-items:center;justify-content:center">
+      <div style="width:620px;background:#fff;border:1px solid #d8d3c6;border-radius:14px;box-shadow:0 18px 50px rgba(38,34,32,0.22);overflow:hidden">
+        <div style="padding:16px 22px;border-bottom:1px solid #e2ddd3">
+          <div style="font-family:'Source Serif 4',Georgia,serif;font-size:18px;font-weight:600">Iniciar processo</div>
+          <div style="font-size:11.5px;color:#6f675a;margin-top:3px">somente definições <strong>publicadas</strong> no registry; visível para papéis com permissão de start (RBAC v1)</div>
+        </div>
+        <div style="padding:14px 22px;display:flex;flex-direction:column;gap:8px">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1.5px;color:#9a7b1e">DEFINIÇÃO</div>
+          <div style="border:1px solid #1a6a54;background:#f4faf6;border-radius:10px;padding:11px 14px;display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:13.5px;font-weight:600">Reembolso de despesas</div><div style="font-size:11px;color:#6f675a;margin-top:2px">form inicial: <span style="font-family:'IBM Plex Mono',monospace;font-size:10px">solicitacao@v2</span> · lint D19 ok</div></div><span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#1a6a54">v8 · publicada</span></div>
+          <div style="border:1px solid #e2ddd3;border-radius:10px;padding:11px 14px;display:flex;justify-content:space-between;align-items:center"><div style="font-size:13.5px">Onboarding fornecedor</div><span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6f675a">v3 · publicada</span></div>
+          <div style="border:1px solid #e2ddd3;border-radius:10px;padding:11px 14px;display:flex;justify-content:space-between;align-items:center;opacity:0.55"><div style="font-size:13.5px">Aprovação de contrato</div><span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6f675a">sem permissão de start</span></div>
+          <label style="display:flex;flex-direction:column;gap:5px;font-size:12px;color:#44403a;margin-top:6px">Business key (única por tenant)<input value="RB-2026-0143" style="font-family:'IBM Plex Mono',monospace;font-size:12.5px;padding:9px 10px;border:1px solid #e2ddd3;border-radius:8px"><span style="font-size:10px;color:#6f675a">sugerida — edite se o sistema de origem já tiver uma</span></label>
+        </div>
+        <div style="padding:14px 22px;border-top:1px solid #e2ddd3;display:flex;justify-content:space-between;align-items:center;gap:12px">
+          <span style="font-size:11px;color:#6f675a">POST /v1/instances com Idempotency-Key — clique duplo não cria duas instâncias.</span>
+          <div style="display:flex;gap:8px;flex-shrink:0"><span style="font-size:12.5px;border:1px solid #e2ddd3;border-radius:8px;padding:8px 16px;color:#44403a;cursor:pointer">Cancelar</span><span style="font-size:12.5px;background:#1a6a54;color:#fff;border-radius:8px;padding:8px 16px;cursor:pointer">Iniciar instância</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section style="width:1360px" data-screen-label="06 Estados não-ideais">
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6f675a;margin-bottom:8px">06 · <strong style="color:#262220">estados não-ideais</strong> (matriz 3.1) — variações reutilizáveis por rota · adição pós-revisão</div>
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px">
+    <div style="background:#fff;border:1px solid #d8d3c6;border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:10px;min-height:210px">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1.5px;color:#9a7b1e">/TASKS · VAZIO (PRIMEIRO DIA)</div>
+      <div style="margin:auto 0;display:flex;flex-direction:column;gap:8px;align-items:flex-start">
+        <div style="font-family:'Source Serif 4',Georgia,serif;font-size:16px;font-weight:600">Nenhuma tarefa para você</div>
+        <div style="font-size:12px;color:#6f675a;line-height:1.55">Quando um processo chegar a uma etapa sua, ela aparece aqui.</div>
+        <span style="font-size:12px;border:1px solid #1a6a54;color:#1a6a54;border-radius:8px;padding:7px 12px;cursor:pointer">+ Iniciar processo</span>
+        <a href="#" style="font-size:11.5px">ver tarefas do meu papel</a>
+      </div>
+    </div>
+    <div style="background:#fff;border:1px solid #d8d3c6;border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:10px;min-height:210px">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1.5px;color:#9a7b1e">/OPERATE · BUSCA SEM RESULTADO</div>
+      <div style="margin:auto 0;display:flex;flex-direction:column;gap:8px;align-items:flex-start">
+        <div style="font-family:'Source Serif 4',Georgia,serif;font-size:16px;font-weight:600">Nada com «RB-9999»</div>
+        <div style="font-size:12px;color:#6f675a;line-height:1.55">Confira a business key ou limpe os filtros. Campos sensíveis não são buscáveis por conteúdo.</div>
+        <a href="#" style="font-size:11.5px">Limpar filtros</a>
+      </div>
+    </div>
+    <div style="background:#fff;border:1px solid #d8d3c6;border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:10px;min-height:210px">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1.5px;color:#9a7b1e">CARREGANDO · SKELETON</div>
+      <div style="margin:auto 0;display:flex;flex-direction:column;gap:10px">
+        <div style="height:12px;border-radius:6px;background:#e8e4db;width:85%"></div>
+        <div style="height:12px;border-radius:6px;background:#e8e4db;width:95%"></div>
+        <div style="height:12px;border-radius:6px;background:#e8e4db;width:70%"></div>
+        <div style="height:12px;border-radius:6px;background:#e8e4db;width:88%"></div>
+        <div style="font-size:11px;color:#6f675a">lista e detalhe; container com aria-busy</div>
+      </div>
+    </div>
+    <div style="background:#fff;border:1px solid #d8d3c6;border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:10px;min-height:210px">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1.5px;color:#9a7b1e">ERRO RECUPERÁVEL · REDE</div>
+      <div style="margin:auto 0;display:flex;flex-direction:column;gap:8px;align-items:flex-start">
+        <div style="font-family:'Source Serif 4',Georgia,serif;font-size:16px;font-weight:600">Não foi possível carregar</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6f675a">problem+json · type: …/errors/unavailable</div>
+        <span style="font-size:12px;border:1px solid #e2ddd3;border-radius:8px;padding:7px 12px;color:#44403a;cursor:pointer">Tentar novamente</span>
+        <div style="font-size:11px;color:#6f675a">anunciado via aria-live</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer style="width:1360px;font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:#6f675a;line-height:1.8;padding-bottom:24px">Protótipos G-UX-3 (baixa→média fidelidade) das telas novas de fluxo principal — F3 do PLANO v1.2. O designer, viewer, simulador e galeria vêm da biblioteca e não são re-prototipados aqui. Heurísticas de Nielsen a registrar nos PRs de implementação (G-UX-1).<br>Critérios de implementação (das revisões): controles viram &lt;button&gt; reais (foco visível, aria-busy, anti duplo-clique), erros anunciados via aria-live, axe serious = 0, piso ~11px para metadados; rótulos humanos na navegação = decisão de produto pendente.</footer>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1460},&quot;showServerError&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Estados&quot;},&quot;lintClean&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Estados&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const lintClean = this.props.lintClean ?? false;
+    return {
+      showServerError: this.props.showServerError ?? true,
+      lintClean,
+      lintDirty: !lintClean
+    };
+  }
+}
+</script>
+</body>
+</html>
