@@ -1,9 +1,10 @@
 # ADR-0002 — Tombstones: ledger imutável × direito de exclusão (LGPD art. 18)
 
-> **Status:** PROPOSTO — decidir na F2 (política 3.2); implementação plena na
-> F5 (LGPD avançada). Base: Anexo B do PLANO v1.2, adotado integralmente;
-> alternativas com trade-offs abaixo. Registrado em `pendencias.md` para
-> aprovação do dono.
+> **Status:** APROVADO pelo dono em 2026-07-22, conforme proposto, com UMA
+> exigência de materialização: **o teste "ledger nunca contém conteúdo
+> pessoal" é ENTREGÁVEL NOMEADO da F2** (citado no aceite da fase), não
+> intenção. Implementação plena (portal/retenção/KMS por tenant) na F5.
+> Base: Anexo B do PLANO v1.2.
 
 ## Contexto
 
