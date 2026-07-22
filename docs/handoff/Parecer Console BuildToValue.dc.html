@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet">
+<style>
+doc-page:not(:defined){visibility:hidden}
+a{color:#1a6a54;text-decoration:none}a:hover{color:#9a7b1e;text-decoration:underline}
+</style>
+<script src="./doc-page.js"></script>
+</helmet>
+<doc-page margin="0.8in">
+
+<div style="font-family:'IBM Plex Sans',sans-serif;color:#44403a">
+
+<div style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:2.5px;color:#9a7b1e;margin-bottom:8px">PARECER DE DESIGN · CONSOLE DA PLATAFORMA · FASE F3 (G-UX-3)</div>
+<h1 style="font-family:'Source Serif 4',Georgia,serif;font-size:31px;font-weight:600;letter-spacing:-0.5px;color:#262220;line-height:1.15;margin:0 0 14px">Parecer sobre os protótipos do Console e as três decisões em aberto</h1>
+<div style="display:flex;flex-wrap:wrap;gap:6px 22px;font-size:12.5px;color:#6f675a;border-top:1px solid #e2ddd3;border-bottom:1px solid #e2ddd3;padding:10px 0;margin-bottom:22px">
+  <span style="white-space:nowrap"><strong style="color:#44403a;font-weight:600">De:</strong> Designer da plataforma BuildToValue</span>
+  <span style="white-space:nowrap"><strong style="color:#44403a;font-weight:600">Para:</strong> Governança do Plano v1.2</span>
+  <span><strong style="color:#44403a;font-weight:600">Ref.:</strong> <span style="font-family:'IBM Plex Mono',monospace;font-size:11px">Prototipos_Console_Plataforma_dc__1_.html</span> · 6 telas</span>
+  <span style="white-space:nowrap"><strong style="color:#44403a;font-weight:600">Data:</strong> 21 jul 2026</span>
+</div>
+
+<div style="background:#f4faf6;border:1px solid #dff0e6;border-left:4px solid #1a6a54;border-radius:12px;padding:16px 20px;margin-bottom:12px;break-inside:avoid">
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:1.8px;color:#1a6a54;margin-bottom:8px">SÍNTESE</div>
+  <p style="font-size:14.5px;line-height:1.6;color:#33413a;margin:0 0 12px"><strong style="color:#1a6a54">Recomendo aprovar os protótipos.</strong> O material chega alinhado ao plano; nenhum ajuste abaixo reprova a estrutura, e a tela 04 (publicação com lint) é exemplar. As três decisões que me cabem estão resolvidas:</p>
+  <div style="display:flex;flex-direction:column;gap:7px;font-size:13.5px;color:#33413a">
+    <div style="display:flex;gap:10px"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;color:#1a6a54;flex-shrink:0;width:16px">A</span><span><strong>Navegação: nomes humanos.</strong> Tarefas · Formulários · Operação · Estúdio — a rota literal vive na URL.</span></div>
+    <div style="display:flex;gap:10px"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;color:#1a6a54;flex-shrink:0;width:16px">B</span><span><strong>Delegação na F3: sim,</strong> como reatribuição simples (pessoa + motivo auditado); renomear “Delegar…” → “Reatribuir…”.</span></div>
+    <div style="display:flex;gap:10px"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;color:#1a6a54;flex-shrink:0;width:16px">C</span><span><strong>Identidade: manter</strong> a linguagem da biblioteca como identidade da plataforma e formalizá-la em <span style="font-family:'IBM Plex Mono',monospace;font-size:11px">packages/shared-ui</span>.</span></div>
+  </div>
+</div>
+
+<table style="width:100%;border-collapse:collapse;margin:18px 0 4px;font-size:13px">
+  <thead><tr>
+    <th style="text-align:left;padding:7px 8px;border-bottom:2px solid #262220;font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:1px;color:#6f675a;font-weight:500">TELA (data-screen-label)</th>
+    <th style="text-align:left;padding:7px 8px;border-bottom:2px solid #262220;font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:1px;color:#6f675a;font-weight:500">VEREDITO</th>
+  </tr></thead>
+  <tbody>
+    <tr><td style="padding:7px 8px;border-bottom:1px solid #e2ddd3;font-family:'IBM Plex Mono',monospace;font-size:12px">01 /tasks — Tasklist</td><td style="padding:7px 8px;border-bottom:1px solid #e2ddd3"><span style="font-family:'IBM Plex Mono',monospace;font-size:10px;background:#fdfaf1;color:#9a7b1e;border:1px solid #f6edd4;border-radius:999px;padding:2px 9px">APROVADO · AJUSTES MENORES</span></td></tr>
+    <tr><td style="padding:7px 8px;border-bottom:1px solid #e2ddd3;font-family:'IBM Plex Mono',monospace;font-size:12px">02 /forms — Editor de formulários</td><td style="padding:7px 8px;border-bottom:1px solid #e2ddd3"><span style="font-family:'IBM Plex Mono',monospace;font-size:10px;background:#fdfaf1;color:#9a7b1e;border:1px solid #f6edd4;border-radius:999px;padding:2px 9px">APROVADO · 1 AJUSTE</span></td></tr>
+    <tr><td style="padding:7px 8px;border-bottom:1px solid #e2ddd3;font-family:'IBM Plex Mono',monospace;font-size:12px">03 /operate — Instâncias</td><td style="padding:7px 8px;border-bottom:1px solid #e2ddd3"><span style="font-family:'IBM Plex Mono',monospace;font-size:10px;background:#fdfaf1;color:#9a7b1e;border:1px solid #f6edd4;border-radius:999px;padding:2px 9px">APROVADO · 1 AJUSTE</span></td></tr>
+    <tr><td style="padding:7px 8px;border-bottom:1px solid #e2ddd3;font-family:'IBM Plex Mono',monospace;font-size:12px">04 /studio — Publicação com lint D19</td><td style="padding:7px 8px;border-bottom:1px solid #e2ddd3"><span style="font-family:'IBM Plex Mono',monospace;font-size:10px;background:#1a6a54;color:#fff;border-radius:999px;padding:2px 9px">APROVADO · EXEMPLAR</span></td></tr>
+    <tr><td style="padding:7px 8px;border-bottom:1px solid #e2ddd3;font-family:'IBM Plex Mono',monospace;font-size:12px">05 Iniciar instância</td><td style="padding:7px 8px;border-bottom:1px solid #e2ddd3"><span style="font-family:'IBM Plex Mono',monospace;font-size:10px;background:#e7f2ec;color:#1a6a54;border:1px solid #cfe6da;border-radius:999px;padding:2px 9px">APROVADO</span></td></tr>
+    <tr><td style="padding:7px 8px;border-bottom:1px solid #e2ddd3;font-family:'IBM Plex Mono',monospace;font-size:12px">06 Estados não-ideais</td><td style="padding:7px 8px;border-bottom:1px solid #e2ddd3"><span style="font-family:'IBM Plex Mono',monospace;font-size:10px;background:#fdfaf1;color:#9a7b1e;border:1px solid #f6edd4;border-radius:999px;padding:2px 9px">APROVADO · AMPLIAR MATRIZ</span></td></tr>
+  </tbody>
+</table>
+<p style="font-size:11.5px;color:#6f675a;margin:8px 0 0;line-height:1.5">O escopo deste parecer é produto e identidade (não uma re-auditoria de conformidade, já feita). Referências ao plano — <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:#1a6a54">D3</span> pinagem por versão, <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:#1a6a54">D19</span> lint rejeita, <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:#1a6a54">D20</span> campos sensíveis, <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:#1a6a54">D21</span> claim persistente — aparecem como âncora, não como rediscussão.</p>
+
+<!-- ============ BLOCO 1 ============ -->
+<div style="margin-top:30px;break-before:page">
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:2px;color:#9a7b1e;margin-bottom:4px">BLOCO 1</div>
+  <h2 style="font-family:'Source Serif 4',Georgia,serif;font-size:23px;font-weight:600;letter-spacing:-0.3px;color:#262220;margin:0 0 4px">Aprovação e ajustes, tela a tela</h2>
+  <p style="font-size:12.5px;color:#6f675a;margin:0 0 6px">Para cada tela: o que já está certo e o que ajustar, com a referência do plano entre colchetes.</p>
+</div>
+
+<!-- 01 -->
+<div style="border:1px solid #e2ddd3;border-radius:12px;padding:16px 18px;margin-top:16px;break-inside:avoid">
+  <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:8px">
+    <h3 style="font-family:'Source Serif 4',Georgia,serif;font-size:17px;font-weight:600;color:#262220;margin:0">01 · /tasks — Tasklist</h3>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;background:#fdfaf1;color:#9a7b1e;border:1px solid #f6edd4;border-radius:999px;padding:2px 9px;white-space:nowrap">APROVADO · AJUSTES MENORES</span>
+  </div>
+  <p style="font-size:13.5px;line-height:1.6;margin:0"><strong style="color:#1a6a54">Certo.</strong> O tríptico filtros → lista → detalhe é a leitura correta para o usuário de negócio. A claim persistente (D21) ganha um aviso explícito, e a versão pinada do formulário (D3) aparece de forma coerente em três lugares — no card, no cabeçalho do detalhe e como badge —, exatamente o que a decisão pede: legível, nunca escondida.</p>
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:1.5px;color:#9a7b1e;margin:12px 0 4px">AJUSTES</div>
+  <ul style="margin:0;padding-left:18px;font-size:13.5px;line-height:1.55">
+    <li style="margin:5px 0">D3 fica legível, mas não explica o “porquê”: como já existe <span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px">reembolso@v4</span> publicada (tela 02), o aprovador vê a v3 e pode achá-la desatualizada. Um micro-affordance no badge (“por que v3?” → “esta instância nasceu na v3”) fecha a dúvida sem poluir. <span style="color:#6f675a;font-size:11.5px">[D3]</span></li>
+    <li style="margin:5px 0">“3 TAREFAS · ORDENAR: MAIS ANTIGAS” fixa a ordenação; expor o controle (mais antigas / por prazo) evita que a ordem pareça imutável. <span style="color:#6f675a;font-size:11.5px">[Nielsen: controle do usuário]</span></li>
+    <li style="margin:5px 0">A tag “PESSOAL” está a ~9px, abaixo do piso de ~11px que o próprio rodapé define para metadados; subir para 11px. <span style="color:#6f675a;font-size:11.5px">[axe/G-UX]</span></li>
+  </ul>
+</div>
+
+<!-- 02 -->
+<div style="border:1px solid #e2ddd3;border-radius:12px;padding:16px 18px;margin-top:14px;break-inside:avoid">
+  <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:8px">
+    <h3 style="font-family:'Source Serif 4',Georgia,serif;font-size:17px;font-weight:600;color:#262220;margin:0">02 · /forms — Editor de formulários</h3>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;background:#fdfaf1;color:#9a7b1e;border:1px solid #f6edd4;border-radius:999px;padding:2px 9px;white-space:nowrap">APROVADO · 1 AJUSTE</span>
+  </div>
+  <p style="font-size:13.5px;line-height:1.6;margin:0"><strong style="color:#1a6a54">Certo.</strong> “Mesmo renderer de /tasks” é a decisão de arquitetura certa exposta na UI — o que se edita é o que se executa. A classificação obrigatória e a caixa de consequências cumprem D20; a convenção de expressões e o <span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px">visibleWhen</span> estão anotados.</p>
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:1.5px;color:#9a7b1e;margin:12px 0 4px">AJUSTE (único que considero bloqueante para D20)</div>
+  <ul style="margin:0;padding-left:18px;font-size:13.5px;line-height:1.55">
+    <li style="margin:5px 0">A caixa de consequências de “sensível” aparece estática mesmo com “não pessoal” selecionado. D20 pede que a consequência seja comunicada <em>no momento da escolha</em>. Amarrar a caixa à seleção de “sensível” — surgindo/intensificando ao clicar, listando cifrado · mascarado · fora de logs/exports · não buscável no Operate — transforma o aviso em decisão informada, não em nota de rodapé. <span style="color:#6f675a;font-size:11.5px">[D20]</span></li>
+  </ul>
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:1.5px;color:#9a7b1e;margin:12px 0 4px">CONSIDERAÇÃO</div>
+  <ul style="margin:0;padding-left:18px;font-size:13.5px;line-height:1.55">
+    <li style="margin:5px 0">“Publicar no registry → v4” aqui vs. “Publicar v8” no /studio: são dois escopos de publicação (schema de formulário × definição de processo) e hoje partilham o mesmo verbo. Ver Bloco 3 (IA). <span style="color:#6f675a;font-size:11.5px">[G-UX-4]</span></li>
+  </ul>
+</div>
+
+<!-- 03 -->
+<div style="border:1px solid #e2ddd3;border-radius:12px;padding:16px 18px;margin-top:14px;break-inside:avoid">
+  <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:8px">
+    <h3 style="font-family:'Source Serif 4',Georgia,serif;font-size:17px;font-weight:600;color:#262220;margin:0">03 · /operate — Instâncias</h3>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;background:#fdfaf1;color:#9a7b1e;border:1px solid #f6edd4;border-radius:999px;padding:2px 9px;white-space:nowrap">APROVADO · 1 AJUSTE</span>
+  </div>
+  <p style="font-size:13.5px;line-height:1.6;margin:0"><strong style="color:#1a6a54">Certo.</strong> Densidade adequada ao operador: posição no diagrama (viewer da biblioteca, corretamente rotulado como tal), incidentes com repetir/resolver, jobs/timers, histórico em sequência, export XES e cancelamento com confirmação. Cobre o F3.5 e materializa a auditoria.</p>
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:1.5px;color:#9a7b1e;margin:12px 0 4px">AJUSTE</div>
+  <ul style="margin:0;padding-left:18px;font-size:13.5px;line-height:1.55">
+    <li style="margin:5px 0">A aba <strong>Variáveis</strong> precisa mascarar valores de campos sensíveis, como já fazem o /tasks e o preview do /forms; sem isso, o Operate vira porta lateral para dado sensível. Anotar máscara + leitura sob permissão. <span style="color:#6f675a;font-size:11.5px">[D20]</span></li>
+  </ul>
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:1.5px;color:#9a7b1e;margin:12px 0 4px">CONSIDERAÇÕES</div>
+  <ul style="margin:0;padding-left:18px;font-size:13.5px;line-height:1.55">
+    <li style="margin:5px 0">“P95 ADVANCE · 38ms” é telemetria de engine; para a persona operador pode ser ruído. Sugiro movê-la para um bloco de “saúde do sistema” e deixar o strip com o que aciona ação (incidentes, jobs atrasados, timers).</li>
+    <li style="margin:5px 0">“Repetir” age direto e reexecuta um job com efeito externo (chamada ao ERP); vale um micro-confirm ou rótulo do que será repetido.</li>
+  </ul>
+</div>
+
+<!-- 04 -->
+<div style="border:1px solid #dff0e6;background:#f8fcf9;border-radius:12px;padding:16px 18px;margin-top:14px;break-inside:avoid">
+  <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:8px">
+    <h3 style="font-family:'Source Serif 4',Georgia,serif;font-size:17px;font-weight:600;color:#262220;margin:0">04 · /studio — Publicação com lint D19</h3>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;background:#1a6a54;color:#fff;border-radius:999px;padding:2px 9px;white-space:nowrap">APROVADO · EXEMPLAR</span>
+  </div>
+  <p style="font-size:13.5px;line-height:1.6;margin:0"><strong style="color:#1a6a54">Certo.</strong> É a tela que melhor traduz o plano. D19 aparece inteiro: o lint <strong>rejeita</strong> (OR-merge fora do escopo), <strong>explica</strong> e <strong>sugere correção</strong> (<span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px">between → &gt;= and &lt;=</span>), separa REJEIÇÃO de AVISO por cor + rótulo, e desabilita “Publicar v8 (2 rejeições)” mostrando o motivo. O vínculo de formulário por versão e “instâncias em voo permanecem na v7” fecham D3/F5. Recorte de escopo correto — só o delta de publicação, o editor vem da biblioteca.</p>
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:1.5px;color:#9a7b1e;margin:12px 0 4px">AJUSTE (menor)</div>
+  <ul style="margin:0;padding-left:18px;font-size:13.5px;line-height:1.55">
+    <li style="margin:5px 0">Explicitar o ponto de entrada (como se chega do designer da biblioteca a este modal), para o handoff não presumir a origem. É contexto, não redesenho.</li>
+  </ul>
+</div>
+
+<!-- 05 -->
+<div style="border:1px solid #e2ddd3;border-radius:12px;padding:16px 18px;margin-top:14px;break-inside:avoid">
+  <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:8px">
+    <h3 style="font-family:'Source Serif 4',Georgia,serif;font-size:17px;font-weight:600;color:#262220;margin:0">05 · Iniciar instância</h3>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;background:#e7f2ec;color:#1a6a54;border:1px solid #cfe6da;border-radius:999px;padding:2px 9px;white-space:nowrap">APROVADO</span>
+  </div>
+  <p style="font-size:13.5px;line-height:1.6;margin:0"><strong style="color:#1a6a54">Certo.</strong> Fecha o fluxo-alvo da F3 para não-desenvolvedor: só definições publicadas, RBAC visível (“Aprovação de contrato” esmaecida por falta de permissão de start), business key sugerida/editável com dica e Idempotency-Key contra clique duplo. Exatamente o pedido.</p>
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:1.5px;color:#9a7b1e;margin:12px 0 4px">AJUSTE / COMPORTAMENTO</div>
+  <ul style="margin:0;padding-left:18px;font-size:13.5px;line-height:1.55">
+    <li style="margin:5px 0">Definir o destino pós-“Iniciar instância”: o fluxo-alvo termina em “tarefa aparece”, então o sucesso deveria levar à primeira tarefa (se for do próprio usuário) ou ao /operate com a instância aberta. É comportamento novo → passa pelo plano (ver Bloco 3).</li>
+  </ul>
+</div>
+
+<!-- 06 -->
+<div style="border:1px solid #e2ddd3;border-radius:12px;padding:16px 18px;margin-top:14px;break-inside:avoid">
+  <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:8px">
+    <h3 style="font-family:'Source Serif 4',Georgia,serif;font-size:17px;font-weight:600;color:#262220;margin:0">06 · Estados não-ideais</h3>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;background:#fdfaf1;color:#9a7b1e;border:1px solid #f6edd4;border-radius:999px;padding:2px 9px;white-space:nowrap">APROVADO · AMPLIAR MATRIZ</span>
+  </div>
+  <p style="font-size:13.5px;line-height:1.6;margin:0"><strong style="color:#1a6a54">Certo.</strong> Cobre vazio (primeiro dia), busca sem resultado (com a consequência de D20 reforçada), skeleton com aria-busy e erro recuperável com problem+json, “Tentar novamente” e aria-live. Reuso por rota é a abordagem certa.</p>
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:1.5px;color:#9a7b1e;margin:12px 0 4px">AJUSTES</div>
+  <ul style="margin:0;padding-left:18px;font-size:13.5px;line-height:1.55">
+    <li style="margin:5px 0">Faltam dois estados que o fluxo principal encontra cedo: <strong>403 / sem permissão de rota</strong> (RBAC) e <strong>conflito de claim</strong> (a tarefa foi assumida por outra pessoa entre carregar e clicar). Ambos são “estados não-ideais obrigatórios” do gate. Como amplia a matriz, sinalizo como mudança de escopo. <span style="color:#6f675a;font-size:11.5px">[gate: erro/vazio/carregando]</span></li>
+    <li style="margin:5px 0">Voz do erro por persona: “problem+json · type: …/unavailable” serve ao operador, mas no /tasks o usuário de negócio precisa de “Não foi possível carregar suas tarefas”, com o detalhe técnico recolhível. <span style="color:#6f675a;font-size:11.5px">[G-UX-2]</span></li>
+  </ul>
+</div>
+
+<!-- ============ BLOCO 2 ============ -->
+<div style="margin-top:34px;break-before:page">
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:2px;color:#9a7b1e;margin-bottom:4px">BLOCO 2</div>
+  <h2 style="font-family:'Source Serif 4',Georgia,serif;font-size:23px;font-weight:600;letter-spacing:-0.3px;color:#262220;margin:0 0 4px">As três decisões que são minhas</h2>
+  <p style="font-size:12.5px;color:#6f675a;margin:0 0 6px">Cada uma com decisão explícita, justificativa curta e guarda-corpos para o plano anotar.</p>
+</div>
+
+<!-- A -->
+<div style="border:1px solid #e2ddd3;border-radius:12px;padding:18px 20px;margin-top:16px;break-inside:avoid">
+  <div style="display:flex;gap:12px;align-items:baseline;margin-bottom:6px">
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:500;color:#1a6a54">A</span>
+    <h3 style="font-family:'Source Serif 4',Georgia,serif;font-size:18px;font-weight:600;color:#262220;margin:0">Rótulos da navegação: rota literal ou nome humano?</h3>
+  </div>
+  <div style="background:#e7f2ec;border-radius:8px;padding:10px 14px;margin:8px 0 12px">
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:1.5px;color:#1a6a54">DECISÃO</span>
+    <p style="font-size:14.5px;line-height:1.5;color:#1a5544;margin:4px 0 0"><strong>Nomes humanos:</strong> Tarefas · Formulários · Operação · Estúdio — nessa ordem. A rota literal continua visível na URL (é uma SPA com rotas reais), atendendo às personas técnicas sem poluir a chrome.</p>
+  </div>
+  <p style="font-size:13.5px;line-height:1.6;margin:0"><strong>Por quê.</strong> Duas das três personas não são técnicas (G-UX-2); rota na barra de navegação é vazamento de implementação (Nielsen — correspondência com o mundo real) e define o tom: o briefing diz que o Console é a face do produto, não um painel de operador. A ordem entra pela porta da persona de negócio (Tarefas). “Estúdio” preserva o vínculo com o /studio da biblioteca e o vocabulário da modeladora. Se o time quiser servir os dois públicos, um sublabel mono discreto (<span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px">Tarefas · /tasks</span>) é aceitável — mas o primário é humano. <span style="color:#6f675a;font-size:11.5px">[G-UX-2, G-UX-4]</span></p>
+</div>
+
+<!-- B -->
+<div style="border:1px solid #e2ddd3;border-radius:12px;padding:18px 20px;margin-top:14px;break-inside:avoid">
+  <div style="display:flex;gap:12px;align-items:baseline;margin-bottom:6px">
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:500;color:#1a6a54">B</span>
+    <h3 style="font-family:'Source Serif 4',Georgia,serif;font-size:18px;font-weight:600;color:#262220;margin:0">Delegação simples entra na F3?</h3>
+  </div>
+  <div style="background:#e7f2ec;border-radius:8px;padding:10px 14px;margin:8px 0 12px">
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:1.5px;color:#1a6a54">DECISÃO</span>
+    <p style="font-size:14.5px;line-height:1.5;color:#1a5544;margin:4px 0 0"><strong>Sim — como reatribuição simples:</strong> escolher uma pessoa + motivo auditado. Renomear o botão “Delegar…” → “Reatribuir…”.</p>
+  </div>
+  <p style="font-size:13.5px;line-height:1.6;margin:0 0 8px"><strong>Por quê.</strong> A mecânica de liberar + assumir já existe (D21); reatribuir = liberar e atribuir a uma pessoa nomeada, tudo auditado — custo incremental baixo. Remover o botão cria um beco (o usuário vê a tarefa mas não consegue encaminhá-la); manter um “Delegar…” inerte é affordance morta (Nielsen). “Delegar” promete devolução temporária e regras (F4); “Reatribuir” é o que a F3 realmente faz — microcopy honesto.</p>
+  <div style="border:1px dashed #d8d3c6;border-radius:8px;padding:10px 14px;font-size:12.5px;color:#6f675a;line-height:1.55"><strong style="color:#44403a">Guarda-corpos:</strong> um único responsável; motivo obrigatório; respeitar RBAC (só para quem pertence ao papel/grupo candidato); sem cadeias, regras de ausência ou delegação temporária (isso é F4). <span style="color:#9a7b1e">Muda comportamento → anotar no plano como adendo.</span></div>
+</div>
+
+<!-- C -->
+<div style="border:1px solid #e2ddd3;border-radius:12px;padding:18px 20px;margin-top:14px;break-inside:avoid">
+  <div style="display:flex;gap:12px;align-items:baseline;margin-bottom:6px">
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:500;color:#1a6a54">C</span>
+    <h3 style="font-family:'Source Serif 4',Georgia,serif;font-size:18px;font-weight:600;color:#262220;margin:0">Identidade visual do Console</h3>
+  </div>
+  <div style="background:#e7f2ec;border-radius:8px;padding:10px 14px;margin:8px 0 12px">
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:1.5px;color:#1a6a54">DECISÃO</span>
+    <p style="font-size:14.5px;line-height:1.5;color:#1a5544;margin:4px 0 0"><strong>Manter</strong> a linguagem da biblioteca (IBM Plex + Source Serif; creme/verde/dourado, vermelho para incidente) como identidade da <em>plataforma</em>, e <strong>promovê-la para</strong> <span style="font-family:'IBM Plex Mono',monospace;font-size:12.5px">packages/shared-ui</span>.</p>
+  </div>
+  <p style="font-size:13.5px;line-height:1.6;margin:0 0 10px"><strong>Por quê.</strong> O Console embute o designer e o viewer da biblioteca (as telas 03 e 04 mostram superfícies da biblioteca dentro do Console); direção própria criaria costuras visíveis onde a chrome encontra a UI embutida — o custo de coerência que o próprio briefing aponta. Uma identidade do modelar ao executar é a narrativa do produto. E a linguagem atual é boa e distintiva: IBM Plex Sans/Mono dá clareza operacional e o mono faz trabalho real (chaves, ids, versões, telemetria, S-FEEL); Source Serif 4 dá uma voz editorial calma que foge do mar de Inter; creme/verde/dourado + um vermelho único já é um sistema semântico.</p>
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:1.5px;color:#9a7b1e;margin:0 0 6px">O QUE EU ACRESCENTO AO FORMALIZAR</div>
+  <ol style="margin:0;padding-left:18px;font-size:13.5px;line-height:1.55">
+    <li style="margin:4px 0">Codificar <strong>papéis semânticos</strong> (não só hex): sucesso/ativo, atenção/aviso, perigo/incidente, escala de tinta, superfícies — o dev consome por intenção.</li>
+    <li style="margin:4px 0">Fixar a <strong>regra do mono</strong> (identificadores, versões, telemetria, expressões) para que ele continue significando algo e não vire decoração.</li>
+    <li style="margin:4px 0"><strong>Pisos de acessibilidade</strong> nos tokens: tamanho mínimo (o dourado a 9px sobre creme falha contraste) e AA; status sempre por cor + rótulo (já é a prática — virar regra).</li>
+    <li style="margin:4px 0"><strong>Densidade</strong>: superfícies do operador (densas) e do negócio (calmas) compartilham tokens, variando espaçamento — não paleta.</li>
+  </ol>
+</div>
+
+<!-- spec item -->
+<div style="border-left:3px solid #9a7b1e;background:#fdfaf1;border-radius:0 10px 10px 0;padding:14px 18px;margin-top:14px;break-inside:avoid">
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:1.5px;color:#9a7b1e;margin-bottom:5px">ITEM DE SPEC — OPINIÃO, NÃO DECISÃO (a decisão é técnica)</div>
+  <p style="font-size:13.5px;line-height:1.6;margin:0"><strong>Convenção de expressões</strong> (<span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px">value</span> = o próprio campo; outras chaves referenciam outros campos): <strong>apoio</strong>. Casa com a semântica de <em>input entry</em> do FEEL/DMN, mantém a validação auto-referente e portável entre campos, e já está exposta na UI. Recomendo: (a) mostrar a legenda inline sempre ao lado de qualquer input S-FEEL; (b) autocomplete das chaves disponíveis para evitar erro de digitação; (c) reservar <span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px">value</span> como palavra-chave — não pode ser chave de campo.</p>
+</div>
+
+<!-- ============ BLOCO 3 ============ -->
+<div style="margin-top:34px;break-before:page">
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:2px;color:#9a7b1e;margin-bottom:4px">BLOCO 3</div>
+  <h2 style="font-family:'Source Serif 4',Georgia,serif;font-size:23px;font-weight:600;letter-spacing:-0.3px;color:#262220;margin:0 0 4px">Considerações adicionais</h2>
+  <p style="font-size:12.5px;color:#6f675a;margin:0 0 6px">Fluxos, microcopy e identidade. Onde proponho algo novo, marco como <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:#9a7b1e">ESCOPO</span> — passa pelo plano, não direto ao dev.</p>
+</div>
+
+<div style="margin-top:16px;break-inside:avoid">
+  <h3 style="font-family:'Source Serif 4',Georgia,serif;font-size:16px;font-weight:600;color:#262220;margin:0 0 6px">Fluxos e estados que faltam</h3>
+  <ul style="margin:0;padding-left:18px;font-size:13.5px;line-height:1.55">
+    <li style="margin:5px 0"><strong>403 / sem permissão de rota</strong> e <strong>conflito de claim</strong> na matriz da tela 06. <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#9a7b1e;background:#fdfaf1;border:1px solid #f6edd4;border-radius:5px;padding:1px 6px">ESCOPO</span></li>
+    <li style="margin:5px 0"><strong>Destino pós-início</strong> (tela 05): sucesso leva à primeira tarefa ou ao /operate com a instância aberta. <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#9a7b1e;background:#fdfaf1;border:1px solid #f6edd4;border-radius:5px;padding:1px 6px">ESCOPO</span></li>
+    <li style="margin:5px 0"><strong>Instância cancelada / terminal</strong> no /operate: o cancelamento existe, mas o histórico consultável deve deixar claro “cancelada por X · motivo Y” — fecha o ciclo de auditoria.</li>
+  </ul>
+</div>
+
+<div style="margin-top:16px;break-inside:avoid">
+  <h3 style="font-family:'Source Serif 4',Georgia,serif;font-size:16px;font-weight:600;color:#262220;margin:0 0 6px">Microcopy</h3>
+  <ul style="margin:0;padding-left:18px;font-size:13.5px;line-height:1.55">
+    <li style="margin:5px 0">Voz do erro por persona (negócio × operador) — ver tela 06.</li>
+    <li style="margin:5px 0">“por que esta versão?” no formulário pinado — ver tela 01.</li>
+    <li style="margin:5px 0">“Delegar” → “Reatribuir” — ver decisão B.</li>
+    <li style="margin:5px 0">Confirmar/rotular “Repetir” no incidente — ver tela 03.</li>
+  </ul>
+</div>
+
+<div style="margin-top:16px;break-inside:avoid">
+  <h3 style="font-family:'Source Serif 4',Georgia,serif;font-size:16px;font-weight:600;color:#262220;margin:0 0 6px">Arquitetura de informação (G-UX-4)</h3>
+  <ul style="margin:0;padding-left:18px;font-size:13.5px;line-height:1.55">
+    <li style="margin:5px 0">O verbo <strong>“Publicar no registry”</strong> aparece em /forms e /studio com objetos diferentes. Desambiguar o modelo mental — “Publicar formulário” × “Publicar definição” — ou explicitar o objeto publicado em cada caso.</li>
+    <li style="margin:5px 0">Chrome (tenant, usuário, navegação) está no mesmo lugar em todas as rotas — <span style="color:#1a6a54">manter como está</span>, é o que sustenta o “Console único” (D15).</li>
+  </ul>
+</div>
+
+<div style="margin-top:16px;break-inside:avoid">
+  <h3 style="font-family:'Source Serif 4',Georgia,serif;font-size:16px;font-weight:600;color:#262220;margin:0 0 6px">Identidade &amp; tokens</h3>
+  <p style="font-size:13.5px;line-height:1.6;margin:0">Consolidado na decisão C: manter a linguagem, promover para <span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px">shared-ui</span> com papéis semânticos, regra do mono, pisos de tamanho/contraste e variação por densidade — não por paleta.</p>
+</div>
+
+<!-- Fecho -->
+<div style="background:#262220;border-radius:12px;padding:20px 22px;margin-top:26px;break-inside:avoid">
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:2px;color:#c9a94a;margin-bottom:8px">PRÓXIMOS PASSOS</div>
+  <ul style="margin:0;padding-left:18px;font-size:13.5px;line-height:1.6;color:#e9e6dd">
+    <li style="margin:5px 0">Ajustes acordados (Bloco 1) voltam ao protótipo.</li>
+    <li style="margin:5px 0">Decisões A / B / C viram adendo ao Plano v1.2.</li>
+    <li style="margin:5px 0">Sinalizadas como <strong style="color:#c9a94a">mudança de escopo</strong> (passam pelo plano, não direto ao dev): (1) 403 + conflito de claim na matriz 06; (2) reatribuição simples na F3; (3) destino pós-início.</li>
+    <li style="margin:5px 0">Sigo no circuito: heurística de Nielsen nos PRs de interface (G-UX-1) e protótipos de telas novas por mim antes do código (G-UX-3).</li>
+  </ul>
+</div>
+
+<p style="font-size:11.5px;color:#9a8f7e;margin:16px 0 0;line-height:1.5;font-style:italic">Parecer emitido como último gate de design antes do desenvolvimento. O designer, viewer, simulador e galeria da biblioteca (danzeroum/bpmn) não são reavaliados aqui — apenas as superfícies novas do Console.</p>
+
+</div>
+</doc-page>
+</x-dc>
+</body>
+</html>
