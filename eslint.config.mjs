@@ -9,6 +9,9 @@ export default tseslint.config(
       '**/node_modules/**',
       '**/*.d.ts',
       '**/src/api/generated/**',
+      // documentos e artefatos de handoff do dono (viewers .js enviados pela
+      // UI) não são código da plataforma — fora do lint.
+      'docs/**',
     ],
   },
   ...tseslint.configs.recommended,
