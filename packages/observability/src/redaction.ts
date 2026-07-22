@@ -27,4 +27,12 @@ export const REDACT_PATHS: string[] = [
   'refreshToken',
   'variables',
   '*.variables',
+  // F2.6: payloads de job, submissões de task e results de handler carregam
+  // dados de negócio (possivelmente pessoais) — redigidos por inteiro.
+  'payload',
+  '*.payload',
+  'submission',
+  '*.submission',
+  'result',
+  '*.result',
 ];

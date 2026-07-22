@@ -1,4 +1,5 @@
 import type { Sql } from '../client.js';
+import type { FieldCipher } from '../crypto/fieldCipher.js';
 import { withTenant } from '../tenancy.js';
 import { advanceInstance } from './advance.js';
 
@@ -22,7 +23,7 @@ export interface TimerSweepResult {
 export async function sweepDueTimersOnce(
   sql: Sql,
   tenantId: string,
-  options: { now?: () => string; limit?: number } = {},
+  options: { now?: () => string; limit?: number; cipher?: FieldCipher } = {},
 ): Promise<TimerSweepResult> {
   const clock = options.now ?? (() => new Date().toISOString());
   const sweepNow = clock();
@@ -43,6 +44,7 @@ export async function sweepDueTimersOnce(
       timer.instance_id as string,
       { type: 'TimerFired', now: sweepNow, waitKey: timer.wait_key as string, variables: {} },
       {
+        cipher: options.cipher,
         onApplied: async (tx) => {
           await tx`UPDATE timers SET status = 'fired'
             WHERE id = ${timer.id as string} AND status = 'armed'`;

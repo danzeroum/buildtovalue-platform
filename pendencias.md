@@ -68,6 +68,16 @@ verde, guarda pre-mode-aware passou — e o publish morreu com `ENEEDAUTH`:
 9. **(F2.1) `seq` da história** = `revision × 100000 + effect_index` —
    monotônico por instância com lacunas, determinístico sob re-dispatch
    (o crash do worker reproduz o MESMO seq; UNIQUE de effect_key deduplica).
+10. **(F2.4+) `FIELD_KEY_SECRET`** é o KeyProvider de dev/CI (D20): scrypt →
+    AES-256-GCM por registro. Sem ele, gravar um campo `sensitive` ABORTA a
+    tx (nunca plaintext silencioso). KMS por tenant continua na F5; chave
+    estática em produção reprova o gate (registrado no código e no .env).
+11. **(F2.4+) Fencing formal de USER TASK** (claim_token, D21) fica para a
+    F3 junto da API de tasklist — na F2 a conclusão dupla é rejeitada pelo
+    engine (staleWait). Registrado no fase-2.md para a sua triagem.
+12. **(F2.4+) Salt-por-registro** (ADR-0002 item 3) entra com a integração
+    do ledger real (@buildtovalue/audit, V1 §8.3) — na F2 nenhum hash de
+    conteúdo é gravado, e o teste nomeado do ledger já vigia o invariante.
 
 ## 2.1 ~~ADR-0002~~ APROVADO (22/07) — teste do ledger vira entregável nomeado da F2
 

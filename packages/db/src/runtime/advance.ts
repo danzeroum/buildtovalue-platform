@@ -4,9 +4,15 @@ import {
   type InstanceState,
 } from '@buildtovalue/engine';
 import type { Sql, TransactionSql } from '../client.js';
+import { isEncryptedField, type FieldCipher } from '../crypto/fieldCipher.js';
 import { withTenant } from '../tenancy.js';
 import { effectKey } from './effectKey.js';
-import { engineFor, SKELETON_DEFINITION_REF } from './definitions.js';
+import {
+  classificationsFor,
+  engineFor,
+  SKELETON_DEFINITION_REF,
+  type DataClassification,
+} from './definitions.js';
 import { insertEffects, OUTBOX_CHANNEL, type OutboxEffect } from './outbox.js';
 
 export interface InstanceRow {
@@ -91,29 +97,56 @@ export function runStateMigrations(
   return { ok: true, state: current };
 }
 
-/** Visão imutável das variáveis persistidas (D13) — lida NA MESMA tx. */
+/**
+ * Visão imutável das variáveis persistidas (D13) — lida NA MESMA tx.
+ * Campos `sensitive` cifrados em repouso são decifrados SÓ em memória para
+ * o engine avaliar condições; nunca voltam em claro para log ou história.
+ */
 async function loadVariables(
   tx: TransactionSql,
   instanceId: string,
+  cipher?: FieldCipher,
 ): Promise<Record<string, unknown>> {
   const rows = await tx`SELECT name, value FROM variables WHERE instance_id = ${instanceId}`;
   const vars: Record<string, unknown> = {};
-  for (const row of rows) vars[row.name as string] = row.value;
+  for (const row of rows) {
+    const value = row.value as unknown;
+    vars[row.name as string] =
+      cipher && isEncryptedField(value) ? await cipher.decrypt(value) : value;
+  }
   return vars;
 }
 
-/** Upsert de variáveis (host, D13). Classificação declarada chega na F3. */
+/**
+ * Upsert de variáveis (host, D13) com a costura LGPD (F2.6): classificação
+ * declarada pela definição; `sensitive` SÓ persiste cifrada pelo FieldCipher
+ * (D20) — sem KeyProvider configurado, a transação ABORTA em vez de gravar
+ * em claro (fail-fast; nunca plaintext silencioso).
+ */
 async function upsertVariables(
   tx: TransactionSql,
   tenantId: string,
   instanceId: string,
   values: Record<string, unknown>,
+  classifications: Record<string, DataClassification>,
+  cipher?: FieldCipher,
 ): Promise<void> {
   for (const [name, value] of Object.entries(values)) {
-    await tx`INSERT INTO variables (tenant_id, instance_id, name, value)
-      VALUES (${tenantId}, ${instanceId}, ${name}, ${tx.json(value as never)})
+    const classification = classifications[name] ?? 'none';
+    let stored = value;
+    if (classification === 'sensitive') {
+      if (!cipher) {
+        throw new Error(
+          `variável '${name}' é sensitive e não há KeyProvider configurado (D20) — recusando gravar em claro`,
+        );
+      }
+      stored = await cipher.encrypt(value);
+    }
+    await tx`INSERT INTO variables (tenant_id, instance_id, name, value, classification)
+      VALUES (${tenantId}, ${instanceId}, ${name}, ${tx.json(stored as never)}, ${classification})
       ON CONFLICT (instance_id, name)
-      DO UPDATE SET value = EXCLUDED.value, updated_at = now()`;
+      DO UPDATE SET value = EXCLUDED.value, classification = EXCLUDED.classification,
+                    updated_at = now()`;
   }
 }
 
@@ -135,7 +168,7 @@ export async function advanceInstance(
   tenantId: string,
   instanceId: string,
   event: EngineEvent,
-  hooks: { onApplied?: (tx: TransactionSql) => Promise<void> } = {},
+  hooks: { onApplied?: (tx: TransactionSql) => Promise<void>; cipher?: FieldCipher } = {},
 ): Promise<AdvanceOutcome> {
   return withTenant(sql, tenantId, async (tx) => {
     const rows = await tx<InstanceRow[]>`
@@ -165,7 +198,7 @@ export async function advanceInstance(
         ON CONFLICT (effect_key) DO NOTHING`;
       return { ok: false, reason: 'stateTooOld', message: migrated.message };
     }
-    const variables = await loadVariables(tx, instanceId);
+    const variables = await loadVariables(tx, instanceId, hooks.cipher);
     // O que o evento PRODUZ (result do job / submission da task) entra na
     // visão de variáveis do MESMO avanço: o gateway logo após a task decide
     // sobre o que ela acabou de submeter — e é isso que se persiste abaixo.
@@ -201,10 +234,11 @@ export async function advanceInstance(
     }
     // D13: o engine nunca devolve variáveis — quem escreve é o HOST, aqui,
     // a partir do que o EVENTO trouxe (result do job / submission da task).
+    const classifications = classificationsFor(row.definition_ref);
     if (event.type === 'JobCompleted' && event.result) {
-      await upsertVariables(tx, tenantId, instanceId, event.result as Record<string, unknown>);
+      await upsertVariables(tx, tenantId, instanceId, event.result as Record<string, unknown>, classifications, hooks.cipher);
     } else if (event.type === 'UserTaskCompleted') {
-      await upsertVariables(tx, tenantId, instanceId, event.submission as Record<string, unknown>);
+      await upsertVariables(tx, tenantId, instanceId, event.submission as Record<string, unknown>, classifications, hooks.cipher);
     }
     await insertEffects(
       tx,
@@ -236,6 +270,7 @@ export async function createAndStartInstance(
   tenantId: string,
   options: { definitionRef?: string; businessKey?: string; variables?: Record<string, unknown> },
   now: string,
+  cipher?: FieldCipher,
 ): Promise<AdvanceOutcome> {
   const definitionRef = options.definitionRef ?? SKELETON_DEFINITION_REF;
   const engine = engineFor(definitionRef);
@@ -255,17 +290,30 @@ export async function createAndStartInstance(
     // Variáveis iniciais persistem ANTES do StartInstance: o avanço as lê
     // da tabela para avaliar condições já no primeiro gateway (D13).
     if (options.variables && Object.keys(options.variables).length > 0) {
-      await upsertVariables(tx, tenantId, id, options.variables);
+      await upsertVariables(
+        tx,
+        tenantId,
+        id,
+        options.variables,
+        classificationsFor(definitionRef),
+        cipher,
+      );
     }
     return id;
   });
-  return advanceInstance(sql, tenantId, instanceId, {
-    type: 'StartInstance',
-    now,
+  return advanceInstance(
+    sql,
+    tenantId,
     instanceId,
-    variables: options.variables ?? {},
-    ...(options.businessKey !== undefined ? { businessKey: options.businessKey } : {}),
-  });
+    {
+      type: 'StartInstance',
+      now,
+      instanceId,
+      variables: {},
+      ...(options.businessKey !== undefined ? { businessKey: options.businessKey } : {}),
+    },
+    { cipher },
+  );
 }
 
 /** Consulta de instância (GET /v1/instances/:id). */

@@ -50,6 +50,19 @@ describe('redaction do logger', () => {
     expect(output).not.toContain('12345');
   });
 
+  it('LEAK-FAIL (F2.6): payload/submission/result nunca vazam valor em log', () => {
+    const { lines, stream } = capture();
+    const logger = createLogger({ service: 'worker', destination: stream });
+    logger.info({ job: { payload: { cpf: '999.888.777-66', url: 'https://x' } } }, 'job');
+    logger.info({ submission: { email: 'ana@leak.test' } }, 'task');
+    logger.info({ result: { segredoDoNegocio: 42 } }, 'complete');
+    const output = lines.join('');
+    expect(output).not.toContain('999.888.777-66');
+    expect(output).not.toContain('ana@leak.test');
+    expect(output).not.toContain('segredoDoNegocio');
+    expect(output).toContain('[REDACTED]');
+  });
+
   it('mantém campos não sensíveis intactos', () => {
     const { lines, stream } = capture();
     const logger = createLogger({ service: 'api', destination: stream });

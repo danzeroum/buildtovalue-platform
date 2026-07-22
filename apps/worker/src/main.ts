@@ -1,13 +1,17 @@
+import { createServer } from 'node:http';
 import { loadConfig } from '@platform/config';
 import { signAccessToken } from '@platform/auth';
 import {
   createDb,
+  createEnvKeyProvider,
+  createFieldCipher,
   dispatchOutboxOnce,
   lockJobs,
   OUTBOX_CHANNEL,
+  runtimeDepths,
   sweepDueTimersOnce,
 } from '@platform/db';
-import { createLogger } from '@platform/observability';
+import { createLogger, createRuntimeMetrics } from '@platform/observability';
 import { createHandlerRegistry, type JobContext } from './handlers.js';
 import { createWaker, IDLE_BASE_MS, nextDelayMs } from './loop.js';
 
@@ -31,6 +35,27 @@ const registry = createHandlerRegistry({
   log: (message, fields) => logger.info(fields ?? {}, message),
 });
 const waker = createWaker();
+// Costura LGPD (D20): a varredura de timers avança instâncias que podem ter
+// variáveis sensitive — mesmo cipher da API.
+const cipher = config.FIELD_KEY_SECRET
+  ? createFieldCipher(createEnvKeyProvider(config.FIELD_KEY_SECRET))
+  : undefined;
+
+// Métricas 9.2: /metrics em porta própria do worker (Prometheus scrape).
+const metrics = createRuntimeMetrics();
+const metricsPort = Number(process.env.WORKER_METRICS_PORT ?? 9100);
+const metricsServer = createServer((req, res) => {
+  if (req.url === '/metrics') {
+    void metrics.registry.metrics().then((body: string) => {
+      res.setHeader('content-type', metrics.registry.contentType);
+      res.end(body);
+    });
+  } else {
+    res.statusCode = 404;
+    res.end();
+  }
+});
+metricsServer.listen(metricsPort);
 
 await sql`SELECT 1`;
 await listenSql.listen(OUTBOX_CHANNEL, (tenantId) => {
@@ -83,7 +108,9 @@ async function tick(): Promise<boolean> {
     const dispatched = await dispatchOutboxOnce(sql, tenantId, {
       onInfo: (row) => logger.debug({ effect: row.effect.type }, 'efeito informativo'),
     });
+    metrics.effectsDispatched.inc({ tenant: tenantId }, dispatched.processed);
     if (dispatched.deadLettered > 0) {
+      metrics.effectsDeadLettered.inc({ tenant: tenantId }, dispatched.deadLettered);
       logger.error({ tenantId, ...dispatched }, 'efeitos em dead-letter → incidents');
     }
     if (dispatched.processed > 0) {
@@ -91,11 +118,18 @@ async function tick(): Promise<boolean> {
       logger.info({ tenantId, ...dispatched }, 'outbox despachada');
     }
 
-    const swept = await sweepDueTimersOnce(sql, tenantId);
+    const swept = await sweepDueTimersOnce(sql, tenantId, { cipher });
     if (swept.fired > 0) {
       hadWork = true;
+      metrics.timersFired.inc({ tenant: tenantId }, swept.fired);
       logger.info({ tenantId, ...swept }, 'timers disparados');
     }
+
+    const depths = await runtimeDepths(sql, tenantId);
+    metrics.outboxDepth.set({ tenant: tenantId }, depths.outboxPending);
+    metrics.jobsAvailable.set({ tenant: tenantId }, depths.jobsAvailable);
+    metrics.timersLate.set({ tenant: tenantId }, depths.timersLate);
+    metrics.incidentsOpen.set({ tenant: tenantId }, depths.incidentsOpen);
 
     const jobs = await lockJobs(sql, tenantId, workerId, { leaseMs: 30_000 });
     for (const job of jobs) {
@@ -120,6 +154,7 @@ const shutdown = async (signal: string) => {
   running = false;
   logger.info({ signal }, 'encerrando worker');
   waker.wake();
+  metricsServer.close();
   await listenSql.end({ timeout: 5 });
   await sql.end({ timeout: 5 });
   process.exit(0);
