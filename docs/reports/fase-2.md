@@ -1,8 +1,16 @@
 # Relatório — Fase 2: Runtime confiável
 
-> **Data de fechamento:** 2026-07-22
-> **Status:** ENTREGUE — aguardando triagem do dono (PRs #5, #6 e a final
-> mergeadas em CI verde sob o regime de autonomia).
+> **Data de fechamento:** 2026-07-22 · **Tag:** `phase-2` (sobre `08c1c05`)
+> **Status:** ACEITA pelo dono em 22/07 — condicionantes da triagem
+> cumpridos na PR #8 (fechamento).
+>
+> **Errata (22/07, registrada a pedido da triagem):** este relatório saiu na
+> PR #7 citando `POST /v1/instances/:id/cancel` na tabela de aceite. O
+> contrato foi corrigido na **PR #8** para o sub-recurso
+> `POST /v1/instances/{id}/cancellation` com `reason` OBRIGATÓRIO fluindo
+> para `history_events` (ADENDO-01 §2.3). A tabela abaixo já reflete o
+> contrato corrigido; o arquivo de teste mantém o nome
+> `cancel.e2e.test.ts`. Histórico fiel > histórico reescrito.
 
 ## Aceite da fase (plano v1.2 §F2) — item a item
 
