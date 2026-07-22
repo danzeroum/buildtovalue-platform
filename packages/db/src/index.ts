@@ -85,6 +85,21 @@ export {
   type InstancePage,
 } from './runtime/instances.js';
 export {
+  assignUserTask,
+  claimUserTask,
+  completeUserTask,
+  getUserTask,
+  listUserTasks,
+  unclaimUserTask,
+  type AssignOutcome,
+  type ClaimOutcome,
+  type CompleteTaskOutcome,
+  type TaskViewer,
+  type UnclaimOutcome,
+  type UserTaskDetail,
+  type UserTaskListItem,
+} from './runtime/userTasks.js';
+export {
   listVariables,
   patchVariables,
   revealVariable,
