@@ -12,6 +12,14 @@ import {
   type InstancePage,
 } from './instances.js';
 import {
+  listVariables,
+  patchVariables,
+  revealVariable,
+  type PatchOutcome,
+  type RevealOutcome,
+  type VariableView,
+} from './variables.js';
+import {
   advanceInstance,
   createAndStartInstance,
   getInstance,
@@ -51,6 +59,21 @@ export interface PlatformRuntime {
   idempotency: {
     get(tenantId: string, key: string): Promise<IdempotentHit | undefined>;
     put(tenantId: string, key: string, requestHash: string, statusCode: number, response: unknown): Promise<void>;
+  };
+  variables: {
+    list(tenantId: string, instanceId: string): Promise<VariableView[]>;
+    reveal(
+      tenantId: string,
+      instanceId: string,
+      name: string,
+      context: { actor: string; reason: string },
+    ): Promise<RevealOutcome>;
+    patch(
+      tenantId: string,
+      instanceId: string,
+      set: Record<string, unknown>,
+      context: { actor: string },
+    ): Promise<PatchOutcome>;
   };
   /** Motivo OBRIGATÓRIO (ADENDO-01 §2.3) — vai para history_events. */
   cancel(tenantId: string, instanceId: string, reason: string): Promise<AdvanceOutcome>;
@@ -95,6 +118,17 @@ export function createRuntime(
       get: (tenantId, key) => getIdempotentResponse(sql, tenantId, key),
       put: (tenantId, key, requestHash, statusCode, response) =>
         putIdempotentResponse(sql, tenantId, key, requestHash, statusCode, response),
+    },
+    variables: {
+      list: (tenantId, instanceId) => listVariables(sql, tenantId, instanceId),
+      reveal: (tenantId, instanceId, name, context) => {
+        if (!cipher) {
+          throw new Error('reveal de sensitive exige KeyProvider configurado (D20)');
+        }
+        return revealVariable(sql, tenantId, instanceId, name, { ...context, cipher });
+      },
+      patch: (tenantId, instanceId, set, context) =>
+        patchVariables(sql, tenantId, instanceId, set, { ...context, cipher }),
     },
     cancel(tenantId, instanceId, reason) {
       // O engine emite CancelJob/CancelTimer/CloseUserTask para TODAS as
