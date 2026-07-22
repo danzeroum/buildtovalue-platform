@@ -54,6 +54,20 @@ verde, guarda pre-mode-aware passou — e o publish morreu com `ENEEDAUTH`:
 5. **Storybook do forms-react**: instalado como devDependency do monorepo
    público (peso de install considerável) — se preferir Storybook em repo
    separado ou docs estáticos, dá para mudar depois sem tocar no renderer.
+6. **(F2.1) Avaliador de condição v1 do host** = igualdade de literais
+   (`variavel = true|false|número|"texto"`); expressão fora disso retorna
+   erro → incidente (fail-fast D19, nunca rota silenciosa). É a costura
+   onde o S-FEEL da biblioteca entra na F3 junto do deploy de definições.
+7. **(F2.1) `example@1` embutido** no registro de definições (mesmo caminho
+   do `skeleton@1`) — vira o processo exemplo do aceite da F2; o deploy real
+   via `process_definitions` + lint D19 continua na F3.
+8. **(F2.1) Relógio da varredura de timers é o INJETADO do host** (não o
+   `now()` do banco): o mesmo instante decide o vencimento e carimba o
+   evento TimerFired — testes determinísticos, D2 coerente. A marcação
+   'fired' acontece na MESMA tx do avanço (sem janela de crash).
+9. **(F2.1) `seq` da história** = `revision × 100000 + effect_index` —
+   monotônico por instância com lacunas, determinístico sob re-dispatch
+   (o crash do worker reproduz o MESMO seq; UNIQUE de effect_key deduplica).
 
 ## 2.1 ~~ADR-0002~~ APROVADO (22/07) — teste do ledger vira entregável nomeado da F2
 
