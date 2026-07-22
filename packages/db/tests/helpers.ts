@@ -49,11 +49,15 @@ export async function createTestDatabase(
   try {
     await admin.unsafe(`CREATE DATABASE ${name}`);
     // Papel de migração separado do papel da API (gate 8.4). Senha dev/CI.
+    // EXCEPTION captura a corrida IF-NOT-EXISTS/CREATE entre suítes
+    // concorrentes (visto no CI: unique_violation em pg_authid).
     await admin.unsafe(`
       DO $$ BEGIN
         IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'app_migrator') THEN
           CREATE ROLE app_migrator LOGIN PASSWORD 'app_migrator_dev' NOBYPASSRLS CREATEROLE;
         END IF;
+      EXCEPTION WHEN duplicate_object OR unique_violation THEN
+        NULL; -- outra conexão criou o papel no meio — estado desejado atingido
       END $$;
     `);
     await admin.unsafe(`ALTER DATABASE ${name} OWNER TO app_migrator`);
