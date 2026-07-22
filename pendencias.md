@@ -112,6 +112,25 @@ phase-1` respondeu HTTP 403. A tag existe LOCALMENTE em `e940fe5` (a main
 mergeada da PR #4). Crie pela UI (Releases → "Create a new release"/tag
 `phase-1` sobre `e940fe5`) ou libere tag-push para a integração.
 
+## 2.4 ADENDO-02 (22/07) — registros mandados pela sua mensagem
+
+- **D26 — critério de lançamento REVISADO:** a v1 passa a ser F3 + F-AG
+  (agentes/squads) + Gate de Piloto. **Lacuna corrigida:** agentes e squads
+  não constavam do plano v1.2 até 22/07 — o ADENDO-02 é o documento
+  governante da frente (D26–D31 + aceites nomeados + 3 itens novos no gate).
+- **AG-1 JÁ ESTAVA ENTREGUE quando o ADENDO-02 chegou:** o Handoff 22
+  (SL-1..SL-13) foi implementado e mergeado na main do bpmn nesta mesma
+  data (PRs #163/#164), com RECONCILIACAO.md preenchida (11/11 critérios ✅)
+  e o trem `-next` publicado já contendo a Squad Lane. O caminho crítico da
+  F-AG encurtou: próximo passo é a proposta de contrato da AG-2 (após o
+  fase-3.md). Checkpoint detalhado enviado em 22/07.
+- **Retry de dead-letter (leva 5):** `POST /v1/incidents/{id}/retry`
+  re-arma jobs failed; efeito em dead-letter NÃO é re-enfileirável na v1 —
+  a fila é efêmera e o payload do efeito não é guardado no incidente.
+  Re-enfileirar exige coluna nova em `incidents` (payload) = migração =
+  GATE. Candidata a entrar na migração da AG-2. A rota responde 409
+  honesto apontando /resolution.
+
 ## 3. Registro de fluxo (sem ação sua)
 
 - **~~Follow-up bpmn~~ RESOLVIDO (PR bpmn#169, mergeada 22/07):**
