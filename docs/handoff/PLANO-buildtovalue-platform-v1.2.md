@@ -299,6 +299,12 @@ relatório.
 4. `simulation` → host em memória; **corpus de equivalência FILTRADO ao subconjunto v1**
    (fixtures complexas com skip explícito `todo:F5`); cada fixture equivalente gera fixture de
    replay (D6); comparação 100% automatizada (canonicalJsonExact) — zero intervenção humana.
+   > **Nota registrada no aceite da F0b.4 (2026-07-22):** a refatoração completa do
+   > `simulation` para HOST do engine migra para a **F5** (junto da paridade semântica —
+   > OR, eventos, compensação etc.). Até lá os dois pacotes COEXISTEM e o **gate de
+   > equivalência é a guarda da fonte única**: toda extensão do engine DEVE ampliar o
+   > gate na mesma mudança. Coexistência COM guarda ≠ a coexistência rejeitada no
+   > Anexo C item 2 (que veta duas semânticas SEM verificação cruzada).
 5. **`@buildtovalue/forms` mínimo em formato definitivo:** text, textarea, number, date,
    select, radio, checkbox; `validation`/`visibleWhen` em S-FEEL; `dataClassification`
    obrigatório; `defaultValue`. Extras por minors.
@@ -637,6 +643,12 @@ e quebra o `verify()` existente.
 1. **Adiar RLS / filtros manuais.** Rejeitado (retrofit caro; RLS na 0001 custa horas). (D7)
 2. **Conviver com duas semânticas de tokens.** Rejeitado (engine é extração; duplicação é a
    classe de bug mais cara — achado B4 do repo). (D10)
+   > **Precisão registrada no aceite da F0b.4 (2026-07-22):** o que está rejeitado é
+   > coexistência SEM verificação cruzada. O estado transitório vigente — `simulation` e
+   > `engine` coexistindo sob o GATE DE EQUIVALÊNCIA (igualdade nos pontos de pausa +
+   > replay byte-a-byte, interpretação oficial do D10) — é aceito até a F5, quando o
+   > `simulation` é refatorado para host do engine. Regra operacional: extensão do engine
+   > sem ampliação correspondente do gate não passa em revisão.
 3. **Formulários em formato placeholder (RJSF como FORMATO).** Rejeitado — schema é artefato
    persistido/versionado. Nota v1.2: usar biblioteca pronta como EDITOR do nosso schema (F3.3)
    é permitido e recomendado; o que é proibido é formato provisório persistido.
