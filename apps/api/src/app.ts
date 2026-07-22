@@ -4,7 +4,7 @@ import { PROBLEM_TYPES, type Problem } from '@platform/api-contracts';
 import { InvalidTokenError, verifyAccessToken, type AccessClaims, type Permission } from '@platform/auth';
 import { hasPermission } from '@platform/auth';
 import type { AppConfig } from '@platform/config';
-import type { PlatformRuntime, RefreshTokenRepository, UserRepository } from '@platform/db';
+import type { PlatformRegistry, PlatformRuntime, RefreshTokenRepository, UserRepository } from '@platform/db';
 import { createLogger, createMetrics, type Logger } from '@platform/observability';
 import { randomUUID } from 'node:crypto';
 import Fastify, {
@@ -26,6 +26,7 @@ import {
 } from 'fastify-type-provider-zod';
 import { registerAuthRoutes } from './routes/auth.js';
 import { registerHealthRoutes } from './routes/health.js';
+import { registerDefinitionRoutes } from './routes/definitions.js';
 import { registerRuntimeRoutes } from './routes/runtime.js';
 
 /**
@@ -40,6 +41,7 @@ export interface ApiDeps {
   dbReady: () => Promise<boolean>;
   /** Runtime do walking skeleton (instances/jobs); ausente em testes de auth puros. */
   runtime?: PlatformRuntime;
+  registry?: PlatformRegistry;
   logger?: Logger;
 }
 
@@ -208,6 +210,7 @@ export async function buildApp(deps: ApiDeps): Promise<ZodApp> {
   registerHealthRoutes(app, deps, metrics);
   registerAuthRoutes(app, deps);
   registerRuntimeRoutes(app, deps);
+  registerDefinitionRoutes(app, deps);
 
   app.get('/v1/openapi.json', { schema: { hide: true } }, async () => app.swagger());
 

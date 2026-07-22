@@ -1,8 +1,10 @@
 import { loadConfig } from '@platform/config';
+import { ENGINE_VERSION } from '@buildtovalue/engine';
 import {
   createDb,
   createEnvKeyProvider,
   createRefreshTokenRepository,
+  createRegistry,
   createRuntime,
   createUserRepository,
 } from '@platform/db';
@@ -21,6 +23,7 @@ const app = await buildApp({
   users: createUserRepository(sql),
   refreshTokens: createRefreshTokenRepository(sql),
   runtime: createRuntime(sql, undefined, { keyProvider }),
+  registry: createRegistry(sql, ENGINE_VERSION),
   dbReady: async () => {
     await sql`SELECT 1`;
     return true;

@@ -13,6 +13,7 @@ import {
   SKELETON_DEFINITION_REF,
   type DataClassification,
 } from './definitions.js';
+import { classificationsForRef, engineForRef } from '../registry/store.js';
 import { insertEffects, OUTBOX_CHANNEL, type OutboxEffect } from './outbox.js';
 
 export interface InstanceRow {
@@ -177,7 +178,10 @@ export async function advanceInstance(
       FROM instances WHERE id = ${instanceId} FOR UPDATE`;
     const row = rows[0];
     if (!row) return { ok: false, reason: 'notFound', message: `instância ${instanceId} não existe` };
-    const engine = engineFor(row.definition_ref);
+    // Embutidas (skeleton@1/example@1) primeiro; depois o REGISTRY (F3.1) —
+    // cache por (tenant, ref), definições imutáveis nunca ficam stale.
+    const engine =
+      engineFor(row.definition_ref) ?? (await engineForRef(sql, tenantId, row.definition_ref));
     if (!engine) {
       return { ok: false, reason: 'unknownDefinition', message: `definição ${row.definition_ref} desconhecida` };
     }
@@ -234,7 +238,11 @@ export async function advanceInstance(
     }
     // D13: o engine nunca devolve variáveis — quem escreve é o HOST, aqui,
     // a partir do que o EVENTO trouxe (result do job / submission da task).
-    const classifications = classificationsFor(row.definition_ref);
+    const embedded = classificationsFor(row.definition_ref);
+    const classifications =
+      Object.keys(embedded).length > 0
+        ? embedded
+        : await classificationsForRef(sql, tenantId, row.definition_ref);
     if (event.type === 'JobCompleted' && event.result) {
       await upsertVariables(tx, tenantId, instanceId, event.result as Record<string, unknown>, classifications, hooks.cipher);
     } else if (event.type === 'UserTaskCompleted') {
@@ -273,11 +281,16 @@ export async function createAndStartInstance(
   cipher?: FieldCipher,
 ): Promise<AdvanceOutcome> {
   const definitionRef = options.definitionRef ?? SKELETON_DEFINITION_REF;
-  const engine = engineFor(definitionRef);
+  const engine = engineFor(definitionRef) ?? (await engineForRef(sql, tenantId, definitionRef));
   if (!engine) {
     return { ok: false, reason: 'unknownDefinition', message: `definição ${definitionRef} desconhecida` };
   }
   const initial = engine.initialState({ registryRef: definitionRef, bpmnVersion: '1' });
+  const embeddedClassifications = classificationsFor(definitionRef);
+  const classifications =
+    Object.keys(embeddedClassifications).length > 0
+      ? embeddedClassifications
+      : await classificationsForRef(sql, tenantId, definitionRef);
   const instanceId = await withTenant(sql, tenantId, async (tx) => {
     const [row] = await tx`
       INSERT INTO instances (tenant_id, definition_ref, engine_version,
@@ -295,7 +308,7 @@ export async function createAndStartInstance(
         tenantId,
         id,
         options.variables,
-        classificationsFor(definitionRef),
+        classifications,
         cipher,
       );
     }

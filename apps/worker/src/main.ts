@@ -10,6 +10,7 @@ import {
   OUTBOX_CHANNEL,
   runtimeDepths,
   sweepDueTimersOnce,
+  sweepIdempotencyKeys,
 } from '@platform/db';
 import { createLogger, createRuntimeMetrics } from '@platform/observability';
 import { createHandlerRegistry, type JobContext } from './handlers.js';
@@ -102,9 +103,20 @@ async function conclude(
   }
 }
 
+// Limpeza das idempotency_keys (retenção 24h) em cadência espaçada — não a
+// cada tick.
+let lastIdempotencySweep = 0;
+const IDEMPOTENCY_SWEEP_INTERVAL_MS = 10 * 60_000;
+
 async function tick(): Promise<boolean> {
   let hadWork = false;
+  const sweepKeys = Date.now() - lastIdempotencySweep > IDEMPOTENCY_SWEEP_INTERVAL_MS;
+  if (sweepKeys) lastIdempotencySweep = Date.now();
   for (const tenantId of await tenantsWithWork()) {
+    if (sweepKeys) {
+      const cleaned = await sweepIdempotencyKeys(sql, tenantId);
+      if (cleaned.deleted > 0) logger.info({ tenantId, ...cleaned }, 'idempotency_keys expiradas removidas');
+    }
     const dispatched = await dispatchOutboxOnce(sql, tenantId, {
       onInfo: (row) => logger.debug({ effect: row.effect.type }, 'efeito informativo'),
     });

@@ -1,0 +1,312 @@
+import { createEngine, type Engine } from '@buildtovalue/engine';
+import type { BpmnDiagram } from '@buildtovalue/core';
+import { validateFormSchema, type FormSchema, type SchemaIssue } from '@buildtovalue/forms';
+import type { Sql } from '../client.js';
+import { withTenant } from '../tenancy.js';
+import { conditionEvaluator } from '../runtime/definitions.js';
+import { lintBlocks, lintDiagram, type LintIssue } from './lint.js';
+
+/**
+ * Registry de definições (F3.1, shape /v1 §1/§2b): deploy IMUTÁVEL com lint
+ * no gate — erro = nada gravado. Versões sobem por nome; `registry_ref` =
+ * `name@version` é o que instances.definition_ref aponta.
+ */
+export interface ProcessDefinitionRow {
+  id: string;
+  name: string;
+  version: number;
+  registry_ref: string;
+  diagram: BpmnDiagram;
+  engine_version: string;
+  bpmn_version: string;
+  created_at: string;
+}
+
+export interface FormDefinitionRow {
+  id: string;
+  form_id: string;
+  version: number;
+  ref: string;
+  schema: FormSchema;
+  created_at: string;
+}
+
+export type DeployProcessOutcome =
+  | { ok: true; definition: ProcessDefinitionRow; warnings: LintIssue[] }
+  | { ok: false; issues: LintIssue[] };
+
+export type DeployFormOutcome =
+  | { ok: true; form: FormDefinitionRow }
+  | { ok: false; issues: SchemaIssue[] };
+
+export async function deployProcessDefinition(
+  sql: Sql,
+  tenantId: string,
+  input: { name: string; diagram: BpmnDiagram; engineVersion: string; createdBy?: string },
+): Promise<DeployProcessOutcome> {
+  const issues = lintDiagram(input.diagram);
+  return withTenant(sql, tenantId, async (tx) => {
+    // formRefs do diagrama precisam EXISTIR no registry de forms (§2:
+    // EXEC_FORM_REF_MISSING resolve contra o registry, não só presença).
+    const formRefs = Object.values(input.diagram.nodes)
+      .filter((n) => n.type === 'userTask' && typeof n.properties.formRef === 'string')
+      .map((n) => ({ elementId: n.id, ref: n.properties.formRef as string }));
+    for (const { elementId, ref } of formRefs) {
+      const [found] = await tx`SELECT id FROM form_definitions WHERE ref = ${ref}`;
+      if (!found) {
+        issues.push({
+          code: 'EXEC_FORM_REF_MISSING',
+          severity: 'error',
+          elementId,
+          message: `formRef '${ref}' não existe no registry de formulários`,
+        });
+      }
+    }
+    if (lintBlocks(issues)) return { ok: false, issues };
+
+    // versão nova por nome; a UNIQUE (tenant, name, version) segura corrida.
+    const [row] = await tx<ProcessDefinitionRow[]>`
+      INSERT INTO process_definitions
+        (tenant_id, name, version, registry_ref, diagram, engine_version, created_by)
+      SELECT ${tenantId}, ${input.name},
+             COALESCE(MAX(version), 0) + 1,
+             ${input.name} || '@' || (COALESCE(MAX(version), 0) + 1),
+             ${tx.json(input.diagram as never)}, ${input.engineVersion},
+             ${input.createdBy ?? null}
+      FROM process_definitions WHERE name = ${input.name}
+      RETURNING id, name, version, registry_ref, diagram, engine_version, bpmn_version, created_at`;
+    return { ok: true, definition: row, warnings: issues };
+  });
+}
+
+export async function deployFormDefinition(
+  sql: Sql,
+  tenantId: string,
+  input: { formId: string; schema: FormSchema; createdBy?: string },
+): Promise<DeployFormOutcome> {
+  if (input.schema.formId !== undefined && input.schema.formId !== input.formId) {
+    return {
+      ok: false,
+      issues: [
+        {
+          code: 'SCHEMA_FORM_ID',
+          message: `formId do corpo ('${input.formId}') diverge do schema ('${String(input.schema.formId)}')`,
+        },
+      ],
+    };
+  }
+  return withTenant(sql, tenantId, async (tx) => {
+    // O REGISTRY atribui a versão (imutabilidade: re-deploy = versão nova) e
+    // a carimba no schema ANTES do lint — identidade formId@versão é única.
+    const [next] = await tx`
+      SELECT COALESCE(MAX(version), 0) + 1 AS version
+      FROM form_definitions WHERE form_id = ${input.formId}`;
+    const version = Number(next.version);
+    const candidate: FormSchema = { ...input.schema, formId: input.formId, version };
+    // Formato da F0b.5 é o GATE: `value` reservada, dataClassification
+    // obrigatório por campo — validateFormSchema é o MESMO lint do editor.
+    const issues = validateFormSchema(candidate);
+    if (issues.length > 0) return { ok: false, issues };
+    const [row] = await tx<FormDefinitionRow[]>`
+      INSERT INTO form_definitions (tenant_id, form_id, version, ref, schema, created_by)
+      VALUES (${tenantId}, ${input.formId}, ${version},
+              ${`${input.formId}@${version}`},
+              ${tx.json(candidate as never)}, ${input.createdBy ?? null})
+      RETURNING id, form_id, version, ref, schema, created_at`;
+    return { ok: true, form: row };
+  });
+}
+
+export async function getProcessDefinition(
+  sql: Sql,
+  tenantId: string,
+  idOrRef: string,
+): Promise<ProcessDefinitionRow | undefined> {
+  return withTenant(sql, tenantId, async (tx) => {
+    const rows = await tx<ProcessDefinitionRow[]>`
+      SELECT id, name, version, registry_ref, diagram, engine_version, bpmn_version, created_at
+      FROM process_definitions
+      WHERE registry_ref = ${idOrRef}
+         OR id::text = ${idOrRef}`;
+    return rows[0];
+  });
+}
+
+export async function getFormDefinitionByRef(
+  sql: Sql,
+  tenantId: string,
+  ref: string,
+): Promise<FormDefinitionRow | undefined> {
+  return withTenant(sql, tenantId, async (tx) => {
+    const rows = await tx<FormDefinitionRow[]>`
+      SELECT id, form_id, version, ref, schema, created_at
+      FROM form_definitions WHERE ref = ${ref}`;
+    return rows[0];
+  });
+}
+
+export interface Page<T> {
+  items: T[];
+  nextCursor: string | null;
+}
+
+/** Cursor opaco (§0): base64 de `${created_at}|${id}` — ordem estável. */
+function encodeCursor(createdAt: string, id: string): string {
+  return Buffer.from(`${createdAt}|${id}`).toString('base64url');
+}
+function decodeCursor(cursor: string): { createdAt: string; id: string } | undefined {
+  const raw = Buffer.from(cursor, 'base64url').toString('utf8');
+  const at = raw.lastIndexOf('|');
+  if (at <= 0) return undefined;
+  return { createdAt: raw.slice(0, at), id: raw.slice(at + 1) };
+}
+
+export async function listProcessDefinitions(
+  sql: Sql,
+  tenantId: string,
+  options: { cursor?: string; limit?: number; name?: string } = {},
+): Promise<Page<Omit<ProcessDefinitionRow, 'diagram'>>> {
+  const limit = Math.min(Math.max(options.limit ?? 20, 1), 100);
+  const after = options.cursor ? decodeCursor(options.cursor) : undefined;
+  return withTenant(sql, tenantId, async (tx) => {
+    const rows = await tx`
+      SELECT id, name, version, registry_ref, engine_version, bpmn_version, created_at
+      FROM process_definitions
+      WHERE (${options.name ?? null}::text IS NULL OR name = ${options.name ?? null})
+        AND (${after?.createdAt ?? null}::timestamptz IS NULL
+             OR (created_at, id) > (${after?.createdAt ?? null}::timestamptz, ${after?.id ?? null}::uuid))
+      ORDER BY created_at, id
+      LIMIT ${limit + 1}`;
+    const items = rows.slice(0, limit) as unknown as Omit<ProcessDefinitionRow, 'diagram'>[];
+    const nextCursor =
+      rows.length > limit
+        ? encodeCursor(String(rows[limit - 1].created_at), String(rows[limit - 1].id))
+        : null;
+    return { items, nextCursor };
+  });
+}
+
+export async function listFormDefinitions(
+  sql: Sql,
+  tenantId: string,
+  options: { cursor?: string; limit?: number; formId?: string } = {},
+): Promise<Page<Omit<FormDefinitionRow, 'schema'>>> {
+  const limit = Math.min(Math.max(options.limit ?? 20, 1), 100);
+  const after = options.cursor ? decodeCursor(options.cursor) : undefined;
+  return withTenant(sql, tenantId, async (tx) => {
+    const rows = await tx`
+      SELECT id, form_id, version, ref, created_at
+      FROM form_definitions
+      WHERE (${options.formId ?? null}::text IS NULL OR form_id = ${options.formId ?? null})
+        AND (${after?.createdAt ?? null}::timestamptz IS NULL
+             OR (created_at, id) > (${after?.createdAt ?? null}::timestamptz, ${after?.id ?? null}::uuid))
+      ORDER BY created_at, id
+      LIMIT ${limit + 1}`;
+    const items = rows.slice(0, limit) as unknown as Omit<FormDefinitionRow, 'schema'>[];
+    const nextCursor =
+      rows.length > limit
+        ? encodeCursor(String(rows[limit - 1].created_at), String(rows[limit - 1].id))
+        : null;
+    return { items, nextCursor };
+  });
+}
+
+/** Fachada do registry consumida pela API (mesmo padrão do PlatformRuntime). */
+export interface PlatformRegistry {
+  lintProcess(diagram: BpmnDiagram): LintIssue[];
+  deployProcess(
+    tenantId: string,
+    input: { name: string; diagram: BpmnDiagram; createdBy?: string },
+  ): Promise<DeployProcessOutcome>;
+  getProcess(tenantId: string, idOrRef: string): Promise<ProcessDefinitionRow | undefined>;
+  listProcesses(
+    tenantId: string,
+    options?: { cursor?: string; limit?: number; name?: string },
+  ): Promise<Page<Omit<ProcessDefinitionRow, 'diagram'>>>;
+  lintForm(schema: FormSchema): SchemaIssue[];
+  deployForm(
+    tenantId: string,
+    input: { formId: string; schema: FormSchema; createdBy?: string },
+  ): Promise<DeployFormOutcome>;
+  getFormByRef(tenantId: string, ref: string): Promise<FormDefinitionRow | undefined>;
+  listForms(
+    tenantId: string,
+    options?: { cursor?: string; limit?: number; formId?: string },
+  ): Promise<Page<Omit<FormDefinitionRow, 'schema'>>>;
+}
+
+export function createRegistry(sql: Sql, engineVersion: string): PlatformRegistry {
+  return {
+    lintProcess: (diagram) => lintDiagram(diagram),
+    deployProcess: (tenantId, input) =>
+      deployProcessDefinition(sql, tenantId, { ...input, engineVersion }),
+    getProcess: (tenantId, idOrRef) => getProcessDefinition(sql, tenantId, idOrRef),
+    listProcesses: (tenantId, options) => listProcessDefinitions(sql, tenantId, options),
+    lintForm: (schema) => validateFormSchema(schema),
+    deployForm: (tenantId, input) => deployFormDefinition(sql, tenantId, input),
+    getFormByRef: (tenantId, ref) => getFormDefinitionByRef(sql, tenantId, ref),
+    listForms: (tenantId, options) => listFormDefinitions(sql, tenantId, options),
+  };
+}
+
+/**
+ * Engine resolvido do REGISTRY (substitui as definições embutidas para refs
+ * deployadas): cache por (tenant, ref) — definições são IMUTÁVEIS, o cache
+ * nunca fica stale. skeleton@1/example@1 embutidas continuam válidas
+ * (fixtures de teste e compat F1/F2).
+ */
+const registryEngines = new Map<string, Engine>();
+const registryClassifications = new Map<string, Record<string, 'none' | 'personal' | 'sensitive'>>();
+
+/**
+ * Classificações DECLARADAS de uma definição deployada: união dos
+ * `dataClassification` por campo dos formulários referenciados no diagrama
+ * (a fonte é o schema publicado — F0b.5 tornou a declaração obrigatória).
+ * É o que liga o deploy real à costura LGPD da F2 (cifra de `sensitive`).
+ * O quarteto dos forms (public/internal/personal/sensitive) mapeia para o
+ * trio de ARMAZENAMENTO do runtime: public/internal → 'none' (não-pessoal).
+ */
+export async function classificationsForRef(
+  sql: Sql,
+  tenantId: string,
+  registryRef: string,
+): Promise<Record<string, 'none' | 'personal' | 'sensitive'>> {
+  const cacheKey = `${tenantId}:${registryRef}`;
+  const cached = registryClassifications.get(cacheKey);
+  if (cached) return cached;
+  const definition = await getProcessDefinition(sql, tenantId, registryRef);
+  if (!definition) return {};
+  const map: Record<string, 'none' | 'personal' | 'sensitive'> = {};
+  const formRefs = Object.values(definition.diagram.nodes)
+    .filter((n) => n.type === 'userTask' && typeof n.properties.formRef === 'string')
+    .map((n) => n.properties.formRef as string);
+  for (const ref of formRefs) {
+    const form = await getFormDefinitionByRef(sql, tenantId, ref);
+    if (!form) continue;
+    for (const field of form.schema.fields) {
+      map[field.key] =
+        field.dataClassification === 'sensitive'
+          ? 'sensitive'
+          : field.dataClassification === 'personal'
+            ? 'personal'
+            : 'none';
+    }
+  }
+  registryClassifications.set(cacheKey, map);
+  return map;
+}
+
+export async function engineForRef(
+  sql: Sql,
+  tenantId: string,
+  registryRef: string,
+): Promise<Engine | undefined> {
+  const cacheKey = `${tenantId}:${registryRef}`;
+  const cached = registryEngines.get(cacheKey);
+  if (cached) return cached;
+  const definition = await getProcessDefinition(sql, tenantId, registryRef);
+  if (!definition) return undefined;
+  const engine = createEngine(definition.diagram, { conditions: conditionEvaluator });
+  registryEngines.set(cacheKey, engine);
+  return engine;
+}

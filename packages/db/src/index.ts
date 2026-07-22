@@ -30,6 +30,24 @@ export {
   type KeyProvider,
 } from './crypto/fieldCipher.js';
 export { runtimeDepths, type RuntimeDepths } from './runtime/depths.js';
+export { lintBlocks, lintDiagram, type LintCode, type LintIssue } from './registry/lint.js';
+export {
+  classificationsForRef,
+  createRegistry,
+  deployFormDefinition,
+  deployProcessDefinition,
+  engineForRef,
+  getFormDefinitionByRef,
+  getProcessDefinition,
+  listFormDefinitions,
+  listProcessDefinitions,
+  type DeployFormOutcome,
+  type DeployProcessOutcome,
+  type FormDefinitionRow,
+  type Page,
+  type PlatformRegistry,
+  type ProcessDefinitionRow,
+} from './registry/store.js';
 export {
   advanceInstance,
   createAndStartInstance,
@@ -52,6 +70,10 @@ export {
   type OutboxRow,
 } from './runtime/outbox.js';
 export { sweepDueTimersOnce, type TimerSweepResult } from './runtime/timers.js';
+export {
+  IDEMPOTENCY_RETENTION_HOURS,
+  sweepIdempotencyKeys,
+} from './runtime/idempotency.js';
 export {
   completeJob,
   failJob,
