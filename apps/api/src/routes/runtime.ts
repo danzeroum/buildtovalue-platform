@@ -95,6 +95,38 @@ export function registerRuntimeRoutes(rawApp: ZodApp, deps: ApiDeps): void {
     },
   );
 
+  app.post(
+    '/v1/instances/:id/cancel',
+    {
+      preHandler: [app.authenticate, app.requirePermission('operate:act')],
+      schema: {
+        tags: ['instances'],
+        summary: 'Cancela uma instância — o engine fecha TODAS as esperas',
+        security: [{ bearerAuth: [] }],
+        params: z.object({ id: z.string().uuid() }),
+        body: z.object({ reason: z.string().max(500).optional() }),
+        response: { 200: instanceResponseSchema, 404: problemSchema, 409: problemSchema },
+      },
+    },
+    async (req, reply) => {
+      const outcome = await runtime.cancel(req.auth!.tenantId, req.params.id, req.body.reason);
+      if (!outcome.ok) {
+        if (outcome.reason === 'notFound') {
+          return problem(reply, 404, PROBLEM_TYPES.notFound, 'Instância não encontrada', String(req.id));
+        }
+        // alreadyClosed/invalidTransition/stateTooOld: estado não permite
+        return problem(reply, 409, PROBLEM_TYPES.conflict, 'Cancelamento recusado', String(req.id), outcome.message);
+      }
+      return {
+        id: outcome.instance.id,
+        definitionRef: outcome.instance.definition_ref,
+        status: outcome.instance.status as 'cancelled',
+        revision: outcome.instance.revision,
+        businessKey: outcome.instance.business_key,
+      };
+    },
+  );
+
   const jobConclusionBody = z.object({ lockToken: z.string().uuid() });
 
   app.post(

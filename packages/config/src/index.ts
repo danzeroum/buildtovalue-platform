@@ -18,6 +18,10 @@ const envSchema = z.object({
   DATABASE_MIGRATION_URL: z.string().url().startsWith('postgres').optional(),
 
   JWT_SECRET: z.string().min(32, 'JWT_SECRET precisa de >= 32 caracteres'),
+  /** Segredo do KeyProvider de DEV/CI (D20) para campos `sensitive`.
+   * Ausente = sem cifra: gravar um sensitive falha alto. Produção usa KMS
+   * (F5) — chave estática em produção REPROVA o gate de piloto (8.4). */
+  FIELD_KEY_SECRET: z.string().min(16).optional(),
   JWT_ACCESS_TTL_SECONDS: z.coerce.number().int().min(60).default(900),
   JWT_REFRESH_TTL_SECONDS: z.coerce.number().int().min(3600).default(2_592_000),
 

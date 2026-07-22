@@ -1,4 +1,4 @@
-import { collectDefaultMetrics, Counter, Histogram, Registry } from 'prom-client';
+import { collectDefaultMetrics, Counter, Gauge, Histogram, Registry } from 'prom-client';
 
 /**
  * Métricas Prometheus da plataforma (9.2 do plano). Na F1 nascem as básicas de
@@ -10,6 +10,37 @@ export interface PlatformMetrics {
   registry: Registry;
   httpRequestDuration: Histogram<'method' | 'route' | 'status'>;
   httpRequestsTotal: Counter<'method' | 'route' | 'status'>;
+}
+
+/** Métricas do RUNTIME (9.2) — publicadas pelo worker a cada tick. */
+export interface RuntimeMetrics {
+  registry: Registry;
+  outboxDepth: Gauge<'tenant'>;
+  jobsAvailable: Gauge<'tenant'>;
+  timersLate: Gauge<'tenant'>;
+  incidentsOpen: Gauge<'tenant'>;
+  effectsDispatched: Counter<'tenant'>;
+  effectsDeadLettered: Counter<'tenant'>;
+  timersFired: Counter<'tenant'>;
+}
+
+export function createRuntimeMetrics(): RuntimeMetrics {
+  const registry = new Registry();
+  collectDefaultMetrics({ register: registry });
+  const gauge = (name: string, help: string) =>
+    new Gauge({ name, help, labelNames: ['tenant'] as const, registers: [registry] });
+  const counter = (name: string, help: string) =>
+    new Counter({ name, help, labelNames: ['tenant'] as const, registers: [registry] });
+  return {
+    registry,
+    outboxDepth: gauge('runtime_outbox_depth', 'Efeitos pendentes na outbox'),
+    jobsAvailable: gauge('runtime_jobs_available', 'Jobs aguardando lock'),
+    timersLate: gauge('runtime_timers_late', 'Timers vencidos ha mais de 1min ainda armados'),
+    incidentsOpen: gauge('runtime_incidents_open', 'Incidentes abertos'),
+    effectsDispatched: counter('runtime_effects_dispatched_total', 'Efeitos aplicados pelo dispatcher'),
+    effectsDeadLettered: counter('runtime_effects_dead_lettered_total', 'Efeitos em dead-letter'),
+    timersFired: counter('runtime_timers_fired_total', 'Timers disparados'),
+  };
 }
 
 export function createMetrics(): PlatformMetrics {

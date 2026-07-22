@@ -85,6 +85,26 @@ export const conditionEvaluator: ConditionEvaluator = {
   },
 };
 
+/** Classificação de dados dos forms (@buildtovalue/forms). */
+export type DataClassification = 'none' | 'personal' | 'sensitive';
+
+/**
+ * Classificações DECLARADAS por definição (costura LGPD, F2.6): na F3 isto
+ * vem do formulário/definição publicados no registry; na F2 as definições
+ * embutidas declaram aqui. `sensitive` é cifrada em repouso pelo
+ * FieldCipher (D20) e NÃO é buscável por conteúdo; `personal` fica em claro
+ * nas tabelas mutáveis e é alvo de anonimização no apagamento (ADR-0002).
+ */
+const CLASSIFICATIONS: Record<string, Record<string, DataClassification>> = {
+  [EXAMPLE_DEFINITION_REF]: { cpf: 'sensitive', email: 'personal' },
+};
+
+export function classificationsFor(
+  definitionRef: string,
+): Record<string, DataClassification> {
+  return CLASSIFICATIONS[definitionRef] ?? {};
+}
+
 const engines = new Map<string, Engine>();
 
 /** Engine (kernel PUBLICADO pinado exato, D5) para uma definition_ref. */

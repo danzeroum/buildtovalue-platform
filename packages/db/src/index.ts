@@ -15,11 +15,21 @@ export {
 } from './repositories/refreshTokens.js';
 export { effectKey } from './runtime/effectKey.js';
 export {
+  classificationsFor,
   conditionEvaluator,
   engineFor,
   EXAMPLE_DEFINITION_REF,
   SKELETON_DEFINITION_REF,
+  type DataClassification,
 } from './runtime/definitions.js';
+export {
+  createEnvKeyProvider,
+  createFieldCipher,
+  isEncryptedField,
+  type FieldCipher,
+  type KeyProvider,
+} from './crypto/fieldCipher.js';
+export { runtimeDepths, type RuntimeDepths } from './runtime/depths.js';
 export {
   advanceInstance,
   createAndStartInstance,

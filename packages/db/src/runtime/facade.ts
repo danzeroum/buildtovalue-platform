@@ -1,4 +1,5 @@
 import type { Sql } from '../client.js';
+import { createFieldCipher, type KeyProvider } from '../crypto/fieldCipher.js';
 import {
   advanceInstance,
   createAndStartInstance,
@@ -47,10 +48,14 @@ export interface PlatformRuntime {
 export function createRuntime(
   sql: Sql,
   clock: () => string = () => new Date().toISOString(),
+  options: { keyProvider?: KeyProvider } = {},
 ): PlatformRuntime {
+  // Costura LGPD (F2.6): com KeyProvider, campos `sensitive` persistem
+  // cifrados (D20); sem ele, gravar um sensitive ABORTA (nunca plaintext).
+  const cipher = options.keyProvider ? createFieldCipher(options.keyProvider) : undefined;
   return {
-    createAndStart(tenantId, options) {
-      return createAndStartInstance(sql, tenantId, options, clock());
+    createAndStart(tenantId, opts) {
+      return createAndStartInstance(sql, tenantId, opts, clock(), cipher);
     },
     get(tenantId, instanceId) {
       return getInstance(sql, tenantId, instanceId);
@@ -59,12 +64,18 @@ export function createRuntime(
       // O engine emite CancelJob/CancelTimer/CloseUserTask para TODAS as
       // esperas abertas — o dispatcher fecha job/timer/task (aceite F2:
       // cancelamento fecha esperas).
-      return advanceInstance(sql, tenantId, instanceId, {
-        type: 'CancelInstance',
-        now: clock(),
-        variables: {},
-        ...(reason !== undefined ? { reason } : {}),
-      });
+      return advanceInstance(
+        sql,
+        tenantId,
+        instanceId,
+        {
+          type: 'CancelInstance',
+          now: clock(),
+          variables: {},
+          ...(reason !== undefined ? { reason } : {}),
+        },
+        { cipher },
+      );
     },
     async completeJob(tenantId, jobId, lockToken, now, result) {
       const conclusion = await completeJobRow(sql, tenantId, jobId, lockToken);
@@ -80,13 +91,19 @@ export function createRuntime(
                 : 'job não encontrado',
         };
       }
-      const advanced = await advanceInstance(sql, tenantId, conclusion.job.instance_id, {
-        type: 'JobCompleted',
-        now,
-        waitKey: conclusion.job.wait_key,
-        variables: {},
-        ...(result !== undefined ? { result } : {}),
-      });
+      const advanced = await advanceInstance(
+        sql,
+        tenantId,
+        conclusion.job.instance_id,
+        {
+          type: 'JobCompleted',
+          now,
+          waitKey: conclusion.job.wait_key,
+          variables: {},
+          ...(result !== undefined ? { result } : {}),
+        },
+        { cipher },
+      );
       if (!advanced.ok) return { ok: false, reason: advanced.reason, message: advanced.message };
       return { ok: true, instance: advanced.instance };
     },
@@ -102,13 +119,13 @@ export function createRuntime(
       if (conclusion.job.status === 'failed') {
         // Retries esgotados: o engine registra o incidente OPERACIONAL
         // (instância segue ativa; retry do operador re-dispara pela fila).
-        await advanceInstance(sql, tenantId, conclusion.job.instance_id, {
-          type: 'JobFailed',
-          now,
-          waitKey: conclusion.job.wait_key,
-          variables: {},
-          error,
-        });
+        await advanceInstance(
+          sql,
+          tenantId,
+          conclusion.job.instance_id,
+          { type: 'JobFailed', now, waitKey: conclusion.job.wait_key, variables: {}, error },
+          { cipher },
+        );
         return { ok: true, status: 'failed' };
       }
       return { ok: true, status: 'available' };
