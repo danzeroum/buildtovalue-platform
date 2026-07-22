@@ -18,11 +18,12 @@ import { buildApp, type ZodApp } from '../src/app.js';
 import { fakeDeps } from '../src/testing/fakes.js';
 
 /**
- * Cancelamento pelo CONTRATO PÚBLICO (aceite F2): POST /v1/instances/:id/cancel
+ * Cancelamento pelo CONTRATO PÚBLICO (aceite F2 + ADENDO-01 §2.3): sub-recurso
+ * POST /v1/instances/:id/cancellation com motivo OBRIGATÓRIO fluindo à história;
  * fecha TODAS as esperas — a task some, o timer não dispara — e cancelar de
  * novo é 409 problem+json.
  */
-describe('POST /v1/instances/:id/cancel (aceite F2)', () => {
+describe('POST /v1/instances/:id/cancellation (aceite F2 + ADENDO-01 §2.3)', () => {
   let db: TestDatabase;
   let sql: postgres.Sql;
   let app: ZodApp;
@@ -77,9 +78,18 @@ describe('POST /v1/instances/:id/cancel (aceite F2)', () => {
       if (r.processed === 0) break;
     }
 
+    // motivo é OBRIGATÓRIO (ADENDO-01 §2.3): sem reason = 400 de validação
+    const semMotivo = await app.inject({
+      method: 'POST',
+      url: `/v1/instances/${id}/cancellation`,
+      headers: auth,
+      payload: {},
+    });
+    expect(semMotivo.statusCode).toBe(400);
+
     const cancelled = await app.inject({
       method: 'POST',
-      url: `/v1/instances/${id}/cancel`,
+      url: `/v1/instances/${id}/cancellation`,
       headers: auth,
       payload: { reason: 'pedido do operador' },
     });
@@ -97,20 +107,26 @@ describe('POST /v1/instances/:id/cancel (aceite F2)', () => {
       tx`SELECT status FROM timers WHERE instance_id = ${id}`);
     expect(timer.status).toBe('cancelled'); // o timer NÃO dispara
 
+    // o motivo FLUI para a história (instanceCancelled → history_events)
+    const [cancelEvent] = await withTenant(sql, tenant, (tx) =>
+      tx`SELECT payload FROM history_events
+         WHERE instance_id = ${id} AND kind = 'instanceCancelled'`);
+    expect(cancelEvent.payload).toMatchObject({ reason: 'pedido do operador' });
+
     const again = await app.inject({
       method: 'POST',
-      url: `/v1/instances/${id}/cancel`,
+      url: `/v1/instances/${id}/cancellation`,
       headers: auth,
-      payload: {},
+      payload: { reason: 'de novo' },
     });
     expect(again.statusCode).toBe(409);
     expect(again.json().type).toContain('/problems/conflict');
 
     const missing = await app.inject({
       method: 'POST',
-      url: '/v1/instances/00000000-0000-0000-0000-000000000000/cancel',
+      url: '/v1/instances/00000000-0000-0000-0000-000000000000/cancellation',
       headers: auth,
-      payload: {},
+      payload: { reason: 'x' },
     });
     expect(missing.statusCode).toBe(404);
   });

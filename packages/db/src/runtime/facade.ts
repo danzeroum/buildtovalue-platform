@@ -28,7 +28,8 @@ export interface PlatformRuntime {
     options: { definitionRef?: string; businessKey?: string; variables?: Record<string, unknown> },
   ): Promise<AdvanceOutcome>;
   get(tenantId: string, instanceId: string): Promise<InstanceRow | undefined>;
-  cancel(tenantId: string, instanceId: string, reason?: string): Promise<AdvanceOutcome>;
+  /** Motivo OBRIGATÓRIO (ADENDO-01 §2.3) — vai para history_events. */
+  cancel(tenantId: string, instanceId: string, reason: string): Promise<AdvanceOutcome>;
   completeJob(
     tenantId: string,
     jobId: string,
@@ -68,12 +69,7 @@ export function createRuntime(
         sql,
         tenantId,
         instanceId,
-        {
-          type: 'CancelInstance',
-          now: clock(),
-          variables: {},
-          ...(reason !== undefined ? { reason } : {}),
-        },
+        { type: 'CancelInstance', now: clock(), variables: {}, reason },
         { cipher },
       );
     },

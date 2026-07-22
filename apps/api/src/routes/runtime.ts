@@ -95,16 +95,21 @@ export function registerRuntimeRoutes(rawApp: ZodApp, deps: ApiDeps): void {
     },
   );
 
+  // Sub-recurso de cancelamento (plano §6 + ADENDO-01 §2.3): motivo
+  // OBRIGATÓRIO, que flui para history_events (payload do instanceCancelled
+  // emitido pelo engine) — fecha o ciclo de auditoria do parecer.
   app.post(
-    '/v1/instances/:id/cancel',
+    '/v1/instances/:id/cancellation',
     {
       preHandler: [app.authenticate, app.requirePermission('operate:act')],
       schema: {
         tags: ['instances'],
-        summary: 'Cancela uma instância — o engine fecha TODAS as esperas',
+        summary: 'Cancela uma instância com motivo obrigatório — fecha TODAS as esperas',
         security: [{ bearerAuth: [] }],
         params: z.object({ id: z.string().uuid() }),
-        body: z.object({ reason: z.string().max(500).optional() }),
+        body: z.object({
+          reason: z.string().min(1).max(500).describe('Motivo do cancelamento — vai para o histórico'),
+        }),
         response: { 200: instanceResponseSchema, 404: problemSchema, 409: problemSchema },
       },
     },

@@ -96,9 +96,10 @@ mergeada da PR #4). Crie pela UI (Releases → "Create a new release"/tag
 
 ## 3. Registro de fluxo (sem ação sua)
 
-- **Follow-up bpmn (absorvido pela F2 — triagem 22/07):** ENGINE_VERSION
-  derivada do package.json NO BUILD (é o valor gravado por instância que
-  replay/StateMigrator usam — não pode divergir do pacote publicado).
+- **~~Follow-up bpmn~~ RESOLVIDO (PR bpmn#169, mergeada 22/07):**
+  ENGINE_VERSION derivada do package.json no build + no version-packages,
+  com teste de sincronia; corpus de replay regenerado localmente. A
+  correção viaja no próximo publish do trem -next.
 - **Absorvido pela F2 (triagem 22/07):** StateMigrator sai de stub, com o
   caso "state_schema_version antiga demais → incidente" no aceite.
 - **Follow-up infra:** smoke containerizado do compose.dev.yml em máquina
