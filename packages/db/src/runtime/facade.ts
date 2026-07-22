@@ -27,6 +27,21 @@ import {
   type InstanceRow,
 } from './advance.js';
 import {
+  assignUserTask,
+  claimUserTask,
+  completeUserTask,
+  getUserTask,
+  listUserTasks,
+  unclaimUserTask,
+  type AssignOutcome,
+  type ClaimOutcome,
+  type CompleteTaskOutcome,
+  type TaskViewer,
+  type UnclaimOutcome,
+  type UserTaskDetail,
+  type UserTaskListItem,
+} from './userTasks.js';
+import {
   completeJob as completeJobRow,
   failJob as failJobRow,
   listJobs,
@@ -66,6 +81,26 @@ export interface PlatformRuntime {
   idempotency: {
     get(tenantId: string, key: string): Promise<IdempotentHit | undefined>;
     put(tenantId: string, key: string, requestHash: string, statusCode: number, response: unknown): Promise<void>;
+  };
+  userTasks: {
+    list(
+      tenantId: string,
+      viewer: TaskViewer,
+      options?: { cursor?: string; limit?: number; status?: string; instanceId?: string; filter?: 'mine' | 'role' | 'unassigned' },
+    ): Promise<{ items: UserTaskListItem[]; nextCursor: string | null }>;
+    get(tenantId: string, taskId: string, viewer: TaskViewer): Promise<UserTaskDetail | undefined>;
+    claim(tenantId: string, taskId: string, user: string): Promise<ClaimOutcome>;
+    unclaim(tenantId: string, taskId: string, user: string): Promise<UnclaimOutcome>;
+    complete(
+      tenantId: string,
+      taskId: string,
+      input: { claimToken: string; submission: Record<string, unknown>; user: string },
+    ): Promise<CompleteTaskOutcome>;
+    assign(
+      tenantId: string,
+      taskId: string,
+      input: { assignee: string; reason: string; actor: string },
+    ): Promise<AssignOutcome>;
   };
   jobs: {
     lock(
@@ -136,6 +171,15 @@ export function createRuntime(
       get: (tenantId, key) => getIdempotentResponse(sql, tenantId, key),
       put: (tenantId, key, requestHash, statusCode, response) =>
         putIdempotentResponse(sql, tenantId, key, requestHash, statusCode, response),
+    },
+    userTasks: {
+      list: (tenantId, viewer, options) => listUserTasks(sql, tenantId, viewer, options),
+      get: (tenantId, taskId, viewer) => getUserTask(sql, tenantId, taskId, viewer),
+      claim: (tenantId, taskId, user) => claimUserTask(sql, tenantId, taskId, user),
+      unclaim: (tenantId, taskId, user) => unclaimUserTask(sql, tenantId, taskId, user),
+      complete: (tenantId, taskId, input) =>
+        completeUserTask(sql, tenantId, taskId, { ...input, now: clock() }, cipher),
+      assign: (tenantId, taskId, input) => assignUserTask(sql, tenantId, taskId, input),
     },
     jobs: {
       lock: (tenantId, workerId, options) => lockJobs(sql, tenantId, workerId, options),

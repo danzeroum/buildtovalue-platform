@@ -1,6 +1,7 @@
-import type { Sql, TransactionSql } from '../client.js';
+import type { Sql } from '../client.js';
 import { isEncryptedField, type FieldCipher } from '../crypto/fieldCipher.js';
 import { withTenant } from '../tenancy.js';
+import { insertAuditEvent } from './audit.js';
 import { classificationsFor, type DataClassification } from './definitions.js';
 import { classificationsForRef } from '../registry/store.js';
 
@@ -17,43 +18,6 @@ export interface VariableView {
   value?: unknown;
   masked?: true;
   updatedAt: string;
-}
-
-/**
- * Eventos de AUDITORIA do host na história: seq determinístico na faixa
- * reservada da revision vigente (base + 90000..99999 — o engine emite
- * dezenas de efeitos por avanço, nunca chega perto). O FOR UPDATE na
- * instância serializa o MAX+1; UNIQUE(instance_id, seq) é o guarda-corpo.
- */
-async function insertAuditEvent(
-  tx: TransactionSql,
-  tenantId: string,
-  instanceId: string,
-  kind: string,
-  payload: Record<string, unknown>,
-): Promise<void> {
-  const [instance] = await tx`
-    SELECT revision, engine_version FROM instances WHERE id = ${instanceId} FOR UPDATE`;
-  if (!instance) throw new Error(`instância ${instanceId} não existe`);
-  const base = (instance.revision as number) * 100_000 + 90_000;
-  const ceiling = (instance.revision as number) * 100_000 + 100_000;
-  const [next] = await tx`
-    SELECT COALESCE(MAX(seq), ${base - 1}) + 1 AS seq
-    FROM history_events
-    WHERE instance_id = ${instanceId} AND seq >= ${base} AND seq < ${ceiling}`;
-  if (Number(next.seq) >= ceiling) {
-    // GUARDA EXPLÍCITA (triagem 22/07): estourar a faixa de auditoria da
-    // revision (10.000 eventos sem avanço do engine) é anomalia operacional
-    // — erro alto, NUNCA overflow silencioso invadindo a revision seguinte.
-    throw new Error(
-      `faixa de auditoria esgotada na instância ${instanceId} (revision ${String(instance.revision)}: ${ceiling - base} eventos) — investigar loop de auditoria`,
-    );
-  }
-  await tx`INSERT INTO history_events
-      (tenant_id, instance_id, seq, kind, payload, engine_version, effect_key)
-    VALUES (${tenantId}, ${instanceId}, ${next.seq as number}, ${kind},
-            ${tx.json(payload as never)}, ${String(instance.engine_version)},
-            ${`host:audit:${instanceId}:${next.seq}`})`;
 }
 
 /** Lista com máscara: sensitive nunca sai em claro (nem cifrada). */

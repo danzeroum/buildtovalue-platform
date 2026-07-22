@@ -28,6 +28,7 @@ import { registerAuthRoutes } from './routes/auth.js';
 import { registerHealthRoutes } from './routes/health.js';
 import { registerDefinitionRoutes } from './routes/definitions.js';
 import { registerRuntimeRoutes } from './routes/runtime.js';
+import { registerUserTaskRoutes } from './routes/userTasks.js';
 
 /**
  * Dependências injetadas (DIP, G-COD-1): a API depende de interfaces de
@@ -211,6 +212,7 @@ export async function buildApp(deps: ApiDeps): Promise<ZodApp> {
   registerAuthRoutes(app, deps);
   registerRuntimeRoutes(app, deps);
   registerDefinitionRoutes(app, deps);
+  registerUserTaskRoutes(app, deps);
 
   app.get('/v1/openapi.json', { schema: { hide: true } }, async () => app.swagger());
 
