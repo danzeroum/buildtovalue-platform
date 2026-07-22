@@ -87,6 +87,15 @@ com as alternativas B/C e trade-offs. A política 3.2 pede sua aprovação —
 a implementação da costura (KeyProvider + teste "ledger sem conteúdo
 pessoal") entra na F2 assim que aceitar (ou ajustar).
 
+## 2.3 D1 REVISADO pelo dono (22/07) — visibilidade do repo
+
+**"D1 revisado em 22/07: público até o fechamento da v1; retorno a Private
+é ITEM DO GATE DE PILOTO (8.4)."** — decisão consciente e temporária do
+dono (acesso direto do arquiteto e analistas). Linha correspondente
+adicionada ao checklist vivo `docs/privacy/gate-piloto.md` (item 6).
+Verificação de visibilidade passa a ser pelo MÉTODO EXTERNO (selo do
+cabeçalho / 404 anônimo), executada pelo desenvolvedor.
+
 ## 2.2 Tag `phase-1` — push bloqueado pelo proxy (ação SUA, 1 min)
 
 O proxy git da sessão só aceita push na branch designada; `git push origin
