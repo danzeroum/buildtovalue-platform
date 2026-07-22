@@ -1,0 +1,64 @@
+/* Consome APENAS tokens do shared-ui (D25.1) — nenhum hex neste arquivo. */
+body {
+  margin: 0;
+  font-family: var(--ui-font-sans);
+  font-size: var(--ui-font-size-body);
+  color: var(--ui-ink-base);
+  background: var(--ui-surface-page);
+}
+
+.shell-header {
+  display: flex;
+  align-items: center;
+  gap: var(--ui-space-calm-gutter);
+  padding: var(--ui-space-calm-row) var(--ui-space-calm-gutter);
+  background: var(--ui-surface-card);
+  border-bottom: 1px solid var(--ui-surface-border);
+}
+
+.brand {
+  font-family: var(--ui-font-serif);
+  font-size: var(--ui-font-size-title);
+  color: var(--ui-ink-strong);
+}
+
+.shell-header nav {
+  display: flex;
+  gap: var(--ui-space-calm-block);
+}
+
+.nav-item {
+  display: flex;
+  flex-direction: column;
+  text-decoration: none;
+  color: var(--ui-ink-muted);
+  padding: var(--ui-space-dense-row) var(--ui-space-dense-block);
+  border-radius: 6px;
+}
+
+.nav-item.active {
+  color: var(--ui-role-success-fg);
+  background: var(--ui-role-success-bg);
+}
+
+/* Regra do mono (D25.2): rota é IDENTIFICADOR — mono legítimo, no piso de 11px. */
+.nav-route {
+  font-family: var(--ui-font-mono);
+  font-size: var(--ui-font-size-meta);
+  color: var(--ui-ink-subtle);
+}
+
+.shell-main {
+  padding: var(--ui-space-calm-gutter);
+}
+
+.api-status {
+  font-family: var(--ui-font-mono);
+  font-size: var(--ui-font-size-meta);
+}
+.api-status[data-status='ok'] {
+  color: var(--ui-role-success-fg);
+}
+.api-status[data-status='down'] {
+  color: var(--ui-role-danger-fg);
+}
