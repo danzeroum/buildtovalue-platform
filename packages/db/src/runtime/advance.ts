@@ -7,7 +7,7 @@ import type { Sql, TransactionSql } from '../client.js';
 import { withTenant } from '../tenancy.js';
 import { effectKey } from './effectKey.js';
 import { engineFor, SKELETON_DEFINITION_REF } from './definitions.js';
-import { insertEffects, type OutboxEffect } from './outbox.js';
+import { insertEffects, OUTBOX_CHANNEL, type OutboxEffect } from './outbox.js';
 
 export interface InstanceRow {
   id: string;
@@ -217,6 +217,11 @@ export async function advanceInstance(
       })),
       { revision: nextRevision, engineVersion: result.state.engineVersion },
     );
+    if (result.effects.length > 0) {
+      // Acorda o dispatcher NO COMMIT (F2.2): pg_notify dentro da tx só é
+      // entregue se ela commitar; payload = tenant com trabalho novo.
+      await tx`SELECT pg_notify(${OUTBOX_CHANNEL}, ${tenantId})`;
+    }
     await hooks.onApplied?.(tx);
     return {
       ok: true,

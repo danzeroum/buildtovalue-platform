@@ -64,47 +64,93 @@ export function historySeq(revision: number, effectIndex: number): number {
   return revision * 100_000 + effectIndex;
 }
 
+/** Canal do pg_notify emitido no COMMIT do avanço (payload = tenant_id). */
+export const OUTBOX_CHANNEL = 'btv_outbox';
+
 export interface DispatchResult {
   processed: number;
+  failed: number;
+  deadLettered: number;
+}
+
+/** Backoff exponencial (segundos) por tentativa, teto de 60s. */
+function backoffSeconds(attempts: number): number {
+  return Math.min(2 ** attempts, 60);
 }
 
 /**
  * UM passo do dispatcher (F2.2): consome a outbox com FOR UPDATE SKIP LOCKED
- * — O(1) amortizado por item — e aplica cada efeito DENTRO da mesma
- * transação em que a linha é removida (fila efêmera: linha despachada é
- * DELETADA). Crash em qualquer ponto = rollback = re-dispatch idempotente:
- * cada tratador tem uma âncora de dedupe (UNIQUE wait_key em jobs/timers/
- * user_tasks; UNIQUE effect_key em history_events/incidents; UPDATEs
- * condicionados a estado). `onCrash` é a agulha do CRASH TEST.
+ * — O(1) amortizado por item: cada linha é visitada uma vez por passada e o
+ * índice outbox_ready_idx entrega só as prontas — e aplica cada efeito
+ * DENTRO da mesma transação em que a linha é removida (fila efêmera: linha
+ * despachada é DELETADA). Crash em qualquer ponto = rollback = re-dispatch
+ * idempotente: cada tratador tem uma âncora de dedupe (UNIQUE wait_key em
+ * jobs/timers/user_tasks; UNIQUE effect_key em history_events/incidents;
+ * UPDATEs condicionados a estado). `onCrash` é a agulha do CRASH TEST.
+ *
+ * Efeito que FALHA ao aplicar (defeito de dado, não crash): SAVEPOINT por
+ * linha isola a falha — as demais linhas do lote seguem; a linha ganha
+ * backoff exponencial (2^n s, teto 60s) e, esgotadas as tentativas,
+ * DEAD-LETTER: vira incidente (kind 'effectDispatchFailed', dedupe por
+ * effect_key) e sai da fila.
  */
 export async function dispatchOutboxOnce(
   sql: Sql,
   tenantId: string,
   options: {
     batch?: number;
+    /** tentativas até dead-letter (default 5). */
+    maxAttempts?: number;
     /** hook de teste: lançar aqui simula o worker morrendo no meio. */
     onCrash?: (row: OutboxRow, index: number) => void;
     /** efeitos sem escrita local (CompleteInstance) — log do worker. */
     onInfo?: (row: OutboxRow) => void;
   } = {},
 ): Promise<DispatchResult> {
+  const maxAttempts = options.maxAttempts ?? 5;
   return withTenant(sql, tenantId, async (tx) => {
-    const rows = await tx<OutboxRow[]>`
+    const rows = await tx<(OutboxRow & { attempts: number })[]>`
       SELECT id, tenant_id, instance_id, effect, effect_key,
-             revision, effect_index, engine_version
+             revision, effect_index, engine_version, attempts
       FROM outbox
       WHERE status = 'pending' AND next_attempt_at <= now()
       ORDER BY created_at, id
       FOR UPDATE SKIP LOCKED
       LIMIT ${options.batch ?? 10}`;
+    const result: DispatchResult = { processed: 0, failed: 0, deadLettered: 0 };
     let index = 0;
     for (const row of rows) {
+      // onCrash fica FORA do savepoint de propósito: simula o processo
+      // morrendo (rollback do lote inteiro), não um efeito defeituoso.
       options.onCrash?.(row, index);
       index += 1;
-      await applyEffect(tx, row, options.onInfo);
-      await tx`DELETE FROM outbox WHERE id = ${row.id}`;
+      try {
+        await tx.savepoint(async (sp) => {
+          await applyEffect(sp, row, options.onInfo);
+          await sp`DELETE FROM outbox WHERE id = ${row.id}`;
+        });
+        result.processed += 1;
+      } catch (error) {
+        const attempts = row.attempts + 1;
+        const message = error instanceof Error ? error.message : String(error);
+        if (attempts >= maxAttempts) {
+          await tx`INSERT INTO incidents (tenant_id, instance_id, kind, message, effect_key)
+            VALUES (${row.tenant_id}, ${row.instance_id}, 'effectDispatchFailed',
+                    ${`efeito ${row.effect.type} falhou ${attempts}x: ${message}`},
+                    ${`host:dead-letter:${row.effect_key}`})
+            ON CONFLICT (effect_key) DO NOTHING`;
+          await tx`DELETE FROM outbox WHERE id = ${row.id}`;
+          result.deadLettered += 1;
+        } else {
+          await tx`UPDATE outbox SET
+              attempts = ${attempts},
+              next_attempt_at = now() + make_interval(secs => ${backoffSeconds(attempts)})
+            WHERE id = ${row.id}`;
+          result.failed += 1;
+        }
+      }
     }
-    return { processed: rows.length };
+    return result;
   });
 }
 

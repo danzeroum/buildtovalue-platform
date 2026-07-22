@@ -36,6 +36,7 @@ export {
   historySeq,
   insertEffects,
   outboxDepth,
+  OUTBOX_CHANNEL,
   type DispatchResult,
   type OutboxEffect,
   type OutboxRow,
