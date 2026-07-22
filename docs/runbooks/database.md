@@ -40,4 +40,4 @@ pg_restore --dbname=postgres://.../buildtovalue_restore --no-owner --role=app_mi
 
 | Ensaio | Data | Duração | Resultado |
 |---|---|---|---|
-| (pendente — executar antes do fechamento da F1) | | | |
+| Ciclo completo em Postgres 16 local: migração 0001 + seed → `backup.sh` → `sha256sum -c` → `pg_restore` em banco limpo → verificação | 2026-07-22 | ~3s (base mínima; medir de novo com volume da F2) | ✅ `schema_migrations` íntegra; dados presentes; `relrowsecurity`+`relforcerowsecurity` = true em users/tenants/refresh_tokens (RLS sobrevive ao restore) |
