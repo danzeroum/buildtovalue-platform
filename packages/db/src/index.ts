@@ -71,6 +71,10 @@ export {
 } from './runtime/outbox.js';
 export { sweepDueTimersOnce, type TimerSweepResult } from './runtime/timers.js';
 export {
+  IDEMPOTENCY_RETENTION_HOURS,
+  sweepIdempotencyKeys,
+} from './runtime/idempotency.js';
+export {
   completeJob,
   failJob,
   lockJobs,
