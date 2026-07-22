@@ -123,8 +123,21 @@ terceira cobrança de rename com clientes reais no ar.
 | Rota | Descrição | Permissão |
 |---|---|---|
 | `GET /v1/incidents` | Lista (cursor; `status`, `kind`, `instanceId`). | `operate:read` |
-| `POST /v1/incidents/{id}/retry` | Re-tenta a causa: job failed volta a `available` (retries restaurados) / efeito dead-letter re-enfileirado. Auditado. 200 `{status}`. | `operate:act` |
+| `POST /v1/incidents/{id}/retry` | Re-tenta a causa: job failed volta a `available` (retries restaurados). Auditado. 200 `{rearmedJobs}`. **Ver ERRATA abaixo sobre dead-letter.** | `operate:act` |
 | `POST /v1/incidents/{id}/resolution` | `{reason}` obrigatório — resolve manualmente sem re-tentar. Auditado. | `operate:act` |
+
+> **ERRATA (leva 5 F3, aceita pelo dono em 22/07) — retry de dead-letter na v1.**
+> O shape acima previa que `/retry` também **re-enfileirasse o efeito em
+> dead-letter** (`incidents.kind = 'effectDispatchFailed'`). Isso **NÃO é
+> viável na v1**: a outbox é uma fila EFÊMERA (linha despachada é DELETADA) e
+> o payload do efeito não é persistido no incidente — não há o que
+> re-enfileirar. Comportamento v1: `/retry` re-arma jobs `failed`; para um
+> incidente de dead-letter sem job re-tentável, responde **`409` +
+> `problem+json`** apontando `/resolution` (mensagem explícita, sem falso
+> sucesso). O re-enfileiramento fiel exige **coluna `payload` em `incidents`
+> (migração nova = GATE)** e entra na **migração da AG-2** (registrado em
+> `pendencias.md` §2.4). O 409 e a limitação estão documentados no OpenAPI da
+> rota (`apps/api/src/routes/operate.ts`).
 
 ## 8. Matriz RBAC (rota → permissão; papéis existentes de `@platform/auth`)
 
