@@ -1,26 +1,36 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { createBrowserRouter, RouterProvider } from 'react-router-dom';
+import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom';
 import '@platform/shared-ui/tokens.css';
 import './app.css';
-import { AppShell, PlaceholderRoute } from './shell.js';
+import { AppShell } from './shell.js';
+import { FormsRoute } from './routes/forms.js';
+import { StudioRoute } from './routes/studio.js';
+import { NonIdeal } from './ui/ui.js';
 
 /**
  * Console único (D15): 4 rotas técnicas na URL, RÓTULOS HUMANOS na navegação
- * (D23): Tarefas · Formulários · Operação · Estúdio. As telas reais chegam na
- * F3 (protótipos aprovados + G-UX-3); os placeholders mantêm o roteamento e o
- * SDK compilando desde a F1.
+ * (D23). PR1 entrega Estúdio (F3.2) e Formulários (F3.3); Tarefas (F3.4) e
+ * Operação (F3.5) chegam na PR2.
  */
+function ComingSoon({ title }: { title: string }) {
+  return (
+    <section className="route" aria-label={title}>
+      <NonIdeal kind="empty" title={title} detail="Esta rota chega na PR2 desta leva (Tarefas/Operação)." />
+    </section>
+  );
+}
+
 const router = createBrowserRouter([
   {
     path: '/',
     element: <AppShell />,
     children: [
-      { index: true, element: <PlaceholderRoute title="Tarefas" /> },
-      { path: 'tasks', element: <PlaceholderRoute title="Tarefas" /> },
-      { path: 'forms', element: <PlaceholderRoute title="Formulários" /> },
-      { path: 'operate', element: <PlaceholderRoute title="Operação" /> },
-      { path: 'studio', element: <PlaceholderRoute title="Estúdio" /> },
+      { index: true, element: <Navigate to="/tasks" replace /> },
+      { path: 'tasks', element: <ComingSoon title="Tarefas" /> },
+      { path: 'forms', element: <FormsRoute /> },
+      { path: 'operate', element: <ComingSoon title="Operação" /> },
+      { path: 'studio', element: <StudioRoute /> },
     ],
   },
 ]);
