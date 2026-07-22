@@ -39,6 +39,14 @@ correto). Não existe caminho técnico para eu publicar.
    público (peso de install considerável) — se preferir Storybook em repo
    separado ou docs estáticos, dá para mudar depois sem tocar no renderer.
 
+## 2.1 ADR-0002 (tombstones LGPD×ledger) — PROPOSTO, aguarda seu aceite
+
+`docs/architecture/ADR-0002-tombstones-ledger-lgpd.md`: Anexo B adotado
+(conteúdo fora do ledger + tombstone de eliminação + salt por registro),
+com as alternativas B/C e trade-offs. A política 3.2 pede sua aprovação —
+a implementação da costura (KeyProvider + teste "ledger sem conteúdo
+pessoal") entra na F2 assim que aceitar (ou ajustar).
+
 ## 3. Registro de fluxo (sem ação sua)
 
 - Issue #2 deste repo: regra de lint D19 "boundary só sobre atividade de
