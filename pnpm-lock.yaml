@@ -66,6 +66,9 @@ importers:
         specifier: ^4.1.5
         version: 4.4.3
     devDependencies:
+      postgres:
+        specifier: ^3.4.7
+        version: 3.4.9
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
@@ -109,6 +112,9 @@ importers:
 
   apps/worker:
     dependencies:
+      '@platform/auth':
+        specifier: workspace:*
+        version: link:../../packages/auth
       '@platform/config':
         specifier: workspace:*
         version: link:../../packages/config
@@ -155,6 +161,12 @@ importers:
 
   packages/db:
     dependencies:
+      '@buildtovalue/core':
+        specifier: 1.2.0-next.0
+        version: 1.2.0-next.0
+      '@buildtovalue/engine':
+        specifier: 1.1.0-next.1
+        version: 1.1.0-next.1
       postgres:
         specifier: ^3.4.7
         version: 3.4.9
@@ -278,6 +290,14 @@ packages:
   '@bcoe/v8-coverage@1.0.2':
     resolution: {integrity: sha512-6zABk/ECA/QYSCQ1NGiVwwbQerUCZ+TQbp64Q3AgmfNvurHH0j8TtXa1qbShXA6qqkpAj4V5W8pP6mLe1mcMqA==}
     engines: {node: '>=18'}
+
+  '@buildtovalue/core@1.2.0-next.0':
+    resolution: {integrity: sha512-PK8dfdTwkT2wFYQkJU1jf6Wiebm5pdIka/6Vvjn74nfa0NEKUdaVREjQEs6Bsg4Zme5JjSxANngXf3zAlSkdHw==}
+    engines: {node: '>=20'}
+
+  '@buildtovalue/engine@1.1.0-next.1':
+    resolution: {integrity: sha512-9oz5Jt2cNCiVi9FbasdHT/Yt1JLS3vSGINop25NrnPku+cr99AUEwjdDLuuXjtl28EMZtqkSj7qcQJ2NRVozGQ==}
+    engines: {node: '>=20'}
 
   '@changesets/apply-release-plan@7.1.1':
     resolution: {integrity: sha512-9qPCm/rLx/xoOFXIHGB229+4GOL76S4MC+7tyOuTsR6+1jYlfFDQORdvwR5hDA6y4FL2BPt3qpbcQIS+dW85LA==}
@@ -2456,6 +2476,12 @@ snapshots:
       '@babel/helper-validator-identifier': 7.29.7
 
   '@bcoe/v8-coverage@1.0.2': {}
+
+  '@buildtovalue/core@1.2.0-next.0': {}
+
+  '@buildtovalue/engine@1.1.0-next.1':
+    dependencies:
+      '@buildtovalue/core': 1.2.0-next.0
 
   '@changesets/apply-release-plan@7.1.1':
     dependencies:

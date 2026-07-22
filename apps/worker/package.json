@@ -12,7 +12,8 @@
   "dependencies": {
     "@platform/config": "workspace:*",
     "@platform/db": "workspace:*",
-    "@platform/observability": "workspace:*"
+    "@platform/observability": "workspace:*",
+    "@platform/auth": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.9.3"
