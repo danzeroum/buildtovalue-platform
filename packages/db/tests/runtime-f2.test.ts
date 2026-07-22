@@ -1,6 +1,6 @@
 import type { InstanceState } from '@buildtovalue/engine';
 import postgres from 'postgres';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import {
   advanceInstance,
   runStateMigrations,
@@ -10,7 +10,13 @@ import { EXAMPLE_DEFINITION_REF, conditionEvaluator } from '../src/runtime/defin
 import { effectKey } from '../src/runtime/effectKey.js';
 import { createRuntime } from '../src/runtime/facade.js';
 import { lockJobs } from '../src/runtime/jobs.js';
-import { dispatchOutboxOnce, historySeq, insertEffects, outboxDepth } from '../src/runtime/outbox.js';
+import {
+  dispatchOutboxOnce,
+  historySeq,
+  insertEffects,
+  outboxDepth,
+  OUTBOX_CHANNEL,
+} from '../src/runtime/outbox.js';
 import { sweepDueTimersOnce } from '../src/runtime/timers.js';
 import { withTenant } from '../src/tenancy.js';
 import { createTestDatabase, type TestDatabase } from './helpers.js';
@@ -390,6 +396,67 @@ describe('runtime F2 — efeitos, história, timers e migrador (migração 0003)
         tx`SELECT id FROM jobs WHERE instance_id = ${id}`);
       expect(jobs).toHaveLength(0);
     });
+  });
+
+  // -------------------------------------------------------------------------
+  it('efeito defeituoso: SAVEPOINT isola a linha, backoff, e dead-letter → incidents (F2.2)', async () => {
+    const instance = await seedInstance();
+    await withTenant(api, tenant, (tx) =>
+      insertEffects(tx, tenant, instance, [
+        {
+          // CreateJob SEM waitKey: viola NOT NULL ao aplicar — defeito de
+          // dado, não crash do worker.
+          effectKey: effectKey(instance, 9, 0, 'CreateJob'),
+          effect: { type: 'CreateJob', jobType: 'noop' },
+          index: 0,
+        },
+        {
+          effectKey: effectKey(instance, 9, 1, 'EmitHistory'),
+          effect: { type: 'EmitHistory', kind: 'ok', payload: {} },
+          index: 1,
+        },
+      ], { revision: 9, engineVersion: 'eng-test' }),
+    );
+    const first = await dispatchOutboxOnce(api, tenant, { batch: 10, maxAttempts: 2 });
+    // a linha boa do MESMO lote passa; a defeituosa ganha backoff
+    expect(first).toMatchObject({ processed: 1, failed: 1, deadLettered: 0 });
+    expect(await outboxDepth(api, tenant)).toBe(1);
+    const hist = await withTenant(api, tenant, (tx) =>
+      tx`SELECT kind FROM history_events WHERE instance_id = ${instance}`);
+    expect(hist.map((h) => h.kind)).toEqual(['ok']);
+
+    // com backoff, a linha NÃO é re-tentada antes do next_attempt_at…
+    const tooSoon = await dispatchOutboxOnce(api, tenant, { batch: 10, maxAttempts: 2 });
+    expect(tooSoon).toMatchObject({ processed: 0, failed: 0, deadLettered: 0 });
+    // …o teste vence o backoff manualmente e a 2ª tentativa dead-lettera
+    await withTenant(api, tenant, (tx) =>
+      tx`UPDATE outbox SET next_attempt_at = now() WHERE instance_id = ${instance}`);
+    const second = await dispatchOutboxOnce(api, tenant, { batch: 10, maxAttempts: 2 });
+    expect(second).toMatchObject({ processed: 0, failed: 0, deadLettered: 1 });
+    expect(await outboxDepth(api, tenant)).toBe(0); // saiu da fila
+    const incidents = await withTenant(api, tenant, (tx) =>
+      tx`SELECT kind, message FROM incidents WHERE instance_id = ${instance}`);
+    expect(incidents).toHaveLength(1);
+    expect(incidents[0].kind).toBe('effectDispatchFailed');
+    expect(incidents[0].message).toContain('CreateJob');
+  });
+
+  it('avanço com efeitos emite pg_notify no COMMIT (canal da outbox, payload = tenant)', async () => {
+    const runtime = createRuntime(api, NOW);
+    const notified: string[] = [];
+    const listener = postgres(db.apiUrl, { max: 1, onnotice: () => {} });
+    await listener.listen(OUTBOX_CHANNEL, (payload) => {
+      notified.push(payload);
+    });
+    try {
+      const started = await runtime.createAndStart(tenant, { businessKey: 'notify-1' });
+      expect(started.ok).toBe(true);
+      await vi.waitFor(() => {
+        expect(notified).toContain(tenant);
+      }, { timeout: 5_000 });
+    } finally {
+      await listener.end({ timeout: 5 });
+    }
   });
 
   it('avaliador de condição v1: igualdade de literais; fora disso, erro explícito', () => {
