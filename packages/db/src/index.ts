@@ -95,8 +95,10 @@ export {
 export {
   completeJob,
   failJob,
+  listJobs,
   lockJobs,
   type JobConclusion,
+  type JobListItem,
   type JobRow,
 } from './runtime/jobs.js';
 export {

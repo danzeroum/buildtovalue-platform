@@ -86,7 +86,8 @@ async function conclude(
   run: Awaited<ReturnType<typeof registry.run>>,
 ): Promise<void> {
   const token = await machineToken(tenantId);
-  const path = run.ok ? 'complete' : 'fail';
+  // nomes NOVOS do contrato (shape §5, decisão 10.a); aliases somem na F4
+  const path = run.ok ? 'completion' : 'failure';
   const body = run.ok
     ? { lockToken, ...(run.result ? { result: run.result } : {}) }
     : { lockToken, error: run.error.slice(0, 2000) };

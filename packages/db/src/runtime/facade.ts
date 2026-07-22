@@ -26,7 +26,14 @@ import {
   type AdvanceOutcome,
   type InstanceRow,
 } from './advance.js';
-import { completeJob as completeJobRow, failJob as failJobRow } from './jobs.js';
+import {
+  completeJob as completeJobRow,
+  failJob as failJobRow,
+  listJobs,
+  lockJobs,
+  type JobListItem,
+  type JobRow,
+} from './jobs.js';
 
 export type JobOutcome =
   | { ok: true; instance: InstanceRow }
@@ -59,6 +66,17 @@ export interface PlatformRuntime {
   idempotency: {
     get(tenantId: string, key: string): Promise<IdempotentHit | undefined>;
     put(tenantId: string, key: string, requestHash: string, statusCode: number, response: unknown): Promise<void>;
+  };
+  jobs: {
+    lock(
+      tenantId: string,
+      workerId: string,
+      options?: { limit?: number; leaseMs?: number; types?: string[] },
+    ): Promise<JobRow[]>;
+    list(
+      tenantId: string,
+      options?: { cursor?: string; limit?: number; status?: string; type?: string; instanceId?: string },
+    ): Promise<{ items: JobListItem[]; nextCursor: string | null }>;
   };
   variables: {
     list(tenantId: string, instanceId: string): Promise<VariableView[]>;
@@ -118,6 +136,10 @@ export function createRuntime(
       get: (tenantId, key) => getIdempotentResponse(sql, tenantId, key),
       put: (tenantId, key, requestHash, statusCode, response) =>
         putIdempotentResponse(sql, tenantId, key, requestHash, statusCode, response),
+    },
+    jobs: {
+      lock: (tenantId, workerId, options) => lockJobs(sql, tenantId, workerId, options),
+      list: (tenantId, options) => listJobs(sql, tenantId, options),
     },
     variables: {
       list: (tenantId, instanceId) => listVariables(sql, tenantId, instanceId),

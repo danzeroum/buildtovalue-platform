@@ -393,70 +393,199 @@ export function registerRuntimeRoutes(rawApp: ZodApp, deps: ApiDeps): void {
     },
   );
 
+  // ---- jobs (shape §5): sub-recursos SUBSTANTIVOS + aliases deprecados ----
   const jobConclusionBody = z.object({ lockToken: z.string().uuid() });
+  const completionBody = jobConclusionBody.extend({
+    result: z
+      .record(z.string(), z.unknown())
+      .optional()
+      .describe('Variáveis produzidas pelo handler; o host persiste (D13)'),
+  });
+  const failureBody = jobConclusionBody.extend({ error: z.string().max(2000) });
+
+  // MESMO handler para rota nova e alias — equivalência byte-idêntica
+  // garantida por construção (e testada); aliases somem na F4.
+  const completionHandler = async (
+    req: { auth?: { tenantId: string }; params: { id: string }; body: z.infer<typeof completionBody>; id: unknown },
+    reply: FastifyReply,
+  ) => {
+    const outcome = await runtime.completeJob(req.auth!.tenantId, req.params.id, req.body.lockToken, new Date().toISOString(), req.body.result);
+    if (!outcome.ok) {
+      if (outcome.reason === 'notFound') {
+        return problem(reply, 404, PROBLEM_TYPES.notFound, 'Job não encontrado', String(req.id));
+      }
+      return problem(reply, 409, PROBLEM_TYPES.conflict, 'Conclusão recusada', String(req.id), outcome.message);
+    }
+    return {
+      id: outcome.instance.id,
+      definitionRef: outcome.instance.definition_ref,
+      status: outcome.instance.status as 'active',
+      revision: outcome.instance.revision,
+      businessKey: outcome.instance.business_key,
+    };
+  };
+  const failureHandler = async (
+    req: { auth?: { tenantId: string }; params: { id: string }; body: z.infer<typeof failureBody>; id: unknown },
+    reply: FastifyReply,
+  ) => {
+    const outcome = await runtime.failJob(req.auth!.tenantId, req.params.id, req.body.lockToken, req.body.error, new Date().toISOString());
+    if (!outcome.ok) {
+      if (outcome.reason === 'notFound') {
+        return problem(reply, 404, PROBLEM_TYPES.notFound, 'Job não encontrado', String(req.id));
+      }
+      return problem(reply, 409, PROBLEM_TYPES.conflict, 'Falha recusada', String(req.id), outcome.message);
+    }
+    return { status: outcome.status };
+  };
+
+  for (const { path, deprecated } of [
+    { path: '/v1/jobs/:id/completion', deprecated: false },
+    { path: '/v1/jobs/:id/complete', deprecated: true },
+  ]) {
+    app.post(
+      path,
+      {
+        preHandler: [app.authenticate, app.requirePermission('operate:act')],
+        schema: {
+          tags: ['jobs'],
+          summary: deprecated
+            ? 'DEPRECADO — use /completion (alias removido na F4)'
+            : 'Conclui um job com o lock_token vigente (fencing D12)',
+          ...(deprecated ? { deprecated: true } : {}),
+          security: [{ bearerAuth: [] }],
+          params: z.object({ id: z.string().uuid() }),
+          body: completionBody,
+          response: { 200: instanceResponseSchema, 404: problemSchema, 409: problemSchema },
+        },
+      },
+      completionHandler,
+    );
+  }
+
+  for (const { path, deprecated } of [
+    { path: '/v1/jobs/:id/failure', deprecated: false },
+    { path: '/v1/jobs/:id/fail', deprecated: true },
+  ]) {
+    app.post(
+      path,
+      {
+        preHandler: [app.authenticate, app.requirePermission('operate:act')],
+        schema: {
+          tags: ['jobs'],
+          summary: deprecated
+            ? 'DEPRECADO — use /failure (alias removido na F4)'
+            : 'Falha um job com o lock_token vigente; retries esgotados viram incidente',
+          ...(deprecated ? { deprecated: true } : {}),
+          security: [{ bearerAuth: [] }],
+          params: z.object({ id: z.string().uuid() }),
+          body: failureBody,
+          response: {
+            200: z.object({ status: z.enum(['available', 'failed']) }),
+            404: problemSchema,
+            409: problemSchema,
+          },
+        },
+      },
+      failureHandler,
+    );
+  }
 
   app.post(
-    '/v1/jobs/:id/complete',
+    '/v1/jobs/locks',
     {
       preHandler: [app.authenticate, app.requirePermission('operate:act')],
       schema: {
         tags: ['jobs'],
-        summary: 'Conclui um job com o lock_token vigente (fencing D12)',
+        summary: 'Lock em lote (lease + lock_token de fencing — D12/D22)',
         security: [{ bearerAuth: [] }],
-        params: z.object({ id: z.string().uuid() }),
-        body: jobConclusionBody.extend({
-          result: z
-            .record(z.string(), z.unknown())
-            .optional()
-            .describe('Variáveis produzidas pelo handler; o host persiste (D13)'),
+        body: z.object({
+          workerId: z.string().min(1).max(120),
+          types: z.array(z.string().min(1)).optional(),
+          limit: z.coerce.number().int().min(1).max(50).optional(),
+          leaseMs: z.coerce.number().int().min(1_000).max(300_000).optional(),
         }),
-        response: { 200: instanceResponseSchema, 404: problemSchema, 409: problemSchema },
+        response: {
+          200: z.object({
+            jobs: z.array(
+              z.object({
+                id: z.string().uuid(),
+                instanceId: z.string().uuid(),
+                type: z.string(),
+                payload: z.record(z.string(), z.unknown()),
+                lockToken: z.string().uuid(),
+                retriesLeft: z.number().int(),
+              }),
+            ),
+          }),
+        },
       },
     },
-    async (req, reply) => {
-      const outcome = await runtime.completeJob(req.auth!.tenantId, req.params.id, req.body.lockToken, new Date().toISOString(), req.body.result);
-      if (!outcome.ok) {
-        if (outcome.reason === 'notFound') {
-          return problem(reply, 404, PROBLEM_TYPES.notFound, 'Job não encontrado', String(req.id));
-        }
-        return problem(reply, 409, PROBLEM_TYPES.conflict, 'Conclusão recusada', String(req.id), outcome.message);
-      }
+    async (req) => {
+      const rows = await runtime.jobs.lock(req.auth!.tenantId, req.body.workerId, {
+        types: req.body.types,
+        limit: req.body.limit,
+        leaseMs: req.body.leaseMs,
+      });
       return {
-        id: outcome.instance.id,
-        definitionRef: outcome.instance.definition_ref,
-        status: outcome.instance.status as 'active',
-        revision: outcome.instance.revision,
-        businessKey: outcome.instance.business_key,
+        jobs: rows.map((job) => ({
+          id: job.id,
+          instanceId: job.instance_id,
+          type: job.type,
+          payload: job.payload,
+          lockToken: job.lock_token!,
+          retriesLeft: job.retries_left,
+        })),
       };
     },
   );
 
-  app.post(
-    '/v1/jobs/:id/fail',
+  app.get(
+    '/v1/jobs',
     {
-      preHandler: [app.authenticate, app.requirePermission('operate:act')],
+      preHandler: [app.authenticate, app.requirePermission('operate:read')],
       schema: {
         tags: ['jobs'],
-        summary: 'Falha um job com o lock_token vigente; retries esgotados viram incidente',
+        summary: 'Lista jobs (cursor; filtros status/type/instanceId — Operate)',
         security: [{ bearerAuth: [] }],
-        params: z.object({ id: z.string().uuid() }),
-        body: jobConclusionBody.extend({ error: z.string().max(2000) }),
+        querystring: z.object({
+          cursor: z.string().optional(),
+          limit: z.coerce.number().int().min(1).max(100).optional(),
+          status: z.enum(['available', 'locked', 'completed', 'failed', 'cancelled']).optional(),
+          type: z.string().optional(),
+          instanceId: z.string().uuid().optional(),
+        }),
         response: {
-          200: z.object({ status: z.enum(['available', 'failed']) }),
-          404: problemSchema,
-          409: problemSchema,
+          200: z.object({
+            items: z.array(
+              z.object({
+                id: z.string().uuid(),
+                instanceId: z.string().uuid(),
+                type: z.string(),
+                status: z.string(),
+                retriesLeft: z.number().int(),
+                error: z.string().nullable(),
+                createdAt: z.string(),
+              }),
+            ),
+            nextCursor: z.string().nullable(),
+          }),
         },
       },
     },
-    async (req, reply) => {
-      const outcome = await runtime.failJob(req.auth!.tenantId, req.params.id, req.body.lockToken, req.body.error, new Date().toISOString());
-      if (!outcome.ok) {
-        if (outcome.reason === 'notFound') {
-          return problem(reply, 404, PROBLEM_TYPES.notFound, 'Job não encontrado', String(req.id));
-        }
-        return problem(reply, 409, PROBLEM_TYPES.conflict, 'Falha recusada', String(req.id), outcome.message);
-      }
-      return { status: outcome.status };
+    async (req) => {
+      const page = await runtime.jobs.list(req.auth!.tenantId, req.query);
+      return {
+        items: page.items.map((job) => ({
+          id: job.id,
+          instanceId: job.instance_id,
+          type: job.type,
+          status: job.status,
+          retriesLeft: job.retries_left,
+          error: job.error,
+          createdAt: String(job.created_at),
+        })),
+        nextCursor: page.nextCursor,
+      };
     },
   );
 }

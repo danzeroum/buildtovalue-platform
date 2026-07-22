@@ -41,6 +41,14 @@ async function insertAuditEvent(
     SELECT COALESCE(MAX(seq), ${base - 1}) + 1 AS seq
     FROM history_events
     WHERE instance_id = ${instanceId} AND seq >= ${base} AND seq < ${ceiling}`;
+  if (Number(next.seq) >= ceiling) {
+    // GUARDA EXPLÍCITA (triagem 22/07): estourar a faixa de auditoria da
+    // revision (10.000 eventos sem avanço do engine) é anomalia operacional
+    // — erro alto, NUNCA overflow silencioso invadindo a revision seguinte.
+    throw new Error(
+      `faixa de auditoria esgotada na instância ${instanceId} (revision ${String(instance.revision)}: ${ceiling - base} eventos) — investigar loop de auditoria`,
+    );
+  }
   await tx`INSERT INTO history_events
       (tenant_id, instance_id, seq, kind, payload, engine_version, effect_key)
     VALUES (${tenantId}, ${instanceId}, ${next.seq as number}, ${kind},
