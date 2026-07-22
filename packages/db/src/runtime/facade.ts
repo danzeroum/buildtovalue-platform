@@ -1,6 +1,17 @@
 import type { Sql } from '../client.js';
 import { createFieldCipher, type KeyProvider } from '../crypto/fieldCipher.js';
 import {
+  getIdempotentResponse,
+  putIdempotentResponse,
+  type IdempotentHit,
+} from './idempotency.js';
+import {
+  listInstanceHistory,
+  listInstances,
+  type HistoryPage,
+  type InstancePage,
+} from './instances.js';
+import {
   advanceInstance,
   createAndStartInstance,
   getInstance,
@@ -28,6 +39,19 @@ export interface PlatformRuntime {
     options: { definitionRef?: string; businessKey?: string; variables?: Record<string, unknown> },
   ): Promise<AdvanceOutcome>;
   get(tenantId: string, instanceId: string): Promise<InstanceRow | undefined>;
+  list(
+    tenantId: string,
+    options?: { cursor?: string; limit?: number; status?: string; definitionRef?: string; businessKey?: string },
+  ): Promise<InstancePage>;
+  history(
+    tenantId: string,
+    instanceId: string,
+    options?: { cursor?: string; limit?: number },
+  ): Promise<HistoryPage>;
+  idempotency: {
+    get(tenantId: string, key: string): Promise<IdempotentHit | undefined>;
+    put(tenantId: string, key: string, requestHash: string, statusCode: number, response: unknown): Promise<void>;
+  };
   /** Motivo OBRIGATÓRIO (ADENDO-01 §2.3) — vai para history_events. */
   cancel(tenantId: string, instanceId: string, reason: string): Promise<AdvanceOutcome>;
   completeJob(
@@ -60,6 +84,17 @@ export function createRuntime(
     },
     get(tenantId, instanceId) {
       return getInstance(sql, tenantId, instanceId);
+    },
+    list(tenantId, opts) {
+      return listInstances(sql, tenantId, opts);
+    },
+    history(tenantId, instanceId, opts) {
+      return listInstanceHistory(sql, tenantId, instanceId, opts);
+    },
+    idempotency: {
+      get: (tenantId, key) => getIdempotentResponse(sql, tenantId, key),
+      put: (tenantId, key, requestHash, statusCode, response) =>
+        putIdempotentResponse(sql, tenantId, key, requestHash, statusCode, response),
     },
     cancel(tenantId, instanceId, reason) {
       // O engine emite CancelJob/CancelTimer/CloseUserTask para TODAS as

@@ -154,6 +154,10 @@ export interface Page<T> {
 function encodeCursor(createdAt: string, id: string): string {
   return Buffer.from(`${createdAt}|${id}`).toString('base64url');
 }
+// NB: nas comparações, o parâmetro do cursor entra como ::text::timestamptz
+// de propósito — o describe do driver tipa o placeholder como TEXT e a
+// string vai crua; sem isso o postgres.js serializa via Date e PERDE os
+// microssegundos (páginas repetiriam a linha de fronteira).
 function decodeCursor(cursor: string): { createdAt: string; id: string } | undefined {
   const raw = Buffer.from(cursor, 'base64url').toString('utf8');
   const at = raw.lastIndexOf('|');
@@ -170,17 +174,18 @@ export async function listProcessDefinitions(
   const after = options.cursor ? decodeCursor(options.cursor) : undefined;
   return withTenant(sql, tenantId, async (tx) => {
     const rows = await tx`
-      SELECT id, name, version, registry_ref, engine_version, bpmn_version, created_at
+      SELECT id, name, version, registry_ref, engine_version, bpmn_version, created_at,
+             created_at::text AS created_at_cursor
       FROM process_definitions
       WHERE (${options.name ?? null}::text IS NULL OR name = ${options.name ?? null})
-        AND (${after?.createdAt ?? null}::timestamptz IS NULL
-             OR (created_at, id) > (${after?.createdAt ?? null}::timestamptz, ${after?.id ?? null}::uuid))
+        AND (${after?.createdAt ?? null}::text::timestamptz IS NULL
+             OR (created_at, id) > (${after?.createdAt ?? null}::text::timestamptz, ${after?.id ?? null}::uuid))
       ORDER BY created_at, id
       LIMIT ${limit + 1}`;
     const items = rows.slice(0, limit) as unknown as Omit<ProcessDefinitionRow, 'diagram'>[];
     const nextCursor =
       rows.length > limit
-        ? encodeCursor(String(rows[limit - 1].created_at), String(rows[limit - 1].id))
+        ? encodeCursor(String(rows[limit - 1].created_at_cursor), String(rows[limit - 1].id))
         : null;
     return { items, nextCursor };
   });
@@ -195,17 +200,18 @@ export async function listFormDefinitions(
   const after = options.cursor ? decodeCursor(options.cursor) : undefined;
   return withTenant(sql, tenantId, async (tx) => {
     const rows = await tx`
-      SELECT id, form_id, version, ref, created_at
+      SELECT id, form_id, version, ref, created_at,
+             created_at::text AS created_at_cursor
       FROM form_definitions
       WHERE (${options.formId ?? null}::text IS NULL OR form_id = ${options.formId ?? null})
-        AND (${after?.createdAt ?? null}::timestamptz IS NULL
-             OR (created_at, id) > (${after?.createdAt ?? null}::timestamptz, ${after?.id ?? null}::uuid))
+        AND (${after?.createdAt ?? null}::text::timestamptz IS NULL
+             OR (created_at, id) > (${after?.createdAt ?? null}::text::timestamptz, ${after?.id ?? null}::uuid))
       ORDER BY created_at, id
       LIMIT ${limit + 1}`;
     const items = rows.slice(0, limit) as unknown as Omit<FormDefinitionRow, 'schema'>[];
     const nextCursor =
       rows.length > limit
-        ? encodeCursor(String(rows[limit - 1].created_at), String(rows[limit - 1].id))
+        ? encodeCursor(String(rows[limit - 1].created_at_cursor), String(rows[limit - 1].id))
         : null;
     return { items, nextCursor };
   });

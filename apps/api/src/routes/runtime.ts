@@ -1,8 +1,10 @@
+import { createHash } from 'node:crypto';
 import { PROBLEM_TYPES, problemSchema } from '@platform/api-contracts';
 import type { FastifyReply } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 import type { ApiDeps, ZodApp } from '../app.js';
+import { instanceHistoryToXES } from '../xes.js';
 
 const instanceResponseSchema = z.object({
   id: z.string().uuid(),
@@ -10,6 +12,11 @@ const instanceResponseSchema = z.object({
   status: z.enum(['active', 'completed', 'cancelled', 'incident']),
   revision: z.number().int(),
   businessKey: z.string().nullable(),
+});
+
+const instanceDetailSchema = instanceResponseSchema.extend({
+  /** Posição atual dos tokens (drill-down do Operate — shape §3). */
+  currentElements: z.array(z.string()),
 });
 
 function problem(
@@ -53,18 +60,173 @@ export function registerRuntimeRoutes(rawApp: ZodApp, deps: ApiDeps): void {
       },
     },
     async (req, reply) => {
-      const outcome = await runtime.createAndStart(req.auth!.tenantId, req.body);
+      const tenantId = req.auth!.tenantId;
+      // Idempotency-Key (convenção §0): replay devolve a resposta ORIGINAL;
+      // mesma chave com corpo diferente = 409 (uso incorreto do cliente).
+      const idempotencyKey = req.headers['idempotency-key'];
+      const requestHash = createHash('sha256').update(JSON.stringify(req.body ?? {})).digest('hex');
+      if (typeof idempotencyKey === 'string' && idempotencyKey.length > 0) {
+        const hit = await runtime.idempotency.get(tenantId, idempotencyKey);
+        if (hit) {
+          if (hit.request_hash !== requestHash) {
+            return problem(reply, 409, PROBLEM_TYPES.conflict, 'Idempotency-Key reutilizada com corpo diferente', String(req.id));
+          }
+          // só respostas 201 são gravadas (falha não conta como consumo)
+          reply.header('idempotency-replayed', 'true');
+          reply.status(201);
+          return hit.response as z.infer<typeof instanceResponseSchema>;
+        }
+      }
+      const outcome = await runtime.createAndStart(tenantId, req.body);
       if (!outcome.ok) {
         return problem(reply, 422, PROBLEM_TYPES.validation, 'Não foi possível iniciar a instância', String(req.id), outcome.message);
       }
-      reply.status(201);
-      return {
+      const responseBody = {
         id: outcome.instance.id,
         definitionRef: outcome.instance.definition_ref,
         status: outcome.instance.status as 'active',
         revision: outcome.instance.revision,
         businessKey: outcome.instance.business_key,
       };
+      if (typeof idempotencyKey === 'string' && idempotencyKey.length > 0) {
+        await runtime.idempotency.put(tenantId, idempotencyKey, requestHash, 201, responseBody);
+        // corrida: se outra requisição venceu, o replay é DELA
+        const winner = await runtime.idempotency.get(tenantId, idempotencyKey);
+        if (winner && winner.request_hash === requestHash && winner.response) {
+          reply.status(201);
+          return winner.response as z.infer<typeof instanceResponseSchema>;
+        }
+      }
+      reply.status(201);
+      return responseBody;
+    },
+  );
+
+  app.get(
+    '/v1/instances',
+    {
+      preHandler: [app.authenticate, app.requirePermission('instances:read')],
+      schema: {
+        tags: ['instances'],
+        summary: 'Lista instâncias (cursor; filtros do Operate)',
+        security: [{ bearerAuth: [] }],
+        querystring: z.object({
+          cursor: z.string().optional(),
+          limit: z.coerce.number().int().min(1).max(100).optional(),
+          status: z.enum(['active', 'completed', 'cancelled', 'incident']).optional(),
+          definitionRef: z.string().optional(),
+          businessKey: z.string().optional(),
+        }),
+        response: {
+          200: z.object({
+            items: z.array(instanceResponseSchema),
+            nextCursor: z.string().nullable(),
+          }),
+        },
+      },
+    },
+    async (req) => {
+      const page = await runtime.list(req.auth!.tenantId, req.query);
+      return {
+        items: page.items.map((row) => ({
+          id: row.id,
+          definitionRef: row.definition_ref,
+          status: row.status as 'active',
+          revision: row.revision,
+          businessKey: row.business_key,
+        })),
+        nextCursor: page.nextCursor,
+      };
+    },
+  );
+
+  app.get(
+    '/v1/instances/:id/history',
+    {
+      preHandler: [app.authenticate, app.requirePermission('instances:read')],
+      schema: {
+        tags: ['instances'],
+        summary: 'História da instância ordenada por seq (cursor = seq)',
+        security: [{ bearerAuth: [] }],
+        params: z.object({ id: z.string().uuid() }),
+        querystring: z.object({
+          cursor: z.string().optional(),
+          limit: z.coerce.number().int().min(1).max(100).optional(),
+        }),
+        response: {
+          200: z.object({
+            items: z.array(
+              z.object({
+                seq: z.number(),
+                kind: z.string(),
+                payload: z.record(z.string(), z.unknown()),
+                engineVersion: z.string(),
+                occurredAt: z.string(),
+              }),
+            ),
+            nextCursor: z.string().nullable(),
+          }),
+          404: problemSchema,
+        },
+      },
+    },
+    async (req, reply) => {
+      const row = await runtime.get(req.auth!.tenantId, req.params.id);
+      if (!row) {
+        return problem(reply, 404, PROBLEM_TYPES.notFound, 'Instância não encontrada', String(req.id));
+      }
+      const page = await runtime.history(req.auth!.tenantId, req.params.id, req.query);
+      return {
+        items: page.items.map((event) => ({
+          seq: Number(event.seq),
+          kind: event.kind,
+          payload: (event.payload ?? {}) as Record<string, unknown>,
+          engineVersion: event.engine_version,
+          occurredAt: String(event.occurred_at),
+        })),
+        nextCursor: page.nextCursor,
+      };
+    },
+  );
+
+  app.get(
+    '/v1/instances/:id/export',
+    {
+      preHandler: [app.authenticate, app.requirePermission('operate:read')],
+      schema: {
+        tags: ['instances'],
+        summary: 'Export XES 2.0 da história (mineração de processos)',
+        security: [{ bearerAuth: [] }],
+        params: z.object({ id: z.string().uuid() }),
+        querystring: z.object({ format: z.literal('xes').default('xes') }),
+        response: { 200: z.string(), 404: problemSchema },
+      },
+    },
+    async (req, reply) => {
+      const row = await runtime.get(req.auth!.tenantId, req.params.id);
+      if (!row) {
+        return problem(reply, 404, PROBLEM_TYPES.notFound, 'Instância não encontrada', String(req.id));
+      }
+      let cursor: string | undefined;
+      const all: { seq: number; kind: string; payload: unknown; occurred_at: string }[] = [];
+      for (;;) {
+        const page = await runtime.history(req.auth!.tenantId, req.params.id, { cursor, limit: 100 });
+        all.push(
+          ...page.items.map((e) => ({
+            seq: Number(e.seq),
+            kind: e.kind,
+            payload: e.payload,
+            occurred_at: String(e.occurred_at),
+          })),
+        );
+        if (!page.nextCursor) break;
+        cursor = page.nextCursor;
+      }
+      reply.header('content-type', 'application/xml; charset=utf-8');
+      return instanceHistoryToXES(
+        { id: row.id, businessKey: row.business_key, definitionRef: row.definition_ref },
+        all,
+      );
     },
   );
 
@@ -74,10 +236,10 @@ export function registerRuntimeRoutes(rawApp: ZodApp, deps: ApiDeps): void {
       preHandler: [app.authenticate, app.requirePermission('instances:read')],
       schema: {
         tags: ['instances'],
-        summary: 'Consulta uma instância',
+        summary: 'Consulta uma instância (com a posição atual dos tokens)',
         security: [{ bearerAuth: [] }],
         params: z.object({ id: z.string().uuid() }),
-        response: { 200: instanceResponseSchema, 404: problemSchema },
+        response: { 200: instanceDetailSchema, 404: problemSchema },
       },
     },
     async (req, reply) => {
@@ -91,6 +253,8 @@ export function registerRuntimeRoutes(rawApp: ZodApp, deps: ApiDeps): void {
         status: row.status as 'active',
         revision: row.revision,
         businessKey: row.business_key,
+        // drill-down do Operate (shape §3): elementos com token vivo
+        currentElements: [...new Set(row.state.tokens.map((t) => t.elementId))],
       };
     },
   );
