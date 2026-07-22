@@ -11,7 +11,10 @@ export interface OutboxEffect {
   waitKey?: string;
   elementId?: string;
   jobType?: string;
-  payload?: Record<string, unknown>;
+  payload?: unknown;
+  formRef?: string;
+  candidates?: string[];
+  fireAt?: string;
   kind?: string;
   message?: string;
 }
@@ -22,20 +25,43 @@ export interface OutboxRow {
   instance_id: string;
   effect: OutboxEffect;
   effect_key: string;
+  revision: number;
+  effect_index: number;
+  engine_version: string;
 }
 
-/** Insere efeitos na MESMA transação do estado (D11); dedupe por effect_key. */
+/**
+ * Insere efeitos na MESMA transação do estado (D11); dedupe por effect_key.
+ * revision/effect_index/engine_version são os metadados do avanço que os
+ * produziu — a história deriva `seq` deles, deterministicamente (G-DAD-2).
+ */
 export async function insertEffects(
   tx: TransactionSql,
   tenantId: string,
   instanceId: string,
-  effects: Array<{ effectKey: string; effect: OutboxEffect }>,
+  effects: Array<{ effectKey: string; effect: OutboxEffect; index?: number }>,
+  meta: { revision?: number; engineVersion?: string } = {},
 ): Promise<void> {
-  for (const { effectKey: key, effect } of effects) {
-    await tx`INSERT INTO outbox (tenant_id, instance_id, effect, effect_key)
-      VALUES (${tenantId}, ${instanceId}, ${tx.json(effect as never)}, ${key})
+  let position = 0;
+  for (const { effectKey: key, effect, index } of effects) {
+    await tx`INSERT INTO outbox
+        (tenant_id, instance_id, effect, effect_key, revision, effect_index, engine_version)
+      VALUES (${tenantId}, ${instanceId}, ${tx.json(effect as never)}, ${key},
+        ${meta.revision ?? 0}, ${index ?? position}, ${meta.engineVersion ?? ''})
       ON CONFLICT (effect_key) DO NOTHING`;
+    position += 1;
   }
+}
+
+/**
+ * seq da história: monotônico POR INSTÂNCIA (com lacunas), derivado de
+ * (revision, effect_index) — determinístico sob re-dispatch, então o crash
+ * do worker reproduz o MESMO seq e a UNIQUE(effect_key) deduplica. O engine
+ * emite um punhado de efeitos por avanço (run-to-quiescence sobre diagrama
+ * finito); 100000 por revision é folga de ordens de magnitude.
+ */
+export function historySeq(revision: number, effectIndex: number): number {
+  return revision * 100_000 + effectIndex;
 }
 
 export interface DispatchResult {
@@ -43,13 +69,13 @@ export interface DispatchResult {
 }
 
 /**
- * UM passo do dispatcher (F1.8): consome a outbox com FOR UPDATE SKIP LOCKED
+ * UM passo do dispatcher (F2.2): consome a outbox com FOR UPDATE SKIP LOCKED
  * — O(1) amortizado por item — e aplica cada efeito DENTRO da mesma
  * transação em que a linha é removida (fila efêmera: linha despachada é
- * DELETADA). Crash em qualquer ponto = rollback = re-dispatch idempotente
- * (CreateJob deduplica por UNIQUE(wait_key); os demais são idempotentes por
- * natureza no skeleton). `onCrash` é a agulha do CRASH TEST: injetada no
- * meio do processamento, simula o kill do worker.
+ * DELETADA). Crash em qualquer ponto = rollback = re-dispatch idempotente:
+ * cada tratador tem uma âncora de dedupe (UNIQUE wait_key em jobs/timers/
+ * user_tasks; UNIQUE effect_key em history_events/incidents; UPDATEs
+ * condicionados a estado). `onCrash` é a agulha do CRASH TEST.
  */
 export async function dispatchOutboxOnce(
   sql: Sql,
@@ -58,13 +84,14 @@ export async function dispatchOutboxOnce(
     batch?: number;
     /** hook de teste: lançar aqui simula o worker morrendo no meio. */
     onCrash?: (row: OutboxRow, index: number) => void;
-    /** efeitos sem tratador dedicado (EmitHistory etc.) — log do worker. */
+    /** efeitos sem escrita local (CompleteInstance) — log do worker. */
     onInfo?: (row: OutboxRow) => void;
   } = {},
 ): Promise<DispatchResult> {
   return withTenant(sql, tenantId, async (tx) => {
     const rows = await tx<OutboxRow[]>`
-      SELECT id, tenant_id, instance_id, effect, effect_key
+      SELECT id, tenant_id, instance_id, effect, effect_key,
+             revision, effect_index, engine_version
       FROM outbox
       WHERE status = 'pending' AND next_attempt_at <= now()
       ORDER BY created_at, id
@@ -74,22 +101,78 @@ export async function dispatchOutboxOnce(
     for (const row of rows) {
       options.onCrash?.(row, index);
       index += 1;
-      const effect = row.effect;
-      if (effect.type === 'CreateJob') {
-        await tx`INSERT INTO jobs (tenant_id, instance_id, wait_key, type, payload)
-          VALUES (${row.tenant_id}, ${row.instance_id}, ${effect.waitKey!},
-                  ${effect.jobType ?? 'noop'}, ${tx.json((effect.payload ?? {}) as never)})
-          ON CONFLICT (wait_key) DO NOTHING`;
-      } else {
-        // CompleteInstance/EmitHistory/RaiseIncident/Close*/Cancel*: no
-        // skeleton não há tabelas-alvo além de jobs (chegam na F2) — o
-        // estado da instância já foi atualizado na tx do advance.
-        options.onInfo?.(row);
-      }
+      await applyEffect(tx, row, options.onInfo);
       await tx`DELETE FROM outbox WHERE id = ${row.id}`;
     }
     return { processed: rows.length };
   });
+}
+
+/** Aplica UM efeito nas tabelas do runtime (migrações 0002/0003). */
+async function applyEffect(
+  tx: TransactionSql,
+  row: OutboxRow,
+  onInfo?: (row: OutboxRow) => void,
+): Promise<void> {
+  const effect = row.effect;
+  switch (effect.type) {
+    case 'CreateJob':
+      await tx`INSERT INTO jobs (tenant_id, instance_id, wait_key, type, payload)
+        VALUES (${row.tenant_id}, ${row.instance_id}, ${effect.waitKey!},
+                ${effect.jobType ?? 'noop'}, ${tx.json((effect.payload ?? {}) as never)})
+        ON CONFLICT (wait_key) DO NOTHING`;
+      return;
+    case 'CancelJob':
+      // Job cancelado não conclui: sai de available/locked; conclusão tardia
+      // com token antigo cai no fencing (409). Terminais ficam como estão.
+      await tx`UPDATE jobs SET status = 'cancelled', lock_token = NULL, lock_until = NULL
+        WHERE wait_key = ${effect.waitKey!} AND status IN ('available','locked')`;
+      return;
+    case 'ScheduleTimer':
+      await tx`INSERT INTO timers (tenant_id, instance_id, element_id, wait_key, fire_at)
+        VALUES (${row.tenant_id}, ${row.instance_id}, ${effect.elementId!},
+                ${effect.waitKey!}, ${effect.fireAt!})
+        ON CONFLICT (wait_key) DO NOTHING`;
+      return;
+    case 'CancelTimer':
+      await tx`UPDATE timers SET status = 'cancelled'
+        WHERE wait_key = ${effect.waitKey!} AND status = 'armed'`;
+      return;
+    case 'OpenUserTask':
+      await tx`INSERT INTO user_tasks
+          (tenant_id, instance_id, element_id, wait_key, form_ref, candidate_roles, payload)
+        VALUES (${row.tenant_id}, ${row.instance_id}, ${effect.elementId!},
+                ${effect.waitKey!}, ${effect.formRef ?? ''},
+                ${effect.candidates ?? []},
+                ${tx.json((effect.payload ?? {}) as never)})
+        ON CONFLICT (wait_key) DO NOTHING`;
+      return;
+    case 'CloseUserTask':
+      // Fechamento pelo ENGINE (boundary interruptivo/cancelamento): a task
+      // some da Tasklist. Conclusão pelo usuário marca 'completed' na rota.
+      await tx`UPDATE user_tasks SET status = 'cancelled', completed_at = now()
+        WHERE wait_key = ${effect.waitKey!} AND status = 'open'`;
+      return;
+    case 'EmitHistory':
+      await tx`INSERT INTO history_events
+          (tenant_id, instance_id, seq, kind, payload, engine_version, effect_key)
+        VALUES (${row.tenant_id}, ${row.instance_id},
+                ${historySeq(row.revision, row.effect_index)},
+                ${effect.kind!}, ${tx.json((effect.payload ?? {}) as never)},
+                ${row.engine_version}, ${row.effect_key})
+        ON CONFLICT (effect_key) DO NOTHING`;
+      return;
+    case 'RaiseIncident':
+      await tx`INSERT INTO incidents (tenant_id, instance_id, kind, message, effect_key)
+        VALUES (${row.tenant_id}, ${row.instance_id}, ${effect.kind!},
+                ${effect.message ?? ''}, ${row.effect_key})
+        ON CONFLICT (effect_key) DO NOTHING`;
+      return;
+    default:
+      // CompleteInstance: o estado/status já foi gravado na tx do avanço; a
+      // história vem do EmitHistory 'instanceCompleted'. Nada a escrever.
+      onInfo?.(row);
+  }
 }
 
 /** Profundidade atual da fila (métrica 9.2 + asserção dos testes). */

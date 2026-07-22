@@ -27,7 +27,14 @@ export interface PlatformRuntime {
     options: { definitionRef?: string; businessKey?: string; variables?: Record<string, unknown> },
   ): Promise<AdvanceOutcome>;
   get(tenantId: string, instanceId: string): Promise<InstanceRow | undefined>;
-  completeJob(tenantId: string, jobId: string, lockToken: string, now: string): Promise<JobOutcome>;
+  cancel(tenantId: string, instanceId: string, reason?: string): Promise<AdvanceOutcome>;
+  completeJob(
+    tenantId: string,
+    jobId: string,
+    lockToken: string,
+    now: string,
+    result?: Record<string, unknown>,
+  ): Promise<JobOutcome>;
   failJob(
     tenantId: string,
     jobId: string,
@@ -48,7 +55,18 @@ export function createRuntime(
     get(tenantId, instanceId) {
       return getInstance(sql, tenantId, instanceId);
     },
-    async completeJob(tenantId, jobId, lockToken, now) {
+    cancel(tenantId, instanceId, reason) {
+      // O engine emite CancelJob/CancelTimer/CloseUserTask para TODAS as
+      // esperas abertas — o dispatcher fecha job/timer/task (aceite F2:
+      // cancelamento fecha esperas).
+      return advanceInstance(sql, tenantId, instanceId, {
+        type: 'CancelInstance',
+        now: clock(),
+        variables: {},
+        ...(reason !== undefined ? { reason } : {}),
+      });
+    },
+    async completeJob(tenantId, jobId, lockToken, now, result) {
       const conclusion = await completeJobRow(sql, tenantId, jobId, lockToken);
       if (!conclusion.ok) {
         return {
@@ -67,6 +85,7 @@ export function createRuntime(
         now,
         waitKey: conclusion.job.wait_key,
         variables: {},
+        ...(result !== undefined ? { result } : {}),
       });
       if (!advanced.ok) return { ok: false, reason: advanced.reason, message: advanced.message };
       return { ok: true, instance: advanced.instance };

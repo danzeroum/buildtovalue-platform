@@ -14,22 +14,33 @@ export {
   type RefreshTokenRow,
 } from './repositories/refreshTokens.js';
 export { effectKey } from './runtime/effectKey.js';
-export { engineFor, SKELETON_DEFINITION_REF } from './runtime/definitions.js';
+export {
+  conditionEvaluator,
+  engineFor,
+  EXAMPLE_DEFINITION_REF,
+  SKELETON_DEFINITION_REF,
+} from './runtime/definitions.js';
 export {
   advanceInstance,
   createAndStartInstance,
   getInstance,
+  runStateMigrations,
+  STATE_MIGRATIONS,
   type AdvanceOutcome,
   type InstanceRow,
+  type MigrationOutcome,
+  type StateMigration,
 } from './runtime/advance.js';
 export {
   dispatchOutboxOnce,
+  historySeq,
   insertEffects,
   outboxDepth,
   type DispatchResult,
   type OutboxEffect,
   type OutboxRow,
 } from './runtime/outbox.js';
+export { sweepDueTimersOnce, type TimerSweepResult } from './runtime/timers.js';
 export {
   completeJob,
   failJob,
