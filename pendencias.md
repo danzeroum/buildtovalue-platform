@@ -5,10 +5,19 @@
 
 ## 1. BLOQUEIO ATIVO — publish no npm (engine e, na sequência, forms)
 
-**Único item que trava o fechamento da F1.** A integração segue sem
-`actions: write` no repo `bpmn` (dispatch do `release.yml` responde 403) e
-este ambiente não tem `NPM_TOKEN` (ele vive só nos secrets do Actions —
-correto). Não existe caminho técnico para eu publicar.
+**Único item que trava o fechamento da F1.** ATUALIZAÇÃO (Release #2,
+22/07 12:42 UTC): o pipeline inteiro está provado — gate de 28 projetos
+verde, guarda pre-mode-aware passou — e o publish morreu com `ENEEDAUTH`:
+**o secret `NPM_TOKEN` não resolveu no runner** (chegou vazio). Checklist:
+
+1. Repo `bpmn` → Settings → Secrets and variables → **Actions** →
+   *Repository secrets* → nome EXATO `NPM_TOKEN` (environment/Dependabot/
+   Codespaces secrets não valem para este workflow).
+2. Token do npm tipo *Automation* (ou granular com **Read and write** na
+   org `@buildtovalue`), não expirado.
+3. Re-executar `release.yml` com dry-run desmarcado. A PR bpmn#168
+   (fail-fast) faz futuras ausências do secret falharem em segundos com a
+   mensagem exata, em vez de após 4min de gate.
 
 - **O que preciso de você (um dos dois):**
   - (a) rodar `release.yml` na UI do Actions da `main` do `bpmn` com
