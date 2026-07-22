@@ -11,14 +11,19 @@
       "default": "./dist/index.js"
     }
   },
-  "files": ["dist", "migrations"],
+  "files": [
+    "dist",
+    "migrations"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "migrate": "tsx src/migrate-cli.ts"
   },
   "dependencies": {
-    "postgres": "^3.4.7"
+    "postgres": "^3.4.7",
+    "@buildtovalue/engine": "1.1.0-next.1",
+    "@buildtovalue/core": "1.2.0-next.0"
   },
   "devDependencies": {
     "typescript": "^5.9.3"

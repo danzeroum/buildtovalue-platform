@@ -3,12 +3,28 @@
 > Mantido pelo desenvolvedor sob o regime de autonomia (2026-07-22): PRs
 > estratégicas com merge em CI verde; o que exige VOCÊ fica aqui.
 
-## 1. BLOQUEIO ATIVO — publish no npm (engine e, na sequência, forms)
+## 1. ~~BLOQUEIO — publish no npm~~ RESOLVIDO (22/07, Release #4 verde)
 
-**Único item que trava o fechamento da F1.** A integração segue sem
-`actions: write` no repo `bpmn` (dispatch do `release.yml` responde 403) e
-este ambiente não tem `NPM_TOKEN` (ele vive só nos secrets do Actions —
-correto). Não existe caminho técnico para eu publicar.
+**Encerrada.** Secret corrigido pelo dono; trem `-next` completo no registry
+(engine@1.1.0-next.1, core@1.2.0-next.0, forms/forms-react@1.0.0-next.0 e a
+biblioteca). F1.8 fechado na sequência com o engine pinado exato. Histórico
+abaixo mantido para auditoria.
+
+### (histórico)
+
+**Único item que trava o fechamento da F1.** ATUALIZAÇÃO (Release #2,
+22/07 12:42 UTC): o pipeline inteiro está provado — gate de 28 projetos
+verde, guarda pre-mode-aware passou — e o publish morreu com `ENEEDAUTH`:
+**o secret `NPM_TOKEN` não resolveu no runner** (chegou vazio). Checklist:
+
+1. Repo `bpmn` → Settings → Secrets and variables → **Actions** →
+   *Repository secrets* → nome EXATO `NPM_TOKEN` (environment/Dependabot/
+   Codespaces secrets não valem para este workflow).
+2. Token do npm tipo *Automation* (ou granular com **Read and write** na
+   org `@buildtovalue`), não expirado.
+3. Re-executar `release.yml` com dry-run desmarcado. A PR bpmn#168
+   (fail-fast) faz futuras ausências do secret falharem em segundos com a
+   mensagem exata, em vez de após 4min de gate.
 
 - **O que preciso de você (um dos dois):**
   - (a) rodar `release.yml` na UI do Actions da `main` do `bpmn` com
@@ -48,6 +64,13 @@ a implementação da costura (KeyProvider + teste "ledger sem conteúdo
 pessoal") entra na F2 assim que aceitar (ou ajustar).
 
 ## 3. Registro de fluxo (sem ação sua)
+
+- **Follow-up bpmn:** ENGINE_VERSION interna ficou 1.1.0-next.0 com pacote
+  1.1.0-next.1 (bump do changesets não toca a constante) — corrigir com
+  teste de sincronia constante×package.json no aceite da F0b.
+- **Follow-up infra:** smoke containerizado do compose.dev.yml em máquina
+  com Docker (este ambiente não tem daemon; processos validados contra PG
+  real) — fase-1.md registra a ressalva.
 
 - Issue #2 deste repo: regra de lint D19 "boundary só sobre atividade de
   espera" (alvo F3.1), com casos de teste.

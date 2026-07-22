@@ -1,5 +1,5 @@
 import { loadConfig } from '@platform/config';
-import { createDb, createRefreshTokenRepository, createUserRepository } from '@platform/db';
+import { createDb, createRefreshTokenRepository, createRuntime, createUserRepository } from '@platform/db';
 import { buildApp } from './app.js';
 
 const config = loadConfig();
@@ -9,6 +9,7 @@ const app = await buildApp({
   config,
   users: createUserRepository(sql),
   refreshTokens: createRefreshTokenRepository(sql),
+  runtime: createRuntime(sql),
   dbReady: async () => {
     await sql`SELECT 1`;
     return true;

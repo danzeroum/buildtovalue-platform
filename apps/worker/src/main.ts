@@ -1,19 +1,64 @@
 import { loadConfig } from '@platform/config';
-import { createDb } from '@platform/db';
+import { signAccessToken } from '@platform/auth';
+import { createDb, dispatchOutboxOnce, lockJobs } from '@platform/db';
 import { createLogger } from '@platform/observability';
 
 /**
- * Worker — esqueleto F1. O dispatcher real (LISTEN em conexão DEDICADA +
- * polling dinâmico 100ms–1s + fallback 60s, D16r/D22) entra na F2; aqui nasce
- * o processo com config validada, logger com redaction, conexão ao banco e
- * shutdown gracioso — o chassi que o dispatcher vai habitar.
+ * Worker do WALKING SKELETON (F1.8): loop de dispatch da outbox
+ * (FOR UPDATE SKIP LOCKED) + execução de jobs pelo CONTRATO PÚBLICO —
+ * o handler roda FORA de transação e conclui via POST /v1/jobs/{id}/complete
+ * com lock_token (D22/D12). A F2 troca o polling fixo por LISTEN dedicado +
+ * polling dinâmico (100ms–1s, fallback 60s) e registra handlers reais no
+ * JobHandlerRegistry; aqui o handler é o noop do skeleton.
  */
 const config = loadConfig();
 const logger = createLogger({ service: 'worker', level: config.LOG_LEVEL });
 const sql = createDb(config.DATABASE_URL, { max: 5 });
+const apiBase = process.env.WORKER_API_BASE ?? `http://localhost:${config.API_PORT}`;
+const workerId = `worker-${process.pid}`;
 
 await sql`SELECT 1`;
-logger.info('worker de pé — dispatcher chega na F2 (walking skeleton F1.8)');
+logger.info({ workerId, apiBase }, 'worker do skeleton de pé');
+
+async function machineToken(tenantId: string): Promise<string> {
+  // Token de máquina restrito a jobs (plano §6): papel operator via RBAC.
+  const { accessToken } = await signAccessToken(
+    { sub: workerId, tenantId, role: 'operator' },
+    { secret: config.JWT_SECRET, accessTtlSeconds: config.JWT_ACCESS_TTL_SECONDS },
+  );
+  return accessToken;
+}
+
+async function tenantsWithWork(): Promise<string[]> {
+  // Skeleton: varre tenants com outbox/jobs pendentes (a F2 herda isto no
+  // dispatcher com LISTEN por canal). Conexão do worker é app_api (RLS) —
+  // a listagem vem das próprias linhas visíveis por tenant via união dos
+  // contextos conhecidos: aqui, tenants da tabela (SELECT liberado).
+  const rows = await sql`SELECT id FROM tenants`;
+  return rows.map((r) => r.id as string);
+}
+
+async function tick(): Promise<void> {
+  for (const tenantId of await tenantsWithWork()) {
+    const dispatched = await dispatchOutboxOnce(sql, tenantId, {
+      onInfo: (row) => logger.debug({ effect: row.effect.type }, 'efeito informativo'),
+    });
+    if (dispatched.processed > 0) logger.info({ tenantId, ...dispatched }, 'outbox despachada');
+
+    const jobs = await lockJobs(sql, tenantId, workerId, { leaseMs: 30_000 });
+    for (const job of jobs) {
+      // handler noop FORA de tx; conclusão SEMPRE pelo contrato público.
+      const token = await machineToken(tenantId);
+      const response = await fetch(`${apiBase}/v1/jobs/${job.id}/complete`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+        body: JSON.stringify({ lockToken: job.lock_token }),
+      });
+      if (response.ok) logger.info({ jobId: job.id }, 'job concluído via contrato');
+      else logger.warn({ jobId: job.id, status: response.status }, 'conclusão recusada (fencing?)');
+    }
+  }
+}
 
 let running = true;
 const shutdown = async (signal: string) => {
@@ -26,8 +71,13 @@ const shutdown = async (signal: string) => {
 process.on('SIGTERM', () => void shutdown('SIGTERM'));
 process.on('SIGINT', () => void shutdown('SIGINT'));
 
-// Heartbeat até o dispatcher da F2 assumir o loop.
-const heartbeat = setInterval(() => {
-  if (running) logger.debug('worker heartbeat');
-}, 60_000);
-heartbeat.unref();
+const POLL_MS = 500;
+while (running) {
+  try {
+    await tick();
+  } catch (error) {
+    logger.error({ err: error }, 'tick falhou — segue no próximo');
+  }
+  await new Promise((resolve) => setTimeout(resolve, POLL_MS));
+}
+export {};

@@ -14,6 +14,14 @@ export {
   type RefreshTokenRow,
 } from './repositories/refreshTokens.js';
 export { effectKey } from './runtime/effectKey.js';
+export { engineFor, SKELETON_DEFINITION_REF } from './runtime/definitions.js';
+export {
+  advanceInstance,
+  createAndStartInstance,
+  getInstance,
+  type AdvanceOutcome,
+  type InstanceRow,
+} from './runtime/advance.js';
 export {
   dispatchOutboxOnce,
   insertEffects,
@@ -29,3 +37,9 @@ export {
   type JobConclusion,
   type JobRow,
 } from './runtime/jobs.js';
+export {
+  createRuntime,
+  type FailOutcome,
+  type JobOutcome,
+  type PlatformRuntime,
+} from './runtime/facade.js';
