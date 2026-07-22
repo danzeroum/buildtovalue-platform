@@ -106,12 +106,17 @@ export function registerRuntimeRoutes(rawApp: ZodApp, deps: ApiDeps): void {
         summary: 'Conclui um job com o lock_token vigente (fencing D12)',
         security: [{ bearerAuth: [] }],
         params: z.object({ id: z.string().uuid() }),
-        body: jobConclusionBody,
+        body: jobConclusionBody.extend({
+          result: z
+            .record(z.string(), z.unknown())
+            .optional()
+            .describe('Variáveis produzidas pelo handler; o host persiste (D13)'),
+        }),
         response: { 200: instanceResponseSchema, 404: problemSchema, 409: problemSchema },
       },
     },
     async (req, reply) => {
-      const outcome = await runtime.completeJob(req.auth!.tenantId, req.params.id, req.body.lockToken, new Date().toISOString());
+      const outcome = await runtime.completeJob(req.auth!.tenantId, req.params.id, req.body.lockToken, new Date().toISOString(), req.body.result);
       if (!outcome.ok) {
         if (outcome.reason === 'notFound') {
           return problem(reply, 404, PROBLEM_TYPES.notFound, 'Job não encontrado', String(req.id));

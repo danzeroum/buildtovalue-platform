@@ -54,8 +54,22 @@ verde, guarda pre-mode-aware passou — e o publish morreu com `ENEEDAUTH`:
 5. **Storybook do forms-react**: instalado como devDependency do monorepo
    público (peso de install considerável) — se preferir Storybook em repo
    separado ou docs estáticos, dá para mudar depois sem tocar no renderer.
+6. **(F2.1) Avaliador de condição v1 do host** = igualdade de literais
+   (`variavel = true|false|número|"texto"`); expressão fora disso retorna
+   erro → incidente (fail-fast D19, nunca rota silenciosa). É a costura
+   onde o S-FEEL da biblioteca entra na F3 junto do deploy de definições.
+7. **(F2.1) `example@1` embutido** no registro de definições (mesmo caminho
+   do `skeleton@1`) — vira o processo exemplo do aceite da F2; o deploy real
+   via `process_definitions` + lint D19 continua na F3.
+8. **(F2.1) Relógio da varredura de timers é o INJETADO do host** (não o
+   `now()` do banco): o mesmo instante decide o vencimento e carimba o
+   evento TimerFired — testes determinísticos, D2 coerente. A marcação
+   'fired' acontece na MESMA tx do avanço (sem janela de crash).
+9. **(F2.1) `seq` da história** = `revision × 100000 + effect_index` —
+   monotônico por instância com lacunas, determinístico sob re-dispatch
+   (o crash do worker reproduz o MESMO seq; UNIQUE de effect_key deduplica).
 
-## 2.1 ADR-0002 (tombstones LGPD×ledger) — PROPOSTO, aguarda seu aceite
+## 2.1 ~~ADR-0002~~ APROVADO (22/07) — teste do ledger vira entregável nomeado da F2
 
 `docs/architecture/ADR-0002-tombstones-ledger-lgpd.md`: Anexo B adotado
 (conteúdo fora do ledger + tombstone de eliminação + salt por registro),
@@ -63,11 +77,20 @@ com as alternativas B/C e trade-offs. A política 3.2 pede sua aprovação —
 a implementação da costura (KeyProvider + teste "ledger sem conteúdo
 pessoal") entra na F2 assim que aceitar (ou ajustar).
 
+## 2.2 Tag `phase-1` — push bloqueado pelo proxy (ação SUA, 1 min)
+
+O proxy git da sessão só aceita push na branch designada; `git push origin
+phase-1` respondeu HTTP 403. A tag existe LOCALMENTE em `e940fe5` (a main
+mergeada da PR #4). Crie pela UI (Releases → "Create a new release"/tag
+`phase-1` sobre `e940fe5`) ou libere tag-push para a integração.
+
 ## 3. Registro de fluxo (sem ação sua)
 
-- **Follow-up bpmn:** ENGINE_VERSION interna ficou 1.1.0-next.0 com pacote
-  1.1.0-next.1 (bump do changesets não toca a constante) — corrigir com
-  teste de sincronia constante×package.json no aceite da F0b.
+- **Follow-up bpmn (absorvido pela F2 — triagem 22/07):** ENGINE_VERSION
+  derivada do package.json NO BUILD (é o valor gravado por instância que
+  replay/StateMigrator usam — não pode divergir do pacote publicado).
+- **Absorvido pela F2 (triagem 22/07):** StateMigrator sai de stub, com o
+  caso "state_schema_version antiga demais → incidente" no aceite.
 - **Follow-up infra:** smoke containerizado do compose.dev.yml em máquina
   com Docker (este ambiente não tem daemon; processos validados contra PG
   real) — fase-1.md registra a ressalva.

@@ -1,6 +1,6 @@
 import { loadConfig } from '@platform/config';
 import { signAccessToken } from '@platform/auth';
-import { createDb, dispatchOutboxOnce, lockJobs } from '@platform/db';
+import { createDb, dispatchOutboxOnce, lockJobs, sweepDueTimersOnce } from '@platform/db';
 import { createLogger } from '@platform/observability';
 
 /**
@@ -44,6 +44,12 @@ async function tick(): Promise<void> {
       onInfo: (row) => logger.debug({ effect: row.effect.type }, 'efeito informativo'),
     });
     if (dispatched.processed > 0) logger.info({ tenantId, ...dispatched }, 'outbox despachada');
+
+    // Timers vencidos → TimerFired → avanço (F2.4). A varredura marca
+    // 'fired' na mesma tx do avanço; efeitos resultantes saem no próximo
+    // dispatch da outbox.
+    const swept = await sweepDueTimersOnce(sql, tenantId);
+    if (swept.fired > 0) logger.info({ tenantId, ...swept }, 'timers disparados');
 
     const jobs = await lockJobs(sql, tenantId, workerId, { leaseMs: 30_000 });
     for (const job of jobs) {

@@ -99,6 +99,50 @@ describe('RLS — isolamento de tenants (migração 0001)', () => {
     );
   });
 
+  it('TODAS as tabelas multi-tenant têm RLS FORÇADA (0001+0002+0003)', async () => {
+    // Lista canônica: tabela nova sem entrar aqui + sem policy = este teste
+    // ou o de vazamento abaixo ficam vermelhos.
+    const tables = [
+      'users', 'refresh_tokens',
+      'instances', 'outbox', 'jobs',
+      'variables', 'variable_search_keys', 'timers', 'user_tasks',
+      'incidents', 'history_events',
+    ];
+    const rows = await api`
+      SELECT relname, relrowsecurity, relforcerowsecurity
+      FROM pg_class
+      WHERE relname = ANY(${tables}) AND relkind = 'r'`;
+    expect(rows.map((r) => r.relname).sort()).toEqual([...tables].sort());
+    for (const row of rows) {
+      expect(row.relrowsecurity, `${row.relname} sem RLS`).toBe(true);
+      expect(row.relforcerowsecurity, `${row.relname} sem FORCE RLS`).toBe(true);
+    }
+  });
+
+  it('tabelas do runtime F2 seguem o mesmo isolamento (history_events como amostra)', async () => {
+    const migrator = postgres(db.migratorUrl, { max: 1, onnotice: () => {} });
+    const instanceId = await withTenant(migrator, tenantA, async (tx) => {
+      const [row] = await tx`
+        INSERT INTO instances (tenant_id, definition_ref, engine_version,
+          state_schema_version, state, status)
+        VALUES (${tenantA}, 'skeleton@1', 'e', 1, '{}'::jsonb, 'active')
+        RETURNING id`;
+      await tx`INSERT INTO history_events
+          (tenant_id, instance_id, seq, kind, payload, engine_version, effect_key)
+        VALUES (${tenantA}, ${row.id}, 1, 'instanceStarted', '{}'::jsonb, 'e', 'rls-hist-1')`;
+      return row.id as string;
+    });
+    await migrator.end();
+    const fromB = await withTenant(
+      api,
+      tenantB,
+      (tx) => tx`SELECT id FROM history_events WHERE instance_id = ${instanceId}`,
+    );
+    expect(fromB.length).toBe(0);
+    const noContext = await api`SELECT id FROM history_events`;
+    expect(noContext.length).toBe(0);
+  });
+
   it('refresh_tokens segue o mesmo isolamento', async () => {
     const [user] = await withTenant(api, tenantA, (tx) => tx`SELECT id FROM users`);
     await withTenant(api, tenantA, (tx) =>
