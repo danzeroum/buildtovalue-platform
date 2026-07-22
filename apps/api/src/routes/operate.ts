@@ -129,12 +129,19 @@ export function registerOperateRoutes(rawApp: ZodApp, deps: ApiDeps): void {
       schema: {
         tags: ['incidents'],
         summary: 'Re-tenta a causa: jobs failed voltam a available com retries restaurados (auditado)',
+        description:
+          'Re-arma jobs `failed` da instância (retries restaurados) e marca o incidente `retried`. ' +
+          'LIMITAÇÃO v1 (ERRATA §7 do contrato): efeito em DEAD-LETTER ' +
+          "(`kind = 'effectDispatchFailed'`) NÃO é re-enfileirável — a outbox é fila efêmera e o " +
+          'payload não é persistido no incidente. Nesse caso a rota responde 409 problem+json ' +
+          'apontando /resolution (sem falso sucesso). Re-enfileiramento com payload persistido ' +
+          'exige coluna nova em incidents (migração da AG-2).',
         security: [{ bearerAuth: [] }],
         params: z.object({ id: z.string().uuid() }),
         response: {
           200: z.object({ rearmedJobs: z.number().int() }),
           404: problemSchema,
-          409: problemSchema,
+          409: problemSchema.describe('Incidente não re-tentável (ex.: dead-letter) — use /resolution'),
         },
       },
     },
