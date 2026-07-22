@@ -65,9 +65,18 @@ verde, guarda pre-mode-aware passou — e o publish morreu com `ENEEDAUTH`:
    `now()` do banco): o mesmo instante decide o vencimento e carimba o
    evento TimerFired — testes determinísticos, D2 coerente. A marcação
    'fired' acontece na MESMA tx do avanço (sem janela de crash).
-9. **(F2.1) `seq` da história** = `revision × 100000 + effect_index` —
-   monotônico por instância com lacunas, determinístico sob re-dispatch
-   (o crash do worker reproduz o MESMO seq; UNIQUE de effect_key deduplica).
+9. **`seq` da história — aritmética COMPLETA (semântica que XES/Operate
+   consomem; atualizado na leva 2 da F3):**
+   - Efeitos do engine (dispatcher): `seq = revision × 100000 +
+     effect_index` (índices 0..N, N pequeno) — determinístico sob
+     re-dispatch (crash reproduz o MESMO seq; UNIQUE de effect_key dedup).
+   - Auditoria do host (reveal/patch/reatribuição): faixa RESERVADA
+     `revision × 100000 + 90000 .. +99999` (10.000 slots por revision),
+     MAX+1 serializado por FOR UPDATE na instância, com GUARDA EXPLÍCITA:
+     estourar a faixa = erro alto, nunca overflow invadindo a revision
+     seguinte. UNIQUE(instance_id, seq) é o guarda-corpo físico.
+   - Ordem total por instância = ordem numérica de seq; dentro de uma
+     revision, efeitos do engine (0..N) precedem auditoria (90000+).
 10. **(F2.4+) `FIELD_KEY_SECRET`** é o KeyProvider de dev/CI (D20): scrypt →
     AES-256-GCM por registro. Sem ele, gravar um campo `sensitive` ABORTA a
     tx (nunca plaintext silencioso). KMS por tenant continua na F5; chave

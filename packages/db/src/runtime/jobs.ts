@@ -24,7 +24,7 @@ export async function lockJobs(
   sql: Sql,
   tenantId: string,
   workerId: string,
-  options: { limit?: number; leaseMs?: number } = {},
+  options: { limit?: number; leaseMs?: number; types?: string[] } = {},
 ): Promise<JobRow[]> {
   const leaseMs = options.leaseMs ?? 30_000;
   return withTenant(sql, tenantId, async (tx) => {
@@ -37,13 +37,65 @@ export async function lockJobs(
         lock_until = now() + make_interval(secs => ${leaseMs / 1000})
       WHERE id IN (
         SELECT id FROM jobs
-        WHERE status = 'available'
-           OR (status = 'locked' AND lock_until < now())
+        WHERE (status = 'available'
+           OR (status = 'locked' AND lock_until < now()))
+          AND (${options.types ?? null}::text[] IS NULL OR type = ANY(${options.types ?? null}))
         ORDER BY created_at
         FOR UPDATE SKIP LOCKED
         LIMIT ${options.limit ?? 5}
       )
       RETURNING id, instance_id, wait_key, type, payload, status, lock_token, retries_left`;
+  });
+}
+
+export interface JobListItem {
+  id: string;
+  instance_id: string;
+  type: string;
+  status: string;
+  retries_left: number;
+  error: string | null;
+  created_at: string;
+}
+
+/** GET /v1/jobs (shape §5): cursor + filtros status/type/instanceId. */
+export async function listJobs(
+  sql: Sql,
+  tenantId: string,
+  options: {
+    cursor?: string;
+    limit?: number;
+    status?: string;
+    type?: string;
+    instanceId?: string;
+  } = {},
+): Promise<{ items: JobListItem[]; nextCursor: string | null }> {
+  const limit = Math.min(Math.max(options.limit ?? 20, 1), 100);
+  const after = options.cursor
+    ? (() => {
+        const raw = Buffer.from(options.cursor!, 'base64url').toString('utf8');
+        const at = raw.lastIndexOf('|');
+        return at > 0 ? { createdAt: raw.slice(0, at), id: raw.slice(at + 1) } : undefined;
+      })()
+    : undefined;
+  return withTenant(sql, tenantId, async (tx) => {
+    const rows = await tx`
+      SELECT id, instance_id, type, status, retries_left, error, created_at,
+             created_at::text AS created_at_cursor
+      FROM jobs
+      WHERE (${options.status ?? null}::text IS NULL OR status = ${options.status ?? null})
+        AND (${options.type ?? null}::text IS NULL OR type = ${options.type ?? null})
+        AND (${options.instanceId ?? null}::uuid IS NULL OR instance_id = ${options.instanceId ?? null})
+        AND (${after?.createdAt ?? null}::text::timestamptz IS NULL
+             OR (created_at, id) > (${after?.createdAt ?? null}::text::timestamptz, ${after?.id ?? null}::uuid))
+      ORDER BY created_at, id
+      LIMIT ${limit + 1}`;
+    const items = rows.slice(0, limit) as unknown as JobListItem[];
+    const nextCursor =
+      rows.length > limit
+        ? Buffer.from(`${rows[limit - 1].created_at_cursor}|${rows[limit - 1].id}`).toString('base64url')
+        : null;
+    return { items, nextCursor };
   });
 }
 
