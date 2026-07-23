@@ -247,6 +247,28 @@ mantém a tag `next`). **Se o `workflow_dispatch` ainda devolver 403** pelo prox
 me avise que **você dispara pela UI do Actions** (mesmo procedimento do
 `phase-1`, §2.2).
 
+**Composição da PR de versão (bpmn#170) — corte final:** o `version-packages`
+batia num acoplamento: bumpar o engine (`next.1→next.2`, changeset pré-existente
+`ENGINE_VERSION`) quebrava 5 cenários do corpus de replay **D6** só na string de
+versão. Resolvido pela raiz (ver §2.8). A #170 publica os **dois juntos**:
+`forms@1.0.0-next.1` + `engine@1.1.0-next.2`; nenhuma aceitação nomeada regenerada.
+
+## 2.8 D6 REFINADO — replay compara projeção semântica, não versão
+
+**D6 refinado — o replay compara a projeção semântica do estado; `engineVersion`
+é gravada e verificada por asserção própria, não por igualdade byte-a-byte.
+Motivo: metadado de versão fazia o gate disparar por não-semântica e empurrava
+para regeneração rotineira do corpus** (e é na regeneração que uma regressão
+semântica real passaria batida, misturada às trocas de string). Feito em
+`packages/engine/tests/replay.test.ts` (bpmn): normaliza SÓ `engineVersion`;
+`stateSchemaVersion` segue byte-a-byte (é semântico — bump exige `migrateState`,
+D14). As fixtures NÃO foram regeneradas (passam em next.1 e next.2).
+
+**Pino do engine na plataforma:** a plataforma **NÃO** sobe para `engine@next.2`
+agora — continua pinada em `1.1.0-next.1` até um **upgrade deliberado** com o gate
+de conformidade/replay (D5 + §9.3). O release da #170 publica o engine; o consumo
+na plataforma é decisão à parte.
+
 ## 3. Registro de fluxo (sem ação sua)
 
 - **~~Follow-up bpmn~~ RESOLVIDO (PR bpmn#169, mergeada 22/07):**
