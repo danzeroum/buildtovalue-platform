@@ -131,6 +131,58 @@ mergeada da PR #4). Crie pela UI (Releases → "Create a new release"/tag
   GATE. Candidata a entrar na migração da AG-2. A rota responde 409
   honesto apontando /resolution.
 
+## 2.5 Console D23 (leva 6, PR2 /tasks + /operate) — lacunas protótipo × contrato
+
+Implementei o console **fiel ao contrato /v1 já aprovado**; onde o protótipo
+(baixa→média fidelidade, G-UX-3) pede algo que o contrato não tem, registro
+aqui em vez de inventar shape (disciplina D19 + regra "pergunta antes do
+merge" para desvio de contrato — aqui NÃO há desvio de contrato, só do
+protótipo).
+
+- **«Aprovar/Reprovar» como dois botões (tela 01):** a conclusão
+  (`POST /v1/user-tasks/{id}/completion`) valida a submissão contra o form
+  PINADO e **rejeita chave desconhecida** (`validateSubmission` — "campo
+  desconhecido"). Logo, NÃO dá para injetar um `approved` fora do schema: o
+  console entrega **«Concluir tarefa»** (submete o form validado; se o
+  processo modela a decisão, ela é um CAMPO do form e o gateway ramifica).
+  Um approve/reject de primeira classe exige **extensão de contrato**: um
+  campo reservado de decisão no schema OU um `decision` no corpo da
+  conclusão. → **candidato à proposta da AG-2** (junto de dead-letter
+  payload e fencing D28).
+- **Rótulo humano da tarefa na lista:** `taskSummary` traz `elementId` +
+  `formRef`, não o rótulo do elemento no diagrama nem o nome do processo. A
+  lista mostra `elementId`/`formRef` (honesto); rótulo humano exigiria juntar
+  o diagrama por definição — enriquecimento futuro, não some do fluxo.
+- **Cartões de métrica do /operate (128 ativas, p95…):** não há endpoint de
+  contagem/agregação na v1, e o **p95 é medido na leva 7**. O console NÃO
+  fabrica totais — mostra lista + drill-down. Agregações = candidatas a um
+  endpoint de métricas (pós-v1).
+- **Edição de variável pelo operador (`PATCH …/variables`, leva 2):** existe
+  no servidor; o console PR2 expõe **revelação** (núcleo do D20) + exibição,
+  não edição de variável de instância em voo (ferramenta afiada, fora do
+  protótipo). Edição via console = follow-up.
+- **RBAC: `instances:start` sem `definitions:read` (revisão adversarial da
+  PR2):** o papel **business** tem `instances:start` mas NÃO `definitions:read`.
+  O «Iniciar processo» (tela 05) lista definições via
+  `GET /v1/process-definitions` (`definitions:read`) → business receberia
+  **403** e não conseguiria escolher o que iniciar. **Decisão de UX aplicada:**
+  o console exige `instances:start` **E** `definitions:read` para mostrar o
+  botão — não oferece um botão que dá em beco (revisão adversarial). Isso
+  DESVIA do protótipo ("visível para papéis com permissão de start"), porque o
+  contrato de RBAC torna o fluxo impossível para business. **Decisão do dono
+  (RBAC = GATE):** (a) conceder `definitions:read` ao business (o botão volta a
+  aparecer para ele); (b) um endpoint de "definições iniciáveis" escopado por
+  `instances:start`; ou (c) retirar `instances:start` do business.
+
+**Correções aplicadas na revisão adversarial da PR2 (antes do merge):** ações
+de trabalho de tarefa gated por `tasks:work` (papel sem ela vê somente
+leitura); «Exportar XES» e abas Incidentes/Jobs/Timers gated por `operate:read`
+(o resto do Operate degrada com graça); cancelamento gated por `operate:act`
+(igual à rota); **D20 fail-closed** nas variáveis (mascara por
+`classification==='sensitive'` OU `masked`, nunca confia num só sinal);
+Idempotency-Key estável por sessão do modal de início (re-tentativa não duplica
+instância).
+
 ## 3. Registro de fluxo (sem ação sua)
 
 - **~~Follow-up bpmn~~ RESOLVIDO (PR bpmn#169, mergeada 22/07):**
