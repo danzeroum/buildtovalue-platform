@@ -48,8 +48,9 @@ Migrações de referência: `packages/db/migrations/0001…0006`.
 | Dead-letter re-enfileirável (D22) | `runtime/outbox.ts` (payload no incidente), `runtime/operate.ts` `retryIncident` | `tests/dead-letter.test.ts` — efeito esgotado vira incidente com payload; `/retry` re-enfileira; crash-test D11 (UNIQUE segura) | ISO · confiabilidade | ✅ v1 |
 | Fencing (effect_key / lock / claim) | outbox/jobs/user_tasks | `skeleton-crash.e2e.test.ts` — 100 instâncias, kill nas duas janelas, zero efeito duplicado; claim token rotacionado | ISO · confiabilidade | ✅ v1 |
 | Gate humano do agente (world-delta · D28) | contrato `expectedInstanceRevision` (fencing) | — | AI Act 14 · supervisão | 🔶 contratado |
-| Trilha de fatos do agente (D27) · evidência-verificada (D30) | `0006` `history_events.agent_io` | — | AI Act 12 · registros/autenticidade | 🔶 contratado |
-| Paradas honestas · budget · invariante de tools (D31) | `tenant_tools.requires_gate` | — (execução de agente é etapa posterior) | AI Act 14 · limites | 🔶 contratado |
+| Trilha de fatos do agente (D27) · evidência-verificada (D30) | `0006`/`0007`/`0008` — `history_events.agent_io` (trilha `agent:*` granular, um fato por linha + envelope de ator D33), `agentflow.FactSource` inclui `evidencia-verificada` (só do `run` real) | `agent-trail-leak` (vazamento), `agent-cycle-e2e` (ciclo completo com pin), engine `replay` + lint aceite-7 (fronteira D27 pelos dois lados) | AI Act 12 · registros/autenticidade | ✅ v1 |
+| Paradas honestas · budget (D29) | `agentRunner` — kill-switch em execução + budget → parada honesta | `agent-runner` (kill-switch passo-a-passo, unidade do budget) | AI Act 14 · limites | ✅ v1 |
+| Invariante de tools (D31) | `tenant_tools.requires_gate` · `effectRequiresGate` | — (etapa 5) | AI Act 14 · limites | 🔶 contratado |
 
 ---
 
@@ -126,7 +127,9 @@ append-only já imposta por permissão na 0006). Itens de **produto** cobertos e
 v1: RLS+FORCE, trilha append-only, envelope de ator, kill-switch auditado,
 motivo obrigatório, ledger sem conteúdo pessoal, cifra de sensíveis. Itens
 **contratados** pendentes de superfície: export auditado (D36), verificação de
-integridade (D35), execução/trilha de agente (D27/D30).
+integridade (D35), invariante de tools do agente (D31 — etapa 5). Execução/trilha
+de agente (D27/D30) **fechada na etapa 4** (engine emite `CreateJob(agent)`, pin
+operacional `0008`, trilha `agent:*` granular com ator, ciclo e2e verde).
 
 ---
 

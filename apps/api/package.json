@@ -23,7 +23,7 @@
     "fastify": "^5.2.1",
     "fastify-type-provider-zod": "^6.0.0",
     "zod": "^4.1.5",
-    "@buildtovalue/engine": "1.1.0-next.1",
+    "@buildtovalue/engine": "1.1.0-next.3",
     "@buildtovalue/core": "1.2.0-next.0",
     "@buildtovalue/forms": "1.0.0-next.1"
   },
