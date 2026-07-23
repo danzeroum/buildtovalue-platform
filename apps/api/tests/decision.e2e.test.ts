@@ -118,15 +118,29 @@ describe('user-tasks completion — decision × decisionVar (etapa 6)', () => {
     return { taskId, token: claim.json().claimToken as string };
   }
 
-  it('o detalhe da task expõe decisionVar (null quando não há decisão)', async () => {
+  it('o detalhe expõe decisionVar + decisionOptions (null quando não há decisão)', async () => {
     const withVar = await startAndClaim('dec@1');
     const detail = await app.inject({ method: 'GET', url: `/v1/user-tasks/${withVar.taskId}`, headers: auth(biz) });
     expect(detail.statusCode).toBe(200);
     expect(detail.json().decisionVar).toBe('decisao');
+    expect(detail.json().decisionOptions).toEqual(['aprovar', 'reprovar']); // escolha exata
 
     const noVar = await startAndClaim('plain@1');
     const detail2 = await app.inject({ method: 'GET', url: `/v1/user-tasks/${noVar.taskId}`, headers: auth(biz) });
     expect(detail2.json().decisionVar).toBeNull();
+    expect(detail2.json().decisionOptions).toBeNull();
+  });
+
+  it('DESENCONTRO DE VALOR: decision fora das opções → 422 com a lista (nunca default silencioso)', async () => {
+    const { taskId, token } = await startAndClaim('dec@1');
+    const res = await app.inject({
+      method: 'POST',
+      url: `/v1/user-tasks/${taskId}/completion`,
+      headers: auth(biz),
+      payload: { claimToken: token, submission: {}, decision: 'Aprovar' }, // maiúsculo ≠ "aprovar"
+    });
+    expect(res.statusCode).toBe(422);
+    expect(res.json().detail).toMatch(/aprovar.*reprovar|rota válida/i);
   });
 
   it('conclusão SEM decision numa task que a exige → 422 (nunca aceita-e-descarta)', async () => {

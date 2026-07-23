@@ -115,6 +115,9 @@ export function registerUserTaskRoutes(rawApp: ZodApp, deps: ApiDeps): void {
             // etapa 6: se não-null, a conclusão EXIGE `decision` (roteamento
             // comparado por igualdade no gateway a jusante).
             decisionVar: z.string().nullable(),
+            // valores EXATOS que roteiam (do gateway a jusante); o cliente
+            // oferece escolha exata. null = texto livre (gateway não-derivável).
+            decisionOptions: z.array(z.string()).nullable(),
           }),
           403: problemSchema,
           404: problemSchema,
@@ -133,7 +136,12 @@ export function registerUserTaskRoutes(rawApp: ZodApp, deps: ApiDeps): void {
           detail: `esta task é dos papéis [${task.candidate_roles.join(', ')}]`,
         });
       }
-      return { ...summarize(task), payload: task.payload, decisionVar: task.decision_var };
+      return {
+        ...summarize(task),
+        payload: task.payload,
+        decisionVar: task.decision_var,
+        decisionOptions: task.decision_options,
+      };
     },
   );
 

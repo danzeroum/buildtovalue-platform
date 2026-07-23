@@ -72,9 +72,9 @@ describe('TasksRoute — F3.4', () => {
     );
   });
 
-  it('etapa 6: task com decisionVar exige decisão e a envia no corpo (roteamento)', async () => {
+  it('etapa 6: decisão por ESCOLHA EXATA (opções derivadas) e enviada no corpo', async () => {
     seedHappyPath({
-      'GET /v1/user-tasks/{id}': () => ok({ ...TASK, payload: {}, decisionVar: 'decisao' }),
+      'GET /v1/user-tasks/{id}': () => ok({ ...TASK, payload: {}, decisionVar: 'decisao', decisionOptions: ['aprovar', 'reprovar'] }),
     });
     render(<TasksRoute />);
     await userEvent.click(await screen.findByRole('button', { name: /aprovar_reembolso/ }));
@@ -82,13 +82,15 @@ describe('TasksRoute — F3.4', () => {
     const parecer = await screen.findByLabelText(/Parecer/);
     await userEvent.type(parecer, 'ok');
 
-    // sem decisão: a conclusão é barrada no cliente (não deixa 422 à toa)
+    // escolha exata (radios), não texto livre — impossível "Aprovar" ≠ "aprovar"
+    const aprovar = await screen.findByRole('radio', { name: 'aprovar' });
+    expect(screen.getByRole('radio', { name: 'reprovar' })).toBeInTheDocument();
+
+    // sem escolher: a conclusão é barrada no cliente (não deixa 422 à toa)
     await userEvent.click(screen.getByRole('button', { name: 'Concluir tarefa' }));
     expect(await screen.findByText(/exige uma decisão/i)).toBeInTheDocument();
-    expect(screen.queryByText(/Tarefa concluída/)).not.toBeInTheDocument();
 
-    // com decisão: vai no corpo do POST
-    await userEvent.type(screen.getByLabelText(/Decisão/), 'aprovar');
+    await userEvent.click(aprovar);
     await userEvent.click(screen.getByRole('button', { name: 'Concluir tarefa' }));
     expect(await screen.findByText(/Tarefa concluída/)).toBeInTheDocument();
     const call = (api.POST as unknown as Mock).mock.calls.find((c) => c[0] === '/v1/user-tasks/{id}/completion');

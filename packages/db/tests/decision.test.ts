@@ -2,7 +2,7 @@ import { createDiagram, createEdge, createNode, type BpmnDiagram } from '@buildt
 import type { FormSchema } from '@buildtovalue/forms';
 import postgres from 'postgres';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { lintDiagram, lintBlocks } from '../src/registry/lint.js';
+import { lintDiagram, lintBlocks, deriveDecisionRouting } from '../src/registry/lint.js';
 import { deployFormDefinition, deployProcessDefinition } from '../src/registry/store.js';
 import { createRuntime } from '../src/runtime/facade.js';
 import { completeUserTask } from '../src/runtime/userTasks.js';
@@ -58,6 +58,28 @@ describe('etapa 6 — lint D19 da decisionVar (estático)', () => {
   it('sem decisionVar declarada = nenhum warning de decisão', () => {
     const issues = lintDiagram(decisionDiagram());
     expect(issues.filter((i) => i.code === 'EXEC_DECISION_VAR_NO_GATEWAY')).toEqual([]);
+  });
+
+  it('deriveDecisionRouting extrai as OPÇÕES exatas do gateway a jusante', () => {
+    const r = deriveDecisionRouting(decisionDiagram({ decisionVar: 'decisao', gatewayReads: 'decisao' }), 'review');
+    expect(r.decisionVar).toBe('decisao');
+    expect(r.readByGateway).toBe(true);
+    expect(r.options).toEqual(['aprovar', 'reprovar']); // ordenadas, dedup
+  });
+
+  it('gateway lê a var mas sem literal string enumerável → texto livre + warning (degrada, não falha)', () => {
+    const d = decisionDiagram({ decisionVar: 'nota', gatewayReads: 'nota' });
+    // troca as condições string por numéricas (fora da enumeração de string)
+    d.edges.gA.properties.condition = 'nota = 10';
+    d.edges.gR.properties.condition = 'nota = 0';
+    const r = deriveDecisionRouting(d, 'review');
+    expect(r.readByGateway).toBe(true);
+    expect(r.options).toBeNull(); // texto livre
+    const issues = lintDiagram(d);
+    expect(issues).toContainEqual(
+      expect.objectContaining({ code: 'EXEC_DECISION_VAR_FREE_TEXT', severity: 'warning' }),
+    );
+    expect(lintBlocks(issues)).toBe(false);
   });
 });
 
@@ -197,6 +219,24 @@ describe('etapa 6 — completion: a decisão NUNCA é ignorada em silêncio (fim
     if (!claim.ok) throw new Error('claim falhou');
     const out = await completeUserTask(api, tenant, taskId, { claimToken: claim.claimToken, submission: {}, user: 'ana', now: NOW(), decision: 'aprovar' });
     expect(out).toMatchObject({ ok: false, reason: 'decisionUnexpected' });
+  });
+
+  it('DESENCONTRO DE VALOR: decision fora das opções do gateway → 422 (aprovação inócua evitada)', async () => {
+    const { taskId } = await startAndOpen('com-decisao@1');
+    const claim = await runtime().userTasks.claim(tenant, taskId, 'ana');
+    if (!claim.ok) throw new Error('claim falhou');
+    // "Aprovar" (maiúsculo) não casa `decisao = "aprovar"` — o default engoliria
+    const out = await completeUserTask(api, tenant, taskId, {
+      claimToken: claim.claimToken,
+      submission: {},
+      user: 'ana',
+      now: NOW(),
+      decision: 'Aprovar',
+    });
+    expect(out).toMatchObject({ ok: false, reason: 'decisionInvalid' });
+    if (!out.ok && 'message' in out) expect(out.message).toMatch(/aprovar.*reprovar|rota válida/i);
+    const [still] = await withTenant(api, tenant, (tx) => tx`SELECT status FROM user_tasks WHERE id = ${taskId}`);
+    expect(still.status).toBe('open');
   });
 
   it('decision válida: roteia pelo gateway + grava em variables E em history_events (quem decidiu o quê)', async () => {

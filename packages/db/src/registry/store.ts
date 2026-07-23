@@ -4,7 +4,7 @@ import { validateFormSchema, type FormSchema, type SchemaIssue } from '@buildtov
 import type { Sql, TransactionSql } from '../client.js';
 import { withTenant } from '../tenancy.js';
 import { conditionEvaluator } from '../runtime/definitions.js';
-import { lintBlocks, lintDiagram, type LintIssue } from './lint.js';
+import { deriveDecisionRouting, lintBlocks, lintDiagram, type LintIssue } from './lint.js';
 
 /**
  * Registry de definições (F3.1, shape /v1 §1/§2b): deploy IMUTÁVEL com lint
@@ -169,23 +169,22 @@ export async function getProcessDefinition(
 }
 
 /**
- * decisionVar de um elemento (etapa 6, opção B): lê a propriedade declarada no
- * BPMN do userTask `elementId` da definição `definitionRef`. Roda DENTRO de uma
- * tx existente (RLS já ativo). Definição embutida (skeleton@1/example@1) não
- * está no registry → `undefined` (não há decisionVar). Fonte única de verdade
- * é o diagrama imutável — nada é duplicado em user_tasks.
+ * Roteamento da decisão de um elemento (etapa 6): lê o diagrama imutável do
+ * `definitionRef` e deriva `decisionVar` + `decisionOptions` (valores exatos do
+ * gateway a jusante) pelo MESMO caminhamento do lint. Roda DENTRO de uma tx
+ * (RLS ativo). Definição embutida (skeleton@1/example@1) não está no registry
+ * → sem decisão. Fonte única de verdade é o diagrama — nada em user_tasks.
  */
-export async function getDefinitionDecisionVar(
+export async function getDefinitionDecisionInfo(
   tx: TransactionSql,
   definitionRef: string,
   elementId: string,
-): Promise<string | undefined> {
+): Promise<{ decisionVar: string | null; decisionOptions: string[] | null }> {
   const [row] = await tx<{ diagram: BpmnDiagram }[]>`
     SELECT diagram FROM process_definitions WHERE registry_ref = ${definitionRef}`;
-  if (!row) return undefined;
-  const node = row.diagram.nodes?.[elementId];
-  const dv = node?.properties?.decisionVar;
-  return typeof dv === 'string' && dv.length > 0 ? dv : undefined;
+  if (!row) return { decisionVar: null, decisionOptions: null };
+  const routing = deriveDecisionRouting(row.diagram, elementId);
+  return { decisionVar: routing.decisionVar, decisionOptions: routing.options };
 }
 
 export async function getFormDefinitionByRef(

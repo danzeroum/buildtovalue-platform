@@ -3,10 +3,10 @@ import { validateSubmission, type SubmissionErrors } from '@buildtovalue/forms';
 import type { Sql } from '../client.js';
 import type { FieldCipher } from '../crypto/fieldCipher.js';
 import { withTenant } from '../tenancy.js';
-import { getDefinitionDecisionVar, getFormDefinitionByRef } from '../registry/store.js';
+import { getDefinitionDecisionInfo, getFormDefinitionByRef } from '../registry/store.js';
 import { advanceInstance } from './advance.js';
 import { insertAuditEvent } from './audit.js';
-import { conditionEvaluator } from './definitions.js';
+import { formEvaluator } from './formEvaluator.js';
 
 /**
  * User tasks pelo CONTRATO público (shape §6): claim PERSISTENTE (D21 —
@@ -98,6 +98,8 @@ export interface UserTaskDetail extends UserTaskListItem {
   visible: boolean;
   /** etapa 6: variável de decisão declarada no BPMN; null = não exige decisão. */
   decision_var: string | null;
+  /** etapa 6: valores EXATOS que roteiam (do gateway a jusante); null = texto livre. */
+  decision_options: string[] | null;
 }
 
 export async function getUserTask(
@@ -114,9 +116,10 @@ export async function getUserTask(
       FROM user_tasks ut JOIN instances i ON i.id = ut.instance_id
       WHERE ut.id = ${taskId}`;
     if (!row) return undefined;
-    // decisionVar do BPMN — o cliente sabe que ESTA task exige decisão e mostra
-    // o controle (obrigatório se declarado; recusado se não — etapa 6).
-    const decisionVar = await getDefinitionDecisionVar(
+    // decisionVar + opções do BPMN — o cliente sabe que ESTA task exige decisão
+    // e oferece a ESCOLHA EXATA (não texto livre), fechando o desencontro de
+    // valor (etapa 6): "Aprovar" ≠ "aprovar" jamais chega ao servidor.
+    const decision = await getDefinitionDecisionInfo(
       tx,
       String(row.definition_ref),
       String(row.element_id),
@@ -128,7 +131,8 @@ export async function getUserTask(
         { assignee: row.assignee as string | null, candidate_roles: row.candidate_roles as string[] },
         viewer,
       ),
-      decision_var: decisionVar ?? null,
+      decision_var: decision.decisionVar,
+      decision_options: decision.decisionOptions,
     };
   });
 }
@@ -249,12 +253,18 @@ export async function completeUserTask(
     if (!form) {
       return { ok: false as const, reason: 'formMissing' as const, message: `form '${String(task.form_ref)}' não está no registry` };
     }
-    const validated = validateSubmission(form.schema, input.submission, conditionEvaluator);
+    // avaliador RICO de formulário (não o de gateway, que é só igualdade) —
+    // fecha a divergência com o preview do console (etapa 7).
+    const validated = validateSubmission(form.schema, input.submission, formEvaluator);
     if (!validated.ok) return { ok: false as const, reason: 'invalidSubmission' as const, errors: validated.errors };
 
     // etapa 6 — A DECISÃO NUNCA É IGNORADA EM SILÊNCIO (mesma família do
     // /cancel e da parada honesta: nunca fingir que agiu):
-    const decisionVar = await getDefinitionDecisionVar(tx, String(task.definition_ref), String(task.element_id));
+    const { decisionVar, decisionOptions } = await getDefinitionDecisionInfo(
+      tx,
+      String(task.definition_ref),
+      String(task.element_id),
+    );
     const decision = input.decision?.trim();
     if (decisionVar && !decision) {
       return {
@@ -275,6 +285,16 @@ export async function completeUserTask(
         ok: false as const,
         reason: 'decisionInvalid' as const,
         message: `'decision' excede ${DECISION_MAX_LENGTH} caracteres`,
+      };
+    }
+    // DESENCONTRO DE VALOR: se as opções são deriváveis do gateway a jusante e a
+    // decisão não está entre elas, NENHUMA condição casaria (aprovação inócua
+    // pela porta do valor) — recusa 422 com a lista, nunca aceita-e-descarta.
+    if (decision && decisionOptions && !decisionOptions.includes(decision)) {
+      return {
+        ok: false as const,
+        reason: 'decisionInvalid' as const,
+        message: `'decision' = '${decision}' não é uma rota válida de '${decisionVar}' (esperado: ${decisionOptions.map((o) => `'${o}'`).join(', ')})`,
       };
     }
 

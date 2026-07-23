@@ -207,6 +207,44 @@ FORM (comparações+and/or) e os DOIS lados consomem — console e o
 Interim aplicado: o form do seed do demo usa só igualdade (`visibleWhen
 decisao = "reprovar"`), então o runbook conclui sem 422.
 
+## 2.7 Avaliador de forms — COEXISTÊNCIA TRANSITÓRIA SOB GATE (AG-2.1 etapa 7)
+
+Precedente: **Anexo C item 2** (o mesmo tratamento de `simulation × engine` —
+duas implementações vivendo juntas sob teste de equivalência até o colapso).
+
+**Estado atual (3 implementações, ancoradas a UM corpus):**
+- **canônica** — `@buildtovalue/forms` `formExpressionEvaluator` (bpmn, branch
+  `claude/...decvzt`), default de `validateSubmission`; changeset `minor`
+  (`forms-canonical-evaluator.md`). Testada na bpmn contra `SFEEL_FORM_CORPUS`.
+- **servidor** — `packages/db/src/runtime/formEvaluator.ts` (cópia rica; a
+  conclusão de user task já a usa, fechando a §2.6 no runtime real).
+- **console** — `apps/console/src/sfeel.ts` `consoleEvaluator` (inalterado).
+- **corpus compartilhado** — `SFEEL_FORM_CORPUS` na bpmn é a FONTE; o espelho
+  byte-a-byte vive em `packages/db/tests/fixtures/sfeel-corpus.ts` e o teste
+  `apps/api/tests/form-evaluator-equivalence.test.ts` afirma **servidor ≡
+  console ≡ corpus** (bidirecional). A canônica roda o mesmo corpus na bpmn —
+  as três não podem divergir.
+
+**PONTO DE COLAPSO (nomeado) — após publicar `@buildtovalue/forms@1.1.0-next.N`:**
+1. subir a dep nos 3 `package.json` da plataforma (db, api, console);
+2. servidor (`userTasks.ts`) e console (`tasks.tsx`) passam a importar
+   `formExpressionEvaluator` da biblioteca;
+3. **DELETAR** `packages/db/src/runtime/formEvaluator.ts`,
+   `apps/console/src/sfeel.ts` (consoleEvaluator) e o espelho
+   `packages/db/tests/fixtures/sfeel-corpus.ts`;
+4. o teste de equivalência importa `SFEEL_FORM_CORPUS` da biblioteca e sobrevive
+   como **regressão contra a canônica**;
+5. só ENTÃO restaurar expressões ricas no `seed-demo.ts` (o demo mostra o poder
+   real, não o interim) — e a §2.6 fecha de verdade.
+
+**Release do bpmn (ação do dono no gate):** `changeset` já commitado →
+`pnpm version-packages` (gera a PR de versão) → **merge da PR de versão** →
+`release.yml` publica. Lembrete do guarda que travou o **Release #1** (o job de
+publish exige o build verde de TODOS os pacotes + o `NPM_TOKEN`; o `pre.json`
+mantém a tag `next`). **Se o `workflow_dispatch` ainda devolver 403** pelo proxy,
+me avise que **você dispara pela UI do Actions** (mesmo procedimento do
+`phase-1`, §2.2).
+
 ## 3. Registro de fluxo (sem ação sua)
 
 - **~~Follow-up bpmn~~ RESOLVIDO (PR bpmn#169, mergeada 22/07):**

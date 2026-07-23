@@ -275,6 +275,9 @@ function TaskFormLoaded({
   // etapa 6: se a task declara decisionVar, a decisão é OBRIGATÓRIA e roteia o
   // gateway a jusante (comparada por igualdade). Sem ela, o servidor recusa 422.
   const requiresDecision = typeof task.decisionVar === 'string' && task.decisionVar.length > 0;
+  // opções EXATAS derivadas do gateway (fecha o desencontro de valor: o usuário
+  // ESCOLHE, não digita). null/vazio = texto livre (gateway não-derivável).
+  const decisionOptions = task.decisionOptions ?? null;
   const [decision, setDecision] = useState('');
   const [errors, setErrors] = useState<SubmissionErrors | undefined>();
   const [banner, setBanner] = useState<{ tone: 'danger' | 'success'; text: string } | null>(null);
@@ -433,21 +436,41 @@ function TaskFormLoaded({
 
       {requiresDecision && (
         <div className="task-decision" data-locked={!claimToken || undefined}>
-          <label className="field">
-            <span>
-              Decisão <Tag tone="gold">roteia o processo</Tag>
-            </span>
+          <span className="field-label">
+            Decisão <Tag tone="gold">roteia o processo</Tag>
+          </span>
+          {decisionOptions && decisionOptions.length > 0 ? (
+            // escolha EXATA das rotas do gateway — impossível um valor que não casa
+            <div className="decision-options" role="radiogroup" aria-label={`Decisão (${task.decisionVar})`} aria-describedby="decision-hint">
+              {decisionOptions.map((opt) => (
+                <button
+                  key={opt}
+                  type="button"
+                  role="radio"
+                  aria-checked={decision === opt}
+                  className="decision-option"
+                  data-selected={decision === opt || undefined}
+                  disabled={!claimToken}
+                  onClick={() => setDecision(opt)}
+                >
+                  {opt}
+                </button>
+              ))}
+            </div>
+          ) : (
+            // fallback honesto (gateway não-derivável): texto livre
             <input
               className="mono"
               value={decision}
               disabled={!claimToken}
               required
               aria-required="true"
+              aria-label={`Decisão (${task.decisionVar})`}
               aria-describedby="decision-hint"
-              placeholder={`valor de '${task.decisionVar}' (ex.: aprovar)`}
+              placeholder={`valor de '${task.decisionVar}'`}
               onChange={(e) => setDecision(e.target.value)}
             />
-          </label>
+          )}
           <p id="decision-hint" className="foot-note">
             Comparada por <strong>igualdade</strong> no próximo gateway (grava em{' '}
             <span className="mono">{task.decisionVar}</span> e na trilha). Obrigatória: sem ela, a conclusão é
