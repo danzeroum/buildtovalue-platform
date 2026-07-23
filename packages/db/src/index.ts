@@ -30,7 +30,24 @@ export {
   type KeyProvider,
 } from './crypto/fieldCipher.js';
 export { runtimeDepths, type RuntimeDepths } from './runtime/depths.js';
-export { lintBlocks, lintDiagram, type LintCode, type LintIssue } from './registry/lint.js';
+export {
+  isBtvGate,
+  lintAgentGates,
+  lintBlocks,
+  lintDiagram,
+  toolEffectGateViolations,
+  type LintCode,
+  type LintIssue,
+} from './registry/lint.js';
+export {
+  deployToolDefinition,
+  getToolDefinitionByRef,
+  toolEffectOfTx,
+  validateToolContract,
+  type DeployToolOutcome,
+  type ToolContractIssue,
+  type ToolDefinitionRow,
+} from './registry/toolStore.js';
 export {
   classificationsForRef,
   createRegistry,

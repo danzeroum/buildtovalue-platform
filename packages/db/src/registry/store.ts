@@ -4,7 +4,9 @@ import { validateFormSchema, type FormSchema, type SchemaIssue } from '@buildtov
 import type { Sql, TransactionSql } from '../client.js';
 import { withTenant } from '../tenancy.js';
 import { conditionEvaluator } from '../runtime/definitions.js';
-import { deriveDecisionRouting, lintBlocks, lintDiagram, type LintIssue } from './lint.js';
+import { effectRequiresGate } from '@buildtovalue/agentflow';
+import { deriveDecisionRouting, lintBlocks, lintDiagram, toolEffectGateViolations, type LintIssue } from './lint.js';
+import { toolEffectOfTx } from './toolStore.js';
 
 /**
  * Registry de definições (F3.1, shape /v1 §1/§2b): deploy IMUTÁVEL com lint
@@ -98,6 +100,18 @@ export async function deployProcessDefinition(
         }
       }
     }
+    // Gate D31 (etapa 5): elementos que declaram uma tool cujo efeito EXIGE gate
+    // (resolvido contra o registry de tools) precisam de um btv:gate a jusante. A
+    // resolução do efeito é aqui (tx); a alcançabilidade no grafo é pura no lint.
+    const gatedElementIds: string[] = [];
+    for (const node of Object.values(input.diagram.nodes)) {
+      const toolRef = typeof node.properties.toolRef === 'string' ? node.properties.toolRef : undefined;
+      if (!toolRef) continue;
+      const effect = await toolEffectOfTx(tx, toolRef);
+      if (effect && effectRequiresGate(effect)) gatedElementIds.push(node.id);
+    }
+    issues.push(...toolEffectGateViolations(input.diagram, gatedElementIds));
+
     if (lintBlocks(issues)) return { ok: false, issues };
 
     // versão nova por nome; a UNIQUE (tenant, name, version) segura corrida.
