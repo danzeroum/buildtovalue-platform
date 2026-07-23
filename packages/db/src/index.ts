@@ -132,3 +132,10 @@ export {
   type JobOutcome,
   type PlatformRuntime,
 } from './runtime/facade.js';
+export {
+  recordTenantAuditEvent,
+  recordTenantAuditEventTx,
+  type ActorType,
+  type AuditActor,
+  type TenantAuditInput,
+} from './audit/tenantAudit.js';
