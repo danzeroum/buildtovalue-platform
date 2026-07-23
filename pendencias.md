@@ -338,8 +338,26 @@ grava `io.output` real do walk; a máscara já cobre input+output.
 uma ida-e-volta de publicação por etapa, AGRUPAR num só changeset/minor:
 - `FactSource` += `'evidencia-verificada'` (D30, aceite 5) — só o `run` real emite;
   simulação NUNCA (teste do aceite);
-- o que as etapas 3–5 revelarem (modelo de fato single-agent, gate de tool D31).
-Peço **um** release do bpmn quando o lote fechar (etapa 3), não três improvisados.
+- **emissão de `agentTask` (etapa 4):** o engine trata `agentTask` como ESPERA que
+  emite `CreateJob{jobType:'agent'}` + `agentRef` efetivo (extensão determinística
+  do avanço; NADA do interior do agente entra no engine);
+- o que a etapa 5 revelar (gate de tool D31 — `effectRequiresGate`).
+Peço **um** release do bpmn quando o lote fechar, não três improvisados.
+
+## 2.11 AG-2.2 etapa 4 — elo engine↔runtime + fronteira D27 (unificados)
+
+O elo que hoje falta (ponto honesto do gate da etapa 3): o engine não emite job de
+agente, então o `agentTask` nunca materializa e o runtime da AG-2.2 está desconectado.
+A etapa 4 fecha isso JUNTO com a fronteira D27 do replay:
+1. **bpmn (no lote acima):** `agentTask` = espera que emite `CreateJob(agent)` com o
+   **`agentRef` efetivo** (o pin da slice 2 viaja no payload do job); **confirmar que
+   o formato bate com o que o worker espera** (`payload.agentRef` + `payload.elementId`).
+   Declarar no changeset **o que passa a ser exposto** ao job (as variáveis da instância
+   que alimentam o agente — resolve o ponto honesto (2), o `io.input` da trilha).
+2. **fixtures de replay NOVAS** provando o avanço AO REDOR do agentTask, byte-idêntico:
+   `start → agentTask emite CreateJob(agent) → JobCompleted → avanço segue`.
+3. **lint do aceite 7 (invariante testada pelos DOIS lados):** nenhuma fixture de replay
+   contém interior de `agentTask` — proibição VERIFICADA, não só declarada.
 
 ## 3. Registro de fluxo (sem ação sua)
 
