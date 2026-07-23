@@ -99,7 +99,7 @@ describe('RLS — isolamento de tenants (migração 0001)', () => {
     );
   });
 
-  it('TODAS as 20 tabelas multi-tenant têm RLS FORÇADA (0001+0002+0003+0004+0006+0007+0008+0009)', async () => {
+  it('TODAS as 21 tabelas multi-tenant têm RLS FORÇADA (0001+0002+0003+0004+0006+0007+0008+0009+0010)', async () => {
     // Lista canônica: tabela nova sem entrar aqui + sem policy = este teste
     // ou o de vazamento abaixo ficam vermelhos.
     const tables = [
@@ -112,8 +112,9 @@ describe('RLS — isolamento de tenants (migração 0001)', () => {
       'agent_definitions', // 0007 (AG-2.2)
       'instance_agent_pins', // 0008 (AG-2.2 etapa 4)
       'tool_definitions', // 0009 (AG-2.2 etapa 5)
+      'instance_gate_state', // 0010 (AG-2.2 etapa 5 slice 2)
     ];
-    expect(tables).toHaveLength(20); // cobertura declarada (AG-2.2 etapa 5)
+    expect(tables).toHaveLength(21); // cobertura declarada (AG-2.2 etapa 5 slice 2)
     const rows = await api`
       SELECT relname, relrowsecurity, relforcerowsecurity
       FROM pg_class

@@ -167,6 +167,24 @@ export {
 } from './agent/tenantAiConfig.js';
 export { fixtureAiProvider, type AiProvider, type AiCompletion } from './agent/aiProvider.js';
 export {
+  buildWorldDelta,
+  deriveProcessConsequence,
+  type ProcessConsequence,
+  type WorldDelta,
+} from './agent/worldDelta.js';
+export {
+  REPROPOSAL_CAP,
+  checkToolFresh,
+  effectSelo,
+  getGateState,
+  recordGateProposal,
+  requestReproposal,
+  verifyProposalFresh,
+  type EffectSelo,
+  type GateState,
+  type ReproposalOutcome,
+} from './agent/gate.js';
+export {
   AGENT_HISTORY_PREFIX,
   buildAgentFacts,
   conservativeMaskingPolicy,
