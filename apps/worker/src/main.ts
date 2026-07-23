@@ -8,6 +8,7 @@ import {
   createEnvKeyProvider,
   createFieldCipher,
   dispatchOutboxOnce,
+  executeGatedEffectTx,
   getAgentDefinitionByRef,
   getInstance,
   isHonestStop,
@@ -226,6 +227,35 @@ async function tick(): Promise<boolean> {
     const jobs = await lockJobs(sql, tenantId, workerId, { leaseMs: 30_000 });
     for (const job of jobs) {
       hadWork = true;
+      // EFEITO SOB GATE (D31): o serviceTask a jusante do gate carrega `gatedBy`
+      // (injetado no despacho). ANTES do handler, sela — verifica a STALENESS da
+      // tool (mudou/desabilitou desde o aval?) e grava a linha `agent:acao` com o
+      // selo do aval. Stale → incidente `agentToolStale`, o efeito NÃO roda; o
+      // gate aprovado permanece na trilha (a falha é posterior ao aval de boa-fé).
+      const gatedBy = typeof job.payload.gatedBy === 'string' ? job.payload.gatedBy : undefined;
+      if (gatedBy) {
+        const instance = await getInstance(sql, tenantId, job.instance_id);
+        const seal = instance
+          ? await withTenant(sql, tenantId, (tx) =>
+              executeGatedEffectTx(tx, {
+                tenantId,
+                instanceId: job.instance_id,
+                gateElementId: gatedBy,
+                revision: instance.revision,
+                engineVersion: instance.engine_version,
+              }),
+            )
+          : ({ executed: false, reason: 'not-gated' } as const);
+        if (!seal.executed) {
+          // efeito não selável/stale: não roda o handler; falha o job (o incidente
+          // agentToolStale, se stale, já foi aberto — effect_key idempotente).
+          await conclude(tenantId, job.id, job.lock_token!, {
+            ok: false,
+            error: `efeito sob gate não executado (${seal.reason})`,
+          });
+          continue;
+        }
+      }
       const context: JobContext = {
         jobId: job.id,
         instanceId: job.instance_id,

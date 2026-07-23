@@ -80,6 +80,40 @@ export async function requestReproposal(
 }
 
 /**
+ * APROVAÇÃO do gate: grava a semente do selo (quem aprovou + quando) no estado
+ * operacional do gate. O efeito roda DEPOIS, por despacho normal; a semente
+ * atravessa o intervalo aprovar→executar (a staleness é verificada lá). Nunca
+ * na trilha (auditoria ≠ execução).
+ */
+export async function recordGateApprovalTx(
+  tx: TransactionSql,
+  tenantId: string,
+  instanceId: string,
+  elementId: string,
+  actor: AgentActor,
+  approvedAt: string,
+): Promise<void> {
+  await tx`UPDATE instance_gate_state
+    SET approved_at = ${approvedAt}, approved_actor = ${tx.json(actor as never)}, updated_at = now()
+    WHERE tenant_id = ${tenantId} AND instance_id = ${instanceId} AND element_id = ${elementId}`;
+}
+
+/** Lê a semente do selo gravada na aprovação (null se o gate não foi aprovado). */
+export async function getGateApprovalTx(
+  tx: TransactionSql,
+  instanceId: string,
+  elementId: string,
+): Promise<{ approvedAt: string; actor: AgentActor } | null> {
+  const [row] = await tx<{ approved_at: Date | string | null; approved_actor: AgentActor | null }[]>`
+    SELECT approved_at, approved_actor FROM instance_gate_state
+    WHERE instance_id = ${instanceId} AND element_id = ${elementId}`;
+  if (!row || !row.approved_at || !row.approved_actor) return null;
+  // timestamptz volta como Date do driver — normaliza para ISO (o selo é ISO).
+  const approvedAt = row.approved_at instanceof Date ? row.approved_at.toISOString() : new Date(row.approved_at).toISOString();
+  return { approvedAt, actor: row.approved_actor };
+}
+
+/**
  * SELO de procedência do efeito (D31, encaixe (b) do designer): a linha de trilha
  * do efeito carrega gate id + ator + momento + a tool/classe. É a prova de que o
  * efeito irreversível rodou SOB aprovação humana — não conteúdo, procedência.

@@ -6,6 +6,7 @@ import { withTenant } from '../tenancy.js';
 import { getDefinitionDecisionInfo, getFormDefinitionByRef } from '../registry/store.js';
 import { advanceInstance } from './advance.js';
 import { insertAuditEvent } from './audit.js';
+import { recordGateApprovalTx } from '../agent/gate.js';
 
 /**
  * User tasks pelo CONTRATO público (shape §6): claim PERSISTENTE (D21 —
@@ -216,7 +217,10 @@ export type CompleteTaskOutcome =
   | { ok: false; reason: 'notFound' | 'notOpen' | 'staleClaim' | 'formMissing' | string; message: string }
   | { ok: false; reason: 'invalidSubmission'; errors: SubmissionErrors }
   // etapa 6 — a decisão NUNCA é ignorada em silêncio:
-  | { ok: false; reason: 'decisionRequired' | 'decisionUnexpected' | 'decisionInvalid'; message: string };
+  | { ok: false; reason: 'decisionRequired' | 'decisionUnexpected' | 'decisionInvalid'; message: string }
+  // etapa 5 (D28) — o gate re-verifica a proposta na aprovação; a instância
+  // avançou desde que o gate abriu → proposta expirada (voz própria, não botão mudo):
+  | { ok: false; reason: 'proposalExpired'; message: string };
 
 /**
  * Completion com FENCING FORMAL (critério nomeado do aceite F3): só o
@@ -236,6 +240,11 @@ export async function completeUserTask(
     now: string;
     /** etapa 6: valor de roteamento; obrigatória sse o elemento declara decisionVar. */
     decision?: string;
+    /** etapa 5 (D28): revisão da instância que o cliente viu ao carregar o gate.
+     *  Só o gate a usa — divergiu da revisão atual → proposta expirada. */
+    expectedInstanceRevision?: number;
+    /** envelope de ator (D33): requestId de correlação do aval (vai para o selo). */
+    requestId?: string;
   },
   cipher?: FieldCipher,
 ): Promise<CompleteTaskOutcome> {
@@ -244,7 +253,7 @@ export async function completeUserTask(
     // decisionVar declarada no BPMN (opção B) do elemento desta task.
     const [task] = await tx`
       SELECT ut.id, ut.instance_id, ut.wait_key, ut.element_id, ut.form_ref,
-             ut.status, ut.claim_token, i.definition_ref
+             ut.status, ut.claim_token, ut.is_gate, i.definition_ref, i.revision
       FROM user_tasks ut JOIN instances i ON i.id = ut.instance_id
       WHERE ut.id = ${taskId} FOR UPDATE`;
     if (!task) return { ok: false as const, reason: 'notFound' as const, message: 'task não existe' };
@@ -258,14 +267,31 @@ export async function completeUserTask(
         message: 'claimToken não é o vigente (rotacionado, revogado ou task não reivindicada)',
       };
     }
-    const form = await getFormDefinitionByRef(sql, tenantId, String(task.form_ref));
-    if (!form) {
-      return { ok: false as const, reason: 'formMissing' as const, message: `form '${String(task.form_ref)}' não está no registry` };
+    const isGate = task.is_gate === true;
+    // D28 (etapa 5): o gate re-verifica a proposta na aprovação. Se a instância
+    // avançou desde que o gate abriu (a revisão que o cliente viu não é mais a
+    // atual), a proposta EXPIROU — reavaliar, não executar sob world-delta velho.
+    if (isGate && input.expectedInstanceRevision !== undefined && input.expectedInstanceRevision !== Number(task.revision)) {
+      return {
+        ok: false as const,
+        reason: 'proposalExpired' as const,
+        message: `proposta expirada: a instância avançou (revisão ${String(task.revision)} ≠ ${input.expectedInstanceRevision} vista no gate) — reavaliar`,
+      };
     }
-    // avaliador CANÔNICO de formulário (@buildtovalue/forms) — a MESMA função do
-    // preview do console; a divergência histórica (§2.6) fica fechada de vez.
-    const validated = validateSubmission(form.schema, input.submission, formExpressionEvaluator);
-    if (!validated.ok) return { ok: false as const, reason: 'invalidSubmission' as const, errors: validated.errors };
+    // GATE não tem formulário (btvGate é exempt do formRef, item 1) — a decisão é
+    // aprovar/reprovar, sem campos. As user tasks comuns seguem validadas no servidor.
+    let validatedValues: Record<string, unknown> = {};
+    if (!isGate) {
+      const form = await getFormDefinitionByRef(sql, tenantId, String(task.form_ref));
+      if (!form) {
+        return { ok: false as const, reason: 'formMissing' as const, message: `form '${String(task.form_ref)}' não está no registry` };
+      }
+      // avaliador CANÔNICO de formulário (@buildtovalue/forms) — a MESMA função do
+      // preview do console; a divergência histórica (§2.6) fica fechada de vez.
+      const validated = validateSubmission(form.schema, input.submission, formExpressionEvaluator);
+      if (!validated.ok) return { ok: false as const, reason: 'invalidSubmission' as const, errors: validated.errors };
+      validatedValues = validated.values;
+    }
 
     // etapa 6 — A DECISÃO NUNCA É IGNORADA EM SILÊNCIO (mesma família do
     // /cancel e da parada honesta: nunca fingir que agiu):
@@ -310,10 +336,23 @@ export async function completeUserTask(
     await tx`UPDATE user_tasks
       SET status = 'completed', completed_at = now(), claim_token = NULL
       WHERE id = ${taskId}`;
+    // GATE aprovado (D31): grava a SEMENTE do selo (quem/quando) no estado
+    // operacional do gate. O efeito a jusante (despacho normal) a lê para selar a
+    // linha agent:acao. Em rota de reprovação nenhum efeito roda → semente ociosa.
+    if (isGate) {
+      await recordGateApprovalTx(
+        tx,
+        tenantId,
+        String(task.instance_id),
+        String(task.element_id),
+        { type: 'user', id: input.user, ...(input.requestId ? { requestId: input.requestId } : {}) },
+        input.now,
+      );
+    }
     // a decisão entra nas variáveis do avanço sob a decisionVar: o engine a lê
     // no gateway a jusante (igualdade) E o host a persiste em `variables`.
     const values =
-      decisionVar && decision ? { ...validated.values, [decisionVar]: decision } : validated.values;
+      decisionVar && decision ? { ...validatedValues, [decisionVar]: decision } : validatedValues;
     return {
       ok: true as const,
       instanceId: String(task.instance_id),

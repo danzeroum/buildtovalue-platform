@@ -1,5 +1,8 @@
+import type { BpmnDiagram } from '@buildtovalue/core';
 import type { Sql, TransactionSql } from '../client.js';
 import { withTenant } from '../tenancy.js';
+import { recordGateProposal } from '../agent/gate.js';
+import { buildGatePayloadTx } from '../agent/gateFio.js';
 
 /**
  * Efeito serializado na outbox — a forma estrutural do catálogo do ADR-0001.
@@ -204,9 +207,25 @@ async function applyEffect(
           ON CONFLICT (wait_key) DO NOTHING`;
         return;
       }
+      // EFEITO SOB GATE (D31): se o serviceTask declara `gatedBy` (o id do gate a
+      // montante) na DEFINIÇÃO PINADA, injeta {gatedBy, elementId} no payload do
+      // job — a execução (despacho normal) sela o efeito com o selo do aval e
+      // verifica a staleness da tool. Resolvido AQUI (disciplina do pin), não
+      // inferido no query.
+      let jobPayload: Record<string, unknown> = (effect.payload ?? {}) as Record<string, unknown>;
+      if (effect.elementId) {
+        const [defRow] = await tx<{ gatedBy: string | null }[]>`
+          SELECT (pd.diagram->'nodes'->${effect.elementId}->'properties'->>'gatedBy') AS "gatedBy"
+          FROM process_definitions pd
+          JOIN instances i ON i.definition_ref = pd.registry_ref
+          WHERE i.id = ${row.instance_id}`;
+        if (defRow?.gatedBy) {
+          jobPayload = { ...jobPayload, gatedBy: defRow.gatedBy, elementId: effect.elementId };
+        }
+      }
       await tx`INSERT INTO jobs (tenant_id, instance_id, wait_key, type, payload)
         VALUES (${row.tenant_id}, ${row.instance_id}, ${effect.waitKey!},
-                ${effect.jobType ?? 'noop'}, ${tx.json((effect.payload ?? {}) as never)})
+                ${effect.jobType ?? 'noop'}, ${tx.json(jobPayload as never)})
         ON CONFLICT (wait_key) DO NOTHING`;
       return;
     }
@@ -226,27 +245,57 @@ async function applyEffect(
       await tx`UPDATE timers SET status = 'cancelled'
         WHERE wait_key = ${effect.waitKey!} AND status = 'armed'`;
       return;
-    case 'OpenUserTask':
-      // MARCADOR DE GATE (D31): resolvido AQUI, no despacho (disciplina do pin),
-      // contra a DEFINIÇÃO PINADA da instância (instances.definition_ref =
-      // process_definitions.registry_ref — a republicação mina um registry_ref
-      // NOVO, nunca toca instância em voo). Persistido em is_gate; o query nunca
-      // infere do diagrama. Definição embutida (skeleton@1/example@1) não está no
-      // registry → sem linha → COALESCE false (não há gate ali).
+    case 'OpenUserTask': {
+      // MARCADOR DE GATE + WORLD-DELTA (D31), resolvidos AQUI, no despacho
+      // (disciplina do pin), contra a DEFINIÇÃO PINADA da instância
+      // (instances.definition_ref = process_definitions.registry_ref — a
+      // republicação mina um registry_ref NOVO, nunca toca instância em voo).
+      // Definição embutida (skeleton@1/example@1) não está no registry → sem
+      // diagrama → tarefa comum (is_gate false), sem world-delta.
+      const [defRow] = await tx<{ diagram: BpmnDiagram }[]>`
+        SELECT pd.diagram FROM process_definitions pd
+        JOIN instances i ON i.definition_ref = pd.registry_ref
+        WHERE i.id = ${row.instance_id}`;
+      const node = defRow?.diagram?.nodes?.[effect.elementId!];
+      const isGate = node?.properties?.btvGate === true;
+      let payload: Record<string, unknown> = (effect.payload ?? {}) as Record<string, unknown>;
+      if (isGate && defRow && typeof node?.properties?.toolRef === 'string') {
+        // FIO do gate (item 2): o payload da tarefa de gate É o world-delta —
+        // ToolContract resolvido 1× + params PROPOSTOS pelo agente (lidos da
+        // variável declarada no nó do gate) + consequência derivada do BPMN.
+        const proposalVar =
+          typeof node.properties.proposalVar === 'string' ? node.properties.proposalVar : undefined;
+        const [varRow] = proposalVar
+          ? await tx<{ value: unknown }[]>`
+              SELECT value FROM variables
+              WHERE instance_id = ${row.instance_id} AND name = ${proposalVar}`
+          : [];
+        const params =
+          varRow && typeof varRow.value === 'object' && varRow.value !== null
+            ? (varRow.value as Record<string, unknown>)
+            : {};
+        const wd = await buildGatePayloadTx(tx, {
+          toolRef: node.properties.toolRef,
+          params,
+          diagram: defRow.diagram,
+          gateElementId: effect.elementId!,
+        });
+        if (wd) payload = wd as unknown as Record<string, unknown>;
+        // baseline D28: a revisão em que o gate abriu (a aprovação re-verifica).
+        const [inst] = await tx<{ revision: number }[]>`
+          SELECT revision FROM instances WHERE id = ${row.instance_id}`;
+        if (inst) await recordGateProposal(tx, row.tenant_id, row.instance_id, effect.elementId!, inst.revision);
+      }
       await tx`INSERT INTO user_tasks
           (tenant_id, instance_id, element_id, wait_key, form_ref, candidate_roles, payload, is_gate)
         VALUES (${row.tenant_id}, ${row.instance_id}, ${effect.elementId!},
                 ${effect.waitKey!}, ${effect.formRef ?? ''},
                 ${effect.candidates ?? []},
-                ${tx.json((effect.payload ?? {}) as never)},
-                COALESCE((
-                  SELECT (pd.diagram->'nodes'->${effect.elementId!}->'properties'->>'btvGate') = 'true'
-                  FROM process_definitions pd
-                  JOIN instances i ON i.definition_ref = pd.registry_ref
-                  WHERE i.id = ${row.instance_id}
-                ), false))
+                ${tx.json(payload as never)},
+                ${isGate})
         ON CONFLICT (wait_key) DO NOTHING`;
       return;
+    }
     case 'CloseUserTask':
       // Fechamento pelo ENGINE (boundary interruptivo/cancelamento): a task
       // some da Tasklist. Conclusão pelo usuário marca 'completed' na rota.
