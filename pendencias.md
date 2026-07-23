@@ -302,19 +302,28 @@ versão. **Ação (bpmn, quando conveniente):** ajustar `publishConfig.tag`/flux
 `next` no changesets — o desalinhamento é no passo de publish/`npm publish
 --tag`). Registrar o fix no changelog do bpmn.
 
-## 2.10 AG-2.2 — caminho de grafo em PAYLOAD (transitório sob gate)
+## 2.10 AG-2.2 — caminho de grafo em PAYLOAD (COLAPSADO na etapa 3) ✅
 
-O AgentRunner (etapa 2) caminha o grafo agentflow por um **resolver injetado**
-(`resolveGraph`). Hoje o stub lê o grafo do **payload do job** (`fromPayload:true`)
-— caminho **DEV/TESTE**, com **guarda dura**: `NODE_ENV=production` recusa
-(`blocked: 'ungoverned-graph'`). Grafo de payload é NÃO-GOVERNADO: não passou por
-`validateGraph`, sem versão, sem lint — é a porta por onde um tool irreversível
-sem gate entraria antes da etapa 5.
+O AgentRunner (etapa 2) caminhava o grafo agentflow por um **resolver injetado**
+(`resolveGraph`) cujo stub lia o grafo do **payload do job** (`fromPayload:true`),
+com guarda dura em produção (`blocked: 'ungoverned-graph'`). Grafo de payload era
+NÃO-GOVERNADO (sem `validateGraph`/versão/lint).
 
-**PONTO DE COLAPSO (nomeado):** a **etapa 3 [GATE+MIGRAÇÃO]** DELETA o caminho de
-payload — o resolver passa a resolver `agentRef` contra o registry `agent_definitions`
-(pin na instância, D3), e `runAgentJob`/testes ficam intactos (só a implementação
-do resolver muda). O `fromPayload` e a guarda somem no colapso.
+**COLAPSO FEITO (etapa 3, migração 0007):** o caminho de payload foi **DELETADO**.
+- `AgentJobInput.graph` e o par `fromPayload`/`ungoverned-graph` **saíram**; o
+  resolver de produção (worker) resolve `agentRef` contra `agent_definitions`
+  (`getAgentDefinitionByRef`) — grafo **governado** (validateGraph passou no deploy).
+- Ausência de grafo no registry = parada honesta `no-graph` (nunca corrida com
+  grafo não-governado). `runAgentJob`, walker e os testes de walk/budget/kill-switch
+  ficaram intactos (só a fonte do grafo mudou; injeção por closure nos testes).
+
+**SEAM REMANESCENTE (não-bloqueante, engenharia AG-2):** quem materializa o job
+`type:'agent'` a partir do `agentTask` é o **engine** (`@buildtovalue/engine`), que
+ainda NÃO emite `CreateJob{jobType:'agent'}`. O **pin** já é resolvido e gravado no
+START (`recordAgentPinsAtStart` → `history_events.agentPinResolved`, incidente
+`agentUnpublished` se a ref não publica); quando o engine emitir o job de agente,
+o payload carrega `agentRef` = o **pin efetivo** (nunca a ref flutuante) — a
+resolução flutuante acontece UMA vez no start, jamais por execução de job.
 
 **Lote de mudanças na biblioteca (agentflow, um único release):** para não gastar
 uma ida-e-volta de publicação por etapa, AGRUPAR num só changeset/minor:

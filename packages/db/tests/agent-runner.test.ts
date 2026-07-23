@@ -13,8 +13,9 @@ import { createTestDatabase, type TestDatabase } from './helpers.js';
 /**
  * AgentRunner etapa 2: CAMINHA o grafo agentflow (simulate no CI), parada honesta
  * EM EXECUÇÃO (kill-switch entre passos, §5.2) + budget, com trilha PARCIAL
- * sempre preservada. Grafo por resolver injetado; payload é DEV/TESTE (recusado
- * em produção). Determinístico — o CI nunca chama LLM real (D27).
+ * sempre preservada. Grafo GOVERNADO por resolver injetado (registry, etapa 3 —
+ * o caminho de grafo-em-payload foi deletado). Determinístico — o CI nunca
+ * chama LLM real (D27).
  */
 describe('AgentRunner — walk + parada honesta em execução (AG-2.2 etapa 2)', () => {
   let db: TestDatabase;
@@ -25,8 +26,9 @@ describe('AgentRunner — walk + parada honesta em execução (AG-2.2 etapa 2)',
   // fixtures determinísticas do template (llm-review devolve saída estruturada)
   const fixtures: Fixtures = { 'llm-review': { outputs: [{ approved: true, rationale: 'ok' }] } };
   const graph = APPROVAL_GATE_AGENT;
-  const payloadResolver: AgentGraphResolver = async (input) =>
-    input.graph ? { graph: input.graph, fromPayload: true } : null;
+  // Resolver GOVERNADO (etapa 3): o grafo vem do "registry" (aqui o template,
+  // via closure) — o caminho de grafo-em-payload foi deletado (§2.10).
+  const governedResolver: AgentGraphResolver = async () => ({ graph });
 
   async function configWith(budgetCents?: number): Promise<void> {
     await upsertTenantAiConfig(
@@ -56,8 +58,8 @@ describe('AgentRunner — walk + parada honesta em execução (AG-2.2 etapa 2)',
     const out = await runAgentJob(
       api,
       tenant,
-      { graph, fixtures, elementId: 'classificar' },
-      { nodeEnv: 'test', resolveGraph: payloadResolver, walker: simulateWalker },
+      { agentRef: 'agnt-approval-gate@1.0.0', fixtures, elementId: 'classificar' },
+      { resolveGraph: governedResolver, walker: simulateWalker },
     );
     expect(out.ok).toBe(true);
     if (out.ok) {
@@ -74,8 +76,8 @@ describe('AgentRunner — walk + parada honesta em execução (AG-2.2 etapa 2)',
     const tight = await runAgentJob(
       api,
       tenant,
-      { graph, fixtures, elementId: 'classificar' },
-      { nodeEnv: 'test', resolveGraph: payloadResolver, walker: simulateWalker },
+      { agentRef: 'agnt-approval-gate@1.0.0', fixtures, elementId: 'classificar' },
+      { resolveGraph: governedResolver, walker: simulateWalker },
     );
     expect(tight).toMatchObject({ ok: false, blocked: 'budget' });
     if (!tight.ok) {
@@ -87,8 +89,8 @@ describe('AgentRunner — walk + parada honesta em execução (AG-2.2 etapa 2)',
     const ample = await runAgentJob(
       api,
       tenant,
-      { graph, fixtures, elementId: 'classificar' },
-      { nodeEnv: 'test', resolveGraph: payloadResolver, walker: simulateWalker },
+      { agentRef: 'agnt-approval-gate@1.0.0', fixtures, elementId: 'classificar' },
+      { resolveGraph: governedResolver, walker: simulateWalker },
     );
     expect(ample.ok).toBe(true);
   });
@@ -111,8 +113,8 @@ describe('AgentRunner — walk + parada honesta em execução (AG-2.2 etapa 2)',
     const out = await runAgentJob(
       api,
       tenant,
-      { graph, elementId: 'classificar' },
-      { nodeEnv: 'test', resolveGraph: payloadResolver, walker: stepwise },
+      { agentRef: 'agnt-approval-gate@1.0.0', elementId: 'classificar' },
+      { resolveGraph: governedResolver, walker: stepwise },
     );
     expect(out).toMatchObject({ ok: false, blocked: 'kill-switch' });
     // trilha PARCIAL preservada: o 1º nó rodou antes do kill-switch
@@ -128,23 +130,23 @@ describe('AgentRunner — walk + parada honesta em execução (AG-2.2 etapa 2)',
     const out = await runAgentJob(
       api,
       tenant,
-      { graph, elementId: 'classificar' },
-      { nodeEnv: 'test', resolveGraph: payloadResolver, walker: simulateWalker },
+      { agentRef: 'agnt-approval-gate@1.0.0', elementId: 'classificar' },
+      { resolveGraph: governedResolver, walker: simulateWalker },
     );
     expect(out).toMatchObject({ ok: false, blocked: 'kill-switch' });
     expect(out.walk.visitedNodes).toEqual([]);
     await setKillSwitch(api, tenant, false, actor, 'liberado');
   });
 
-  it('GUARDA: grafo de payload é recusado em produção (não-governado)', async () => {
+  it('ref sem grafo no registry → parada honesta no-graph (agente não publicado)', async () => {
     await configWith();
     const out = await runAgentJob(
       api,
       tenant,
-      { graph, elementId: 'classificar' },
-      { nodeEnv: 'production', resolveGraph: payloadResolver, walker: simulateWalker },
+      { agentRef: 'agnt-fantasma@1.0.0', elementId: 'classificar' },
+      { resolveGraph: async () => null, walker: simulateWalker },
     );
-    expect(out).toMatchObject({ ok: false, blocked: 'ungoverned-graph' });
+    expect(out).toMatchObject({ ok: false, blocked: 'no-graph' });
   });
 
   it('sem config de inteligência → bloqueio no-config', async () => {
@@ -155,8 +157,8 @@ describe('AgentRunner — walk + parada honesta em execução (AG-2.2 etapa 2)',
     const out = await runAgentJob(
       api,
       tenant2,
-      { graph },
-      { nodeEnv: 'test', resolveGraph: payloadResolver, walker: simulateWalker },
+      { agentRef: 'agnt-approval-gate@1.0.0' },
+      { resolveGraph: governedResolver, walker: simulateWalker },
     );
     expect(out).toMatchObject({ ok: false, blocked: 'no-config' });
   });

@@ -13,7 +13,8 @@ import {
   SKELETON_DEFINITION_REF,
   type DataClassification,
 } from './definitions.js';
-import { classificationsForRef, engineForRef } from '../registry/store.js';
+import { classificationsForRef, engineForRef, getProcessDefinition } from '../registry/store.js';
+import { recordAgentPinsAtStart } from '../registry/agentStore.js';
 import { insertEffects, OUTBOX_CHANNEL, type OutboxEffect } from './outbox.js';
 
 export interface InstanceRow {
@@ -291,6 +292,9 @@ export async function createAndStartInstance(
     Object.keys(embeddedClassifications).length > 0
       ? embeddedClassifications
       : await classificationsForRef(sql, tenantId, definitionRef);
+  // Diagrama da definição (só refs do registry o têm; skeleton/example embutidas
+  // não carregam agentTask). Necessário para PINAR os agentTasks no start.
+  const definition = await getProcessDefinition(sql, tenantId, definitionRef);
   const instanceId = await withTenant(sql, tenantId, async (tx) => {
     const [row] = await tx`
       INSERT INTO instances (tenant_id, definition_ref, engine_version,
@@ -311,6 +315,12 @@ export async function createAndStartInstance(
         classifications,
         cipher,
       );
+    }
+    // PIN AUDITÁVEL (etapa 3 §1): resolve cada agentTask contra o registry no
+    // MESMO commit que cria a corrida — a versão efetiva vai para history_events
+    // (nunca resolvida por execução de job). Ref não publicada = incidente.
+    if (definition) {
+      await recordAgentPinsAtStart(tx, tenantId, id, definition.diagram, initial.engineVersion);
     }
     return id;
   });

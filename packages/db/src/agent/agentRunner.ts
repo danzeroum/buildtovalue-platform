@@ -23,22 +23,21 @@ import { getTenantAiConfig } from './tenantAiConfig.js';
  */
 export interface AgentJobInput {
   elementId?: string;
-  /** ref governado do agente (etapa 3 — registry + pin). */
+  /** PIN governado do agente (`agnt-x@1.0.0`), resolvido no START da instância
+   * (etapa 3 §1) — o grafo vem do registry por esta ref, NUNCA do payload. */
   agentRef?: string;
-  /** grafo INLINE — caminho DEV/TESTE (não-governado; recusado em produção). */
-  graph?: AgentWorkflow;
   /** fixtures por nó — determinismo no CI. */
   fixtures?: Fixtures;
 }
 
 export interface ResolvedAgentGraph {
+  /** grafo GOVERNADO (validateGraph passou no deploy do registry). */
   graph: AgentWorkflow;
-  /** true = veio do payload do job (não passou por validateGraph/versão/lint). */
-  fromPayload: boolean;
 }
 
-/** Resolve o grafo por ref (padrão AiProvider/KeyProvider). Etapa 3 troca só a
- * implementação (stub de payload → registry+pin) sem tocar o walk nem os testes. */
+/** Resolve o grafo GOVERNADO por ref contra o registry (etapa 3 — o caminho de
+ * grafo-em-payload foi deletado, §2.10). Seam idêntico ao AiProvider: a
+ * implementação (registry) é injetada; o walk e os testes não a conhecem. */
 export type AgentGraphResolver = (input: AgentJobInput) => Promise<ResolvedAgentGraph | null>;
 
 /** Motivo de parada verificado ENTRE passos do walk (kill-switch em execução). */
@@ -70,15 +69,12 @@ export type AgentWalker = (
 export type AgentBlock =
   | 'no-config'
   | 'kill-switch'
-  | 'ungoverned-graph'
   | 'no-graph'
   | 'budget'
   | 'walk-error';
 
 export interface AgentRunDeps {
   resolveGraph: AgentGraphResolver;
-  /** 'production' recusa grafo de payload (não-governado). */
-  nodeEnv: string;
   /** default: walker sobre agentflow.simulate (determinístico, atômico). */
   walker?: AgentWalker;
 }
@@ -142,19 +138,11 @@ export async function runAgentJob(
     return { ok: false, blocked: 'kill-switch', message: `${node}: kill-switch acionado — agente pausado (parada honesta)`, walk: EMPTY_WALK };
   }
 
+  // Grafo GOVERNADO pelo registry (o pin resolvido no start). Ausência = agente
+  // não publicado/ref inválida → parada honesta (o registry é o único caminho).
   const resolved = await deps.resolveGraph(input);
   if (!resolved) {
-    return { ok: false, blocked: 'no-graph', message: `${node}: nenhum grafo de agente resolvido`, walk: EMPTY_WALK };
-  }
-  // GUARDA DURA: grafo de payload é NÃO-GOVERNADO (sem validateGraph/versão/lint)
-  // — recusado em produção. Transitório sob gate; a etapa 3 deleta este caminho.
-  if (resolved.fromPayload && deps.nodeEnv === 'production') {
-    return {
-      ok: false,
-      blocked: 'ungoverned-graph',
-      message: `${node}: grafo em payload recusado em produção — publique o agente no registry (etapa 3)`,
-      walk: EMPTY_WALK,
-    };
+    return { ok: false, blocked: 'no-graph', message: `${node}: nenhum grafo de agente resolvido no registry (${input.agentRef ?? 'sem ref'})`, walk: EMPTY_WALK };
   }
 
   // kill-switch EM EXECUÇÃO (§5.2): o walker chama `shouldStop` entre passos; a

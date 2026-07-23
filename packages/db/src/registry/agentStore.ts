@@ -6,8 +6,10 @@ import {
   type AgentWorkflow,
   type ValidationIssue,
 } from '@buildtovalue/agentflow';
-import type { Sql } from '../client.js';
+import { agentTasksOf, type BpmnDiagram } from '@buildtovalue/core';
+import type { Sql, TransactionSql } from '../client.js';
 import { withTenant } from '../tenancy.js';
+import { historySeq } from '../runtime/outbox.js';
 
 /**
  * Registry de AGENTES (AG-2.2 etapa 3 [GATE + MIGRAÇÃO]). Espelha o registry de
@@ -121,6 +123,15 @@ export async function resolveAgentRef(
   tenantId: string,
   agentRef: string,
 ): Promise<ResolvedAgentDefinition | null> {
+  return withTenant(sql, tenantId, (tx) => resolveAgentRefTx(tx, agentRef));
+}
+
+/** Variante tx-scoped de {@link resolveAgentRef}: resolve DENTRO da transação
+ * do start da instância (o pin é gravado no mesmo commit que cria a corrida). */
+export async function resolveAgentRefTx(
+  tx: TransactionSql,
+  agentRef: string,
+): Promise<ResolvedAgentDefinition | null> {
   // Pinado se `parseRef` aceita (tem `@version`); flutuante caso contrário.
   let pinned: { id: string; version: string } | null = null;
   try {
@@ -129,23 +140,104 @@ export async function resolveAgentRef(
     if (!(error instanceof AgentRefError)) throw error;
   }
 
-  return withTenant(sql, tenantId, async (tx) => {
-    if (pinned) {
-      const ref = formatRef(pinned);
-      const [row] = await tx<AgentDefinitionRow[]>`
-        SELECT id, agent_id, version, ref, name, autonomy_level, graph, created_at
-        FROM agent_definitions WHERE ref = ${ref}`;
-      return row ? { definition: row, pinnedRef: row.ref, floating: false } : null;
-    }
-    // Flutuante: todas as versões do id, maior semver vence (ordenação em JS —
-    // a lexical do Postgres erraria a comparação de versões).
-    const rows = await tx<AgentDefinitionRow[]>`
+  if (pinned) {
+    const ref = formatRef(pinned);
+    const [row] = await tx<AgentDefinitionRow[]>`
       SELECT id, agent_id, version, ref, name, autonomy_level, graph, created_at
-      FROM agent_definitions WHERE agent_id = ${agentRef}`;
-    if (rows.length === 0) return null;
-    const latest = rows.reduce((best, r) => (compareSemver(r.version, best.version) > 0 ? r : best));
-    return { definition: latest, pinnedRef: latest.ref, floating: true };
-  });
+      FROM agent_definitions WHERE ref = ${ref}`;
+    return row ? { definition: row, pinnedRef: row.ref, floating: false } : null;
+  }
+  // Flutuante: todas as versões do id, maior semver vence (ordenação em JS —
+  // a lexical do Postgres erraria a comparação de versões).
+  const rows = await tx<AgentDefinitionRow[]>`
+    SELECT id, agent_id, version, ref, name, autonomy_level, graph, created_at
+    FROM agent_definitions WHERE agent_id = ${agentRef}`;
+  if (rows.length === 0) return null;
+  const latest = rows.reduce((best, r) => (compareSemver(r.version, best.version) > 0 ? r : best));
+  return { definition: latest, pinnedRef: latest.ref, floating: true };
+}
+
+/** Pin de um agentTask resolvido no START (etapa 3 §1) — gravado no history_events. */
+export interface AgentPin {
+  elementId: string;
+  /** ref DECLARADA no BPMN (flutuante `agnt-x` ou pinada `agnt-x@1.0.0`). */
+  requestedRef: string;
+  /** ref efetiva resolvida (`agnt-x@1.0.0`) — o PIN da corrida. */
+  resolvedRef: string;
+  version: string;
+  /** true = a ref declarada era flutuante e foi pinada agora. */
+  floating: boolean;
+}
+
+export type AgentPinResult =
+  | { ok: true; pin: AgentPin }
+  | { ok: false; elementId: string; requestedRef: string; reason: 'unpublished' };
+
+/**
+ * Resolução AUDITÁVEL dos agentTasks no START da instância (etapa 3 §1). Para
+ * CADA `agentTask` do diagrama:
+ *   - lê `agentWorkflowRef` (a ref declarada, flutuante ou pinada);
+ *   - resolve contra o registry NESTA transação — o pin efetivo é gravado no
+ *     MESMO commit que cria a corrida, NUNCA por execução de job;
+ *   - grava um `history_events` `agentPinResolved` com a versão efetiva (a
+ *     "versão efetiva aparece no history_events da corrida"). Ref flutuante que
+ *     não resolve = incidente `agentUnpublished` (parada honesta: o registry é
+ *     o único caminho governado — publique o agente).
+ *
+ * `seq` no range da revisão 0 (pré-StartInstance): o pin PRECEDE a semântica do
+ * processo. effect_key determinístico por (instância, elemento) — idempotente.
+ */
+export async function recordAgentPinsAtStart(
+  tx: TransactionSql,
+  tenantId: string,
+  instanceId: string,
+  diagram: BpmnDiagram,
+  engineVersion: string,
+): Promise<AgentPinResult[]> {
+  const tasks = agentTasksOf(diagram);
+  const results: AgentPinResult[] = [];
+  let index = 0;
+  for (const node of tasks) {
+    const requestedRef =
+      typeof node.properties.agentWorkflowRef === 'string' ? node.properties.agentWorkflowRef : '';
+    if (!requestedRef) {
+      // agentTask sem ref é defeito de modelagem — o deploy (lint) barra antes;
+      // em runtime, incidente honesto em vez de corrida sem agente.
+      await tx`INSERT INTO incidents (tenant_id, instance_id, kind, message, effect_key)
+        VALUES (${tenantId}, ${instanceId}, 'agentUnpublished',
+                ${`agentTask '${node.id}' sem agentWorkflowRef`},
+                ${`host:agent-pin:${instanceId}:${node.id}`})
+        ON CONFLICT (effect_key) DO NOTHING`;
+      results.push({ ok: false, elementId: node.id, requestedRef: '', reason: 'unpublished' });
+      continue;
+    }
+    const resolved = await resolveAgentRefTx(tx, requestedRef);
+    if (!resolved) {
+      await tx`INSERT INTO incidents (tenant_id, instance_id, kind, message, effect_key)
+        VALUES (${tenantId}, ${instanceId}, 'agentUnpublished',
+                ${`agentTask '${node.id}': ref '${requestedRef}' não publicada no registry`},
+                ${`host:agent-pin:${instanceId}:${node.id}`})
+        ON CONFLICT (effect_key) DO NOTHING`;
+      results.push({ ok: false, elementId: node.id, requestedRef, reason: 'unpublished' });
+      continue;
+    }
+    const pin: AgentPin = {
+      elementId: node.id,
+      requestedRef,
+      resolvedRef: resolved.pinnedRef,
+      version: resolved.definition.version,
+      floating: resolved.floating,
+    };
+    await tx`INSERT INTO history_events
+        (tenant_id, instance_id, seq, kind, payload, engine_version, effect_key)
+      VALUES (${tenantId}, ${instanceId}, ${historySeq(0, index)}, 'agentPinResolved',
+              ${tx.json(pin as never)}, ${engineVersion},
+              ${`host:agent-pin:${instanceId}:${node.id}`})
+      ON CONFLICT (effect_key) DO NOTHING`;
+    results.push({ ok: true, pin });
+    index += 1;
+  }
+  return results;
 }
 
 /**

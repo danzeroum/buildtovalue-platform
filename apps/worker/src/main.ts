@@ -6,6 +6,7 @@ import {
   createEnvKeyProvider,
   createFieldCipher,
   dispatchOutboxOnce,
+  getAgentDefinitionByRef,
   lockJobs,
   runAgentJob,
   type AgentJobInput,
@@ -38,21 +39,26 @@ const registry = createHandlerRegistry({
   log: (message, fields) => logger.info(fields ?? {}, message),
 });
 
-// AgentRunner (AG-2.2 etapa 2): materializa o `agentTask` (job type 'agent') —
+// AgentRunner (AG-2.2 etapa 3): materializa o `agentTask` (job type 'agent') —
 // CAMINHA o grafo agentflow. O interior não é determinístico (D27). Parada
 // honesta em execução (kill-switch entre passos) + budget preservam a trilha
 // parcial → incidente com voz de operador, nunca conclusão silenciosa.
-// `resolveGraph` aqui é o STUB DEV/TESTE (grafo do payload, fromPayload=true) —
-// recusado em produção pela guarda dura. A etapa 3 troca por registry+pin.
+// `resolveGraph` agora é REGISTRY-BACKED: o job carrega o PIN (`agentRef` já
+// resolvido no start da instância) e o grafo GOVERNADO vem do registry, verbatim
+// (validateGraph passou no deploy). O caminho de grafo-em-payload foi DELETADO
+// (colapso §2.10) — não há mais grafo não-governado em produção nem em teste.
 registry.register('agent', async (job) => {
-  const input = {
+  const input: AgentJobInput = {
     elementId: typeof job.payload.elementId === 'string' ? job.payload.elementId : undefined,
-    graph: job.payload.graph as AgentJobInput['graph'],
+    agentRef: typeof job.payload.agentRef === 'string' ? job.payload.agentRef : undefined,
     fixtures: job.payload.fixtures as AgentJobInput['fixtures'],
   };
   const outcome = await runAgentJob(sql, job.tenantId, input, {
-    nodeEnv: config.NODE_ENV,
-    resolveGraph: async (i) => (i.graph ? { graph: i.graph, fromPayload: true } : null),
+    resolveGraph: async (i) => {
+      if (!i.agentRef) return null;
+      const def = await getAgentDefinitionByRef(sql, job.tenantId, i.agentRef);
+      return def ? { graph: def.graph, fromPayload: false } : null;
+    },
   });
   return outcome.ok ? { ok: true, result: outcome.result } : { ok: false, error: outcome.message };
 });

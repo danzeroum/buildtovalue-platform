@@ -1,4 +1,5 @@
 import { APPROVAL_GATE_AGENT, validateGraph, type AgentWorkflow } from '@buildtovalue/agentflow';
+import { createDiagram, createNode, type BpmnDiagram } from '@buildtovalue/core';
 import postgres from 'postgres';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
@@ -6,8 +7,10 @@ import {
   deployAgentDefinition,
   getAgentDefinitionByRef,
   listAgentDefinitions,
+  recordAgentPinsAtStart,
   resolveAgentRef,
 } from '../src/registry/agentStore.js';
+import { withTenant } from '../src/tenancy.js';
 import { createTestDatabase, type TestDatabase } from './helpers.js';
 
 /**
@@ -121,5 +124,106 @@ describe('AgentRegistry — deploy imutável + pin + resolução (AG-2.2 etapa 3
     await expect(api.unsafe(`DELETE FROM agent_definitions WHERE false`)).rejects.toThrow(
       /permission denied/i,
     );
+  });
+});
+
+/**
+ * PIN AUDITÁVEL no START (AG-2.2 etapa 3 §1). Resolve cada agentTask do diagrama
+ * contra o registry e grava a versão EFETIVA no history_events — nunca por
+ * execução de job. Ref flutuante que não publica = incidente `agentUnpublished`.
+ */
+describe('AgentRegistry — pin auditável no start (etapa 3 §1)', () => {
+  let db: TestDatabase;
+  let migrator: postgres.Sql;
+  let api: postgres.Sql;
+  let tenant: string;
+
+  /** agentTask node com ref declarada (flutuante ou pinada). */
+  function diagramWith(agentRefs: Record<string, string>): BpmnDiagram {
+    const d = createDiagram({ name: 'com-agente' });
+    d.nodes.start = createNode({ id: 'start', type: 'startEvent', label: 'start', x: 0, y: 0 });
+    let x = 200;
+    for (const [elementId, ref] of Object.entries(agentRefs)) {
+      const node = createNode({ id: elementId, type: 'agentTask', label: elementId, x, y: 0 });
+      node.properties.agentWorkflowRef = ref;
+      node.properties.autonomyLevel = 1;
+      d.nodes[elementId] = node;
+      x += 200;
+    }
+    return d;
+  }
+
+  async function newInstance(): Promise<string> {
+    return withTenant(migrator, tenant, async (tx) => {
+      const [row] = await tx`
+        INSERT INTO instances (tenant_id, definition_ref, engine_version,
+          state_schema_version, state, status)
+        VALUES (${tenant}, 'com-agente@1', 'e', 1, '{}'::jsonb, 'active')
+        RETURNING id`;
+      return row.id as string;
+    });
+  }
+
+  beforeAll(async () => {
+    db = await createTestDatabase('agent_pin');
+    migrator = postgres(db.migratorUrl, { max: 2, onnotice: () => {} });
+    const [t] = await migrator`INSERT INTO tenants (slug, name) VALUES ('ag', 'Agente') RETURNING id`;
+    tenant = t.id as string;
+    api = postgres(db.apiUrl, { max: 4, onnotice: () => {} });
+    await deployAgentDefinition(api, tenant, { graph: graphAt('agnt-rev', '1.0.0') });
+    await deployAgentDefinition(api, tenant, { graph: graphAt('agnt-rev', '2.0.0') });
+    await deployAgentDefinition(api, tenant, { graph: graphAt('agnt-fixo', '1.4.0') });
+  });
+
+  afterAll(async () => {
+    await api?.end();
+    await migrator?.end();
+    await db?.drop();
+  });
+
+  it('FLUTUANTE resolve latest e grava a versão EFETIVA no history_events', async () => {
+    const instanceId = await newInstance();
+    const pins = await withTenant(api, tenant, (tx) =>
+      recordAgentPinsAtStart(tx, tenant, instanceId, diagramWith({ classificar: 'agnt-rev' }), 'e'),
+    );
+    expect(pins).toHaveLength(1);
+    expect(pins[0]).toMatchObject({ ok: true });
+    const [event] = await withTenant(api, tenant, (tx) => tx`
+      SELECT kind, payload FROM history_events
+      WHERE instance_id = ${instanceId} AND kind = 'agentPinResolved'`);
+    expect(event.kind).toBe('agentPinResolved');
+    // versão efetiva 2.0.0 (latest), floating=true, ref pedida sem versão
+    expect(event.payload).toMatchObject({
+      elementId: 'classificar',
+      requestedRef: 'agnt-rev',
+      resolvedRef: 'agnt-rev@2.0.0',
+      version: '2.0.0',
+      floating: true,
+    });
+  });
+
+  it('PINADA grava a versão exata (floating=false)', async () => {
+    const diagram = diagramWith({ revisar: 'agnt-fixo@1.4.0' });
+    const instanceId = await newInstance();
+    await withTenant(api, tenant, (tx) => recordAgentPinsAtStart(tx, tenant, instanceId, diagram, 'e'));
+    const [event] = await withTenant(api, tenant, (tx) => tx`
+      SELECT payload FROM history_events
+      WHERE instance_id = ${instanceId} AND kind = 'agentPinResolved'`);
+    expect(event.payload).toMatchObject({ resolvedRef: 'agnt-fixo@1.4.0', floating: false });
+  });
+
+  it('ref NÃO publicada → incidente agentUnpublished (parada honesta, sem pin)', async () => {
+    const diagram = diagramWith({ sumido: 'agnt-fantasma' });
+    const instanceId = await newInstance();
+    const pins = await withTenant(api, tenant, (tx) =>
+      recordAgentPinsAtStart(tx, tenant, instanceId, diagram, 'e'),
+    );
+    expect(pins[0]).toMatchObject({ ok: false, reason: 'unpublished' });
+    const [incident] = await withTenant(api, tenant, (tx) => tx`
+      SELECT kind FROM incidents WHERE instance_id = ${instanceId}`);
+    expect(incident.kind).toBe('agentUnpublished');
+    const events = await withTenant(api, tenant, (tx) => tx`
+      SELECT 1 FROM history_events WHERE instance_id = ${instanceId} AND kind = 'agentPinResolved'`);
+    expect(events).toHaveLength(0);
   });
 });
