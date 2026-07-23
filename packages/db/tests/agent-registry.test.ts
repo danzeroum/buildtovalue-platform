@@ -190,8 +190,8 @@ describe('AgentRegistry — pin auditável no start (etapa 3 §1)', () => {
     expect(pins[0]).toMatchObject({ ok: true });
     const [event] = await withTenant(api, tenant, (tx) => tx`
       SELECT kind, payload FROM history_events
-      WHERE instance_id = ${instanceId} AND kind = 'agentPinResolved'`);
-    expect(event.kind).toBe('agentPinResolved');
+      WHERE instance_id = ${instanceId} AND kind = 'agent:pinResolved'`);
+    expect(event.kind).toBe('agent:pinResolved');
     // versão efetiva 2.0.0 (latest), floating=true, ref pedida sem versão
     expect(event.payload).toMatchObject({
       elementId: 'classificar',
@@ -200,6 +200,8 @@ describe('AgentRegistry — pin auditável no start (etapa 3 §1)', () => {
       version: '2.0.0',
       floating: true,
     });
+    // envelope de ator (D33) gravado desde já — a resolução é ato do runtime.
+    expect(event.payload).toMatchObject({ actor: { type: 'system', id: 'runtime' } });
   });
 
   it('PINADA grava a versão exata (floating=false)', async () => {
@@ -208,7 +210,7 @@ describe('AgentRegistry — pin auditável no start (etapa 3 §1)', () => {
     await withTenant(api, tenant, (tx) => recordAgentPinsAtStart(tx, tenant, instanceId, diagram, 'e'));
     const [event] = await withTenant(api, tenant, (tx) => tx`
       SELECT payload FROM history_events
-      WHERE instance_id = ${instanceId} AND kind = 'agentPinResolved'`);
+      WHERE instance_id = ${instanceId} AND kind = 'agent:pinResolved'`);
     expect(event.payload).toMatchObject({ resolvedRef: 'agnt-fixo@1.4.0', floating: false });
   });
 
@@ -223,7 +225,7 @@ describe('AgentRegistry — pin auditável no start (etapa 3 §1)', () => {
       SELECT kind FROM incidents WHERE instance_id = ${instanceId}`);
     expect(incident.kind).toBe('agentUnpublished');
     const events = await withTenant(api, tenant, (tx) => tx`
-      SELECT 1 FROM history_events WHERE instance_id = ${instanceId} AND kind = 'agentPinResolved'`);
+      SELECT 1 FROM history_events WHERE instance_id = ${instanceId} AND kind = 'agent:pinResolved'`);
     expect(events).toHaveLength(0);
   });
 });

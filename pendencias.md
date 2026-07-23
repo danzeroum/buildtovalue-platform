@@ -325,14 +325,21 @@ START (`recordAgentPinsAtStart` → `history_events.agentPinResolved`, incidente
 o payload carrega `agentRef` = o **pin efetivo** (nunca a ref flutuante) — a
 resolução flutuante acontece UMA vez no start, jamais por execução de job.
 
-**Trilha mascarada (etapa 3 §2, feita):** `persistAgentTrail` grava o I/O do
-agente em `history_events.agent_io`, **conservador por padrão** (só passa campo
-`none`; sensitive/personal/desconhecido → `MASKED_VALUE`). TESTE DE VAZAMENTO
-(`agent-trail-leak.test.ts`) falha se qualquer valor pessoal aparecer na coluna.
-O worker persiste a trilha após o walk (best-effort; não reverte a conclusão).
-Seam remanescente: o `io.input` (variáveis da instância que alimentam o agente)
-só é surfaçado quando o engine passar as vars ao job de agente — hoje a trilha
-grava `io.output` real do walk; a máscara já cobre input+output.
+**Trilha mascarada (etapa 3 §2, feita + gate do designer):** `persistAgentTrail`
+grava o I/O em `history_events.agent_io`, **conservador por padrão** (só passa
+campo `none`; sensitive/personal/desconhecido → `MASKED_VALUE`). TESTE DE VAZAMENTO
+(`agent-trail-leak.test.ts`) falha se qualquer valor pessoal aparecer.
+Dois requisitos do designer travados **desde já** (append-only não perdoa retro):
+- **(a) um fato por linha:** cada elo da cadeia D1 (`intenção → ação(por nó) → I/O
+  → [decisão] → evidência` + `parada`) é UMA linha, com `kind = agent:<elo>`
+  (filtrável por `kind LIKE 'agent:%'` sem abrir payload). `buildAgentFacts` emite
+  a cadeia; `decisao` entra quando o walker surfaçar o nó (a coluna já suporta).
+- **(b) envelope de ator D33** `{type,id,requestId}` em CADA fato de agente (e no
+  `agent:pinResolved` = `system/runtime`), no payload jsonb — **consultável** por
+  `payload->'actor'->>'type'`, sem coluna nova. A P2/P7 da AG-3 monta sem migração.
+Seam remanescente: o `io.input` (variáveis da instância) só é surfaçado quando o
+engine passar as vars ao job (etapa 4, §2.11) — hoje a trilha grava `io.output`
+real; a máscara já cobre input+output.
 
 **Lote de mudanças na biblioteca (agentflow, um único release):** para não gastar
 uma ida-e-volta de publicação por etapa, AGRUPAR num só changeset/minor:
@@ -341,6 +348,9 @@ uma ida-e-volta de publicação por etapa, AGRUPAR num só changeset/minor:
 - **emissão de `agentTask` (etapa 4):** o engine trata `agentTask` como ESPERA que
   emite `CreateJob{jobType:'agent'}` + `agentRef` efetivo (extensão determinística
   do avanço; NADA do interior do agente entra no engine);
+- **elo `decisão` da cadeia D1 (nota do designer):** hoje `buildAgentFacts` NÃO emite
+  `decisao` — falta o walker expor o TIPO do nó. Se depender do agentflow, entra no
+  mesmo lote (a cadeia incompleta vira lacuna visível quando o P2 desenhar a timeline);
 - o que a etapa 5 revelar (gate de tool D31 — `effectRequiresGate`).
 Peço **um** release do bpmn quando o lote fechar, não três improvisados.
 
@@ -358,6 +368,51 @@ A etapa 4 fecha isso JUNTO com a fronteira D27 do replay:
    `start → agentTask emite CreateJob(agent) → JobCompleted → avanço segue`.
 3. **lint do aceite 7 (invariante testada pelos DOIS lados):** nenhuma fixture de replay
    contém interior de `agentTask` — proibição VERIFICADA, não só declarada.
+
+## 2.12 shared-ui — refino de forma do designer (PR PRÓPRIA, pós-#23)
+
+Sete itens DIRETOS aprovados pelo designer (forma, não passam por adendo). Decisão
+minha: **PR própria** após o merge da #23 (não contaminar o gate de backend). Itens:
+1. Renomear tokens de papel: `--ui-role-gate-*` (decisão/gate) ≠ `--ui-role-warning-*`
+   (aviso) ≠ classificação (escala própria). Mesma cor hoje, divergível amanhã.
+2. `--ui-role-agent-*` (violeta) com teste AA AGORA — antes da AG-3, senão nasce ad-hoc.
+3. Piso 44px de alvo de toque: `.decision-option` (~28px), `.chip`, `.palette-pill`,
+   `.segment`. O gate P1 herda o mesmo controle → corrigir aqui corrige lá.
+4. Microcopy: "Liberar" = soltar a própria tarefa (unclaim); "Reatribuir" = passar a
+   outrem; **aposentar "Desatribuir"** (três palavras para dois atos).
+5. Rótulo humano no chip de decisão (hoje mostra `aprovar` cru minúsculo); o valor cru
+   segue sendo o dado auditado. Se o processo fornecer rótulo, usa; senão formata.
+6. Remover `var(--ui-surface-raised, #fff)` — o cabeçalho do app.css declara "nenhum hex".
+7. Forma canônica do controle: `DecisionOption {value, label, intent}`, cor pela intenção
+   e só quando conhecida (user task = routing dourado; gate P1 = affirmative/destructive/
+   neutral). O item a NÃO deixar passar — evita a AG-3 falar duas línguas.
+
+## 2.13 ESCOPO registrado como F4 (muda comportamento — vira adendo se virar v1)
+
+Três pedidos que TOCAM contrato/schema/permrissão — **não implementar** na v1:
+1. **Intenção por rota na publicação** (colorir "Reprovar" na user task): exige campo de
+   intenção por rota no schema+contrato do processo. Hoje a cor da decisão sai só quando
+   a intenção é conhecida (item 7 acima); "colorir Reprovar" é a fonte da intenção, F4.
+2. **Seletor de pessoas na reatribuição:** precisa de endpoint de MEMBROS do papel
+   candidato (`GET` de candidatos). Hoje a reatribuição é digitação de id (risco
+   typo→pessoa errada, anotado). F4 quando o endpoint existir.
+3. **Iniciar versão anterior deliberadamente:** rollback permissionado — a projeção
+   iniciável é latest-per-name de propósito (AG-2.1 etapa 5). F4/F5.
+Se algum virar necessidade da v1, **vira adendo** (passa pelo plano, não direto ao dev).
+
+## 2.14 Contrato — notas do designer que viram interface (registrar no shape)
+
+1. **Namespace `agent:*` no catálogo de event_type (D33):** o prefixo `agent:` das
+   linhas de trilha (`agent:pinResolved`, `agent:intencao|acao|io|decisao|evidencia|
+   parada`) virou INTERFACE no momento em que a timeline passou a ser filtrada por
+   `kind LIKE 'agent:%'`. Publicar no catálogo de `event_type` do contrato (insumo
+   AG-2 já pedia catálogo estável) — não é mais detalhe interno.
+2. **AG-2.3 (export) — normalização do envelope de ator:** o envelope `{type,id,
+   requestId}` existe em DUAS formas físicas — COLUNAS em `tenant_audit_events`
+   (`actor_type/actor_id/request_id`) e JSONB em `history_events`
+   (`payload->'actor'`). O `GET /v1/audit/export` deve NORMALIZAR as duas numa só
+   forma na saída — o auditor nunca recebe dois formatos para o mesmo conceito.
+   Fixar no SHAPE da rota ANTES de implementar (senão vira retrabalho no export).
 
 ## 3. Registro de fluxo (sem ação sua)
 

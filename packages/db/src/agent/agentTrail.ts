@@ -64,11 +64,30 @@ export interface AgentFact {
 }
 
 /**
+ * Envelope de ator (D33), campo de 1ª classe do fato de agente — GRAVADO DESDE JÁ
+ * (a trilha é append-only; sem ele, a P2/P7 da AG-3 exigiria migração retroativa
+ * de trilha imutável, impossível). `type` = quem agiu (o agente na corrida; o
+ * `system` na resolução do pin); `id` = ref/identidade; `requestId` = correlação
+ * da corrida. Consultável por `payload->'actor'->>'type'` (jsonb, sem coluna nova).
+ */
+export interface AgentActor {
+  type: 'agent' | 'user' | 'system';
+  id: string;
+  requestId?: string;
+}
+
+/** Prefixo estável das linhas da trilha de agente na history_events: um SELECT
+ * `kind LIKE 'agent:%'` traz a timeline unificada (pin + cadeia de fatos) sem
+ * caminhar o payload. Cada fato é UMA linha com seu `kind` próprio. */
+export const AGENT_HISTORY_PREFIX = 'agent:';
+
+/**
  * Persiste a trilha MASCARADA na coluna `agent_io` de `history_events`. Cada fato
- * vira uma linha `agentIo`: `payload` carrega SÓ metadados não-pessoais (kind,
- * source, message, nodeId), e o I/O — mascarado pela política conservadora — vai
- * na coluna `agent_io`. Nada em claro em nenhuma das colunas. Append-only (D32):
- * a coluna é escrita só no INSERT; effect_key determinístico por (instância,
+ * vira UMA linha cujo `kind` = `agent:<intencao|acao|io|decisao|evidencia|parada>`
+ * (um fato por linha, filtrável por kind sem abrir o payload). O `payload` carrega
+ * SÓ metadados não-pessoais + o **envelope de ator {type,id,requestId}**; o I/O —
+ * mascarado pela política conservadora — vai na coluna `agent_io`. Nada em claro em
+ * nenhuma das colunas. Append-only (D32): effect_key determinístico por (instância,
  * elemento, step) → idempotente.
  */
 export async function persistAgentTrail(
@@ -78,6 +97,8 @@ export async function persistAgentTrail(
     instanceId: string;
     elementId: string;
     agentRef: string;
+    /** envelope de ator dos fatos (D33) — o agente que corre esta trilha. */
+    actor: AgentActor;
     facts: AgentFact[];
     classifications: Classifications;
     engineVersion: string;
@@ -91,6 +112,7 @@ export async function persistAgentTrail(
     const payload = {
       elementId: args.elementId,
       agentRef: args.agentRef,
+      actor: args.actor,
       kind: fact.kind,
       source: fact.source,
       message: fact.message,
@@ -100,7 +122,8 @@ export async function persistAgentTrail(
     await tx`INSERT INTO history_events
         (tenant_id, instance_id, seq, kind, payload, agent_io, engine_version, effect_key)
       VALUES (${args.tenantId}, ${args.instanceId},
-              ${historySeq(args.revision, 50_000 + fact.step)}, 'agentIo',
+              ${historySeq(args.revision, 50_000 + fact.step)},
+              ${AGENT_HISTORY_PREFIX + fact.kind},
               ${tx.json(payload as never)},
               ${maskedIo ? tx.json(maskedIo as never) : null},
               ${args.engineVersion},
@@ -110,10 +133,11 @@ export async function persistAgentTrail(
 }
 
 /**
- * Constrói a trilha de fatos a partir do resultado do walk do AgentRunner. Um
- * fato `io` com o I/O da corrida (mascarado na persistência) + um `parada` quando
- * o walk não completou (kill-switch/budget/erro) — a trilha PARCIAL vira fato,
- * nunca conclusão silenciosa.
+ * Constrói a CADEIA de fatos (D1) a partir do walk do AgentRunner, um fato por
+ * elo — `intenção → ação(por nó) → I/O → evidência` (+ `parada` honesta quando o
+ * walk não completa). `decisao` entra quando o walker surfaçar o nó de decisão
+ * (hoje o `simulate` do CI não expõe o tipo do nó; a coluna já suporta o kind).
+ * Cada elo vira UMA linha na persistência — granularidade de fato por linha.
  */
 export function buildAgentFacts(input: {
   io: AgentIo;
@@ -121,18 +145,35 @@ export function buildAgentFacts(input: {
   complete: boolean;
   stopReason?: string;
 }): AgentFact[] {
-  const facts: AgentFact[] = [
-    {
-      step: 0,
-      kind: 'io',
+  const facts: AgentFact[] = [];
+  let step = 0;
+  // intenção: o agente foi invocado (o "ask" — input, sem output ainda).
+  facts.push({
+    step: step++,
+    kind: 'intencao',
+    source: 'fixture',
+    message: 'agente invocado',
+    ...(input.io.input ? { io: { input: input.io.input } } : {}),
+  });
+  // ação: um fato por nó caminhado (a trilha do que rodou, na ordem).
+  for (const nodeId of input.visitedNodes) {
+    facts.push({ step: step++, kind: 'acao', source: 'fixture', message: `executou nó '${nodeId}'`, nodeId });
+  }
+  // I/O da corrida (input+output, mascarados na persistência).
+  facts.push({ step: step++, kind: 'io', source: 'fixture', message: 'I/O da corrida', io: input.io });
+  // evidência: o resultado como evidência (só do output; nunca conteúdo pessoal).
+  if (input.complete && input.io.output) {
+    facts.push({
+      step: step++,
+      kind: 'evidencia',
       source: 'fixture',
-      message: `agente caminhou ${input.visitedNodes.length} nó(s): ${input.visitedNodes.join(' → ') || '—'}`,
-      io: input.io,
-    },
-  ];
+      message: 'resultado do agente',
+      io: { output: input.io.output },
+    });
+  }
   if (!input.complete) {
     facts.push({
-      step: 1,
+      step: step++,
       kind: 'parada',
       source: 'fixture',
       message: input.stopReason ?? 'parada honesta',

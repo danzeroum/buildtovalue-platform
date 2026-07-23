@@ -150,10 +150,12 @@ export {
 } from './agent/tenantAiConfig.js';
 export { fixtureAiProvider, type AiProvider, type AiCompletion } from './agent/aiProvider.js';
 export {
+  AGENT_HISTORY_PREFIX,
   buildAgentFacts,
   conservativeMaskingPolicy,
   maskIo,
   persistAgentTrail,
+  type AgentActor,
   type AgentFact,
   type AgentIo,
   type Classification,

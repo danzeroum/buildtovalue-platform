@@ -86,6 +86,7 @@ describe('trilha de agente — TESTE DE VAZAMENTO em agent_io (etapa 3 §2)', ()
         instanceId,
         elementId: 'classificar',
         agentRef: 'agnt-aprova@1.0.0',
+        actor: { type: 'agent', id: 'agnt-aprova@1.0.0', requestId: 'job-1' },
         facts,
         classifications,
         engineVersion: 'e',
@@ -93,21 +94,41 @@ describe('trilha de agente — TESTE DE VAZAMENTO em agent_io (etapa 3 §2)', ()
       }),
     );
 
-    // VARREDURA leak-fail: a coluna agent_io serializada por inteiro.
+    // VARREDURA leak-fail: a trilha de agente serializada por inteiro.
     const rows = await withTenant(api, tenant, (tx) => tx`
-      SELECT payload, agent_io FROM history_events
-      WHERE instance_id = ${instanceId} AND kind = 'agentIo'`);
+      SELECT kind, payload, agent_io FROM history_events
+      WHERE instance_id = ${instanceId} AND kind LIKE 'agent:%'`);
     expect(rows.length).toBeGreaterThanOrEqual(1);
     const serialized = JSON.stringify(rows);
     expect(serialized).not.toContain(CPF);
     expect(serialized).not.toContain(EMAIL);
     expect(serialized).not.toContain(SEGREDO);
-    // aprovado (output estrutural, não classificado) também é conservador →
-    // mascarado; o que importa é que NADA pessoal vaza. A máscara aparece:
+    // campo estrutural não classificado também é conservador → mascarado; o que
+    // importa é que NADA pessoal vaza. A máscara aparece:
     expect(serialized).toContain(MASKED_VALUE);
     // o valor 'none' declarado sobrevive (utilidade da trilha preservada):
     const io = rows.find((r) => r.agent_io)?.agent_io as { input?: Record<string, unknown> };
     expect(io.input?.valor).toBe(5000);
+
+    // (a) UM FATO POR LINHA: a cadeia intenção→ação→io→evidência, kind por linha.
+    const kinds = rows.map((r) => r.kind as string);
+    expect(kinds).toContain('agent:intencao');
+    expect(kinds).toContain('agent:acao');
+    expect(kinds).toContain('agent:io');
+    expect(kinds).toContain('agent:evidencia');
+    // duas ações (llm-review, dec-approve) → duas linhas distintas
+    expect(kinds.filter((k) => k === 'agent:acao')).toHaveLength(2);
+
+    // (b) ENVELOPE DE ATOR {type,id,requestId} em CADA fato, consultável por jsonb.
+    for (const r of rows) {
+      const actor = (r.payload as { actor?: { type: string; id: string; requestId?: string } }).actor;
+      expect(actor).toMatchObject({ type: 'agent', id: 'agnt-aprova@1.0.0', requestId: 'job-1' });
+    }
+    // consulta por caminho jsonb (prova de "consultável" sem coluna nova):
+    const byActor = await withTenant(api, tenant, (tx) => tx`
+      SELECT count(*)::int AS n FROM history_events
+      WHERE instance_id = ${instanceId} AND payload->'actor'->>'type' = 'agent'`);
+    expect(byActor[0].n).toBe(rows.length);
   });
 
   it('parada honesta vira fato de trilha (walk parcial → agentIo com error)', async () => {
@@ -124,6 +145,7 @@ describe('trilha de agente — TESTE DE VAZAMENTO em agent_io (etapa 3 §2)', ()
         instanceId,
         elementId: 'parou',
         agentRef: 'agnt-aprova@1.0.0',
+        actor: { type: 'agent', id: 'agnt-aprova@1.0.0', requestId: 'job-2' },
         facts,
         classifications,
         engineVersion: 'e',
@@ -131,11 +153,12 @@ describe('trilha de agente — TESTE DE VAZAMENTO em agent_io (etapa 3 §2)', ()
       }),
     );
     const rows = await withTenant(api, tenant, (tx) => tx`
-      SELECT payload FROM history_events
-      WHERE instance_id = ${instanceId} AND kind = 'agentIo'
+      SELECT kind, payload FROM history_events
+      WHERE instance_id = ${instanceId} AND kind LIKE 'agent:%'
         AND payload->>'elementId' = 'parou'`);
     const serialized = JSON.stringify(rows);
     expect(serialized).not.toContain(CPF);
-    expect(serialized).toContain('parada');
+    // a parada honesta é sua PRÓPRIA linha (kind = agent:parada, error=true)
+    expect(rows.map((r) => r.kind)).toContain('agent:parada');
   });
 });
