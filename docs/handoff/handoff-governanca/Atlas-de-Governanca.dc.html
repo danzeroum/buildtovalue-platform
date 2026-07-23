@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet">
+<style>
+doc-page:not(:defined){visibility:hidden}
+a{color:#1a6a54;text-decoration:none}a:hover{color:#9a7b1e;text-decoration:underline}
+.lyr{width:100%;border-collapse:collapse;margin:6px 0 0;font-size:11.5px}
+.lyr th{text-align:left;padding:6px 9px;border-bottom:1.5px solid #262220;font-family:'IBM Plex Mono',monospace;font-size:8.5px;letter-spacing:.8px;color:#6f675a;font-weight:500;vertical-align:bottom}
+.lyr td{padding:7px 9px;border-bottom:1px solid #e8e3d9;vertical-align:top;line-height:1.45}
+.lyr .m{font-weight:600;color:#262220}
+.lyr .art{font-family:'IBM Plex Mono',monospace;font-size:10px;color:#1a6a54;white-space:nowrap}
+.k{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:#8a6d16}
+</style>
+<script src="./doc-page.js"></script>
+</helmet>
+<doc-page margin="0.7in">
+<div style="font-family:'IBM Plex Sans',sans-serif;color:#44403a">
+
+<div style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:2.5px;color:#9a7b1e;margin-bottom:8px">ATLAS DE GOVERNANÇA · BUILDTOVALUE · ISO/IEC 42001 · EU AI ACT</div>
+<h1 style="font-family:'Source Serif 4',Georgia,serif;font-size:31px;font-weight:600;letter-spacing:-0.5px;color:#262220;line-height:1.12;margin:0 0 12px">O Atlas de Governança da plataforma</h1>
+<p style="font-size:14px;line-height:1.6;color:#33413a;margin:0 0 14px;max-width:70ch">Um mapa que responde à pergunta do auditor em qualquer camada: <em>“mostre-me a evidência de que este controle existe e funciona”.</em> Para cada mecanismo — <strong>o que é → onde vive → que evidência produz → onde a evidência aparece → que controle/artigo atende</strong>. Não é PDF anexo: é a mesma plataforma que executa o processo exibindo a prova.</p>
+<div style="display:flex;flex-wrap:wrap;gap:6px 22px;font-size:12px;color:#6f675a;border-top:1px solid #e2ddd3;border-bottom:1px solid #e2ddd3;padding:9px 0;margin-bottom:20px">
+  <span><strong style="color:#44403a">Base:</strong> ADENDO-03 (D32–D37) · migrações 0001–0006 · ADR-0002</span>
+  <span><strong style="color:#44403a">Artigos EU AI Act:</strong> 12 registros · 13 transparência · 14 supervisão &amp; interrupção</span>
+  <span><strong style="color:#44403a">Data:</strong> 22 jul 2026</span>
+</div>
+
+<!-- legend: selo de procedência -->
+<div style="background:#faf9f6;border:1px solid #e2ddd3;border-radius:12px;padding:14px 18px;margin-bottom:16px;break-inside:avoid">
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1.5px;color:#9a7b1e;margin-bottom:10px">COMO LER — A LINGUAGEM DE EVIDÊNCIA (detalhada em E2)</div>
+  <div style="display:flex;flex-wrap:wrap;gap:18px 26px;align-items:center">
+    <div><div style="font-size:10px;color:#6f675a;margin-bottom:5px">ATOR (sempre nomeado)</div><div style="display:flex;gap:6px;align-items:center">
+      <span style="display:inline-flex;align-items:center;gap:4px;font-size:10.5px;background:#e7f2ec;border:1px solid #cfe6da;border-radius:999px;padding:2px 8px"><span style="width:13px;height:13px;border-radius:50%;background:#1a6a54;color:#fff;font-size:7px;display:inline-flex;align-items:center;justify-content:center">◍</span>humano</span>
+      <span style="display:inline-flex;align-items:center;gap:4px;font-size:10.5px;background:#f3f1ea;border:1px solid #e2ddd3;border-radius:999px;padding:2px 8px;color:#44403a">⚙ sistema</span>
+      <span style="display:inline-flex;align-items:center;gap:4px;font-size:10.5px;background:#ecebf6;border:1px solid #d7d3ee;border-radius:999px;padding:2px 8px;color:#3f3785">⬡ agente</span>
+    </div></div>
+    <div><div style="font-size:10px;color:#6f675a;margin-bottom:5px">ESTADO DA EVIDÊNCIA</div><div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+      <span style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;background:#fff;border:1px solid #d8d3c6;border-radius:6px;padding:2px 8px;color:#44403a">✎ auditado</span>
+      <span style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;background:#e7f2ec;border:1px solid #cfe6da;border-radius:6px;padding:2px 8px;color:#1a6a54">✓ ancorado·verificável</span>
+      <span style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;background:#fdfaf1;border:1px solid #f6edd4;border-radius:6px;padding:2px 8px;color:#9a7b1e">•• mascarado</span>
+      <span style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;background:#fdf7f6;border:1px solid #f0d9d6;border-radius:6px;padding:2px 8px;color:#b3372f">⃠ negado</span>
+    </div></div>
+  </div>
+</div>
+
+<!-- organization + journey crosswalk -->
+<div style="background:#f4faf6;border:1px solid #dff0e6;border-left:4px solid #1a6a54;border-radius:12px;padding:15px 18px;margin-bottom:20px;break-inside:avoid">
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1.5px;color:#1a6a54;margin-bottom:8px">ORGANIZAÇÃO — POR CAMADA, COM UM ATALHO POR JORNADA</div>
+  <p style="font-size:12.5px;line-height:1.55;color:#25453a;margin:0 0 12px">Organizei o Atlas <strong>por camada</strong> (banco → runtime → ledger → APIs → logs → trilhas → frontend) porque é assim que um auditor pede prova de um controle. Mas uma auditoria também segue a <strong>jornada</strong> de um caso — então a leitura rápida é esta linha, cada passo apontando a camada e o artigo onde a prova mora:</p>
+  <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:11px">
+    <span style="background:#fff;border:1px solid #cfe6da;border-radius:7px;padding:5px 9px">modelou <span class="art">§frontend·12</span></span><span style="color:#9a8f7e">→</span>
+    <span style="background:#fff;border:1px solid #cfe6da;border-radius:7px;padding:5px 9px">publicou c/ lint <span class="art">§api·13</span></span><span style="color:#9a8f7e">→</span>
+    <span style="background:#fff;border:1px solid #cfe6da;border-radius:7px;padding:5px 9px">iniciou <span class="art">§runtime·12</span></span><span style="color:#9a8f7e">→</span>
+    <span style="background:#fff;border:1px solid #cfe6da;border-radius:7px;padding:5px 9px">humano no gate <span class="art">§runtime·14</span></span><span style="color:#9a8f7e">→</span>
+    <span style="background:#fff;border:1px solid #cfe6da;border-radius:7px;padding:5px 9px">efeito + motivo <span class="art">§trilhas·12</span></span><span style="color:#9a8f7e">→</span>
+    <span style="background:#fff;border:1px solid #cfe6da;border-radius:7px;padding:5px 9px">ancorado <span class="art">§ledger·12</span></span><span style="color:#9a8f7e">→</span>
+    <span style="background:#fff;border:1px solid #cfe6da;border-radius:7px;padding:5px 9px">exportável <span class="art">§api·12</span></span>
+  </div>
+</div>
+
+<!-- ============ LAYER 1 — BANCO ============ -->
+<div style="break-inside:avoid;margin-top:8px">
+  <div style="display:flex;align-items:baseline;gap:10px;border-bottom:2px solid #262220;padding-bottom:5px"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#9a7b1e">01</span><h2 style="font-family:'Source Serif 4',serif;font-size:18px;font-weight:600;color:#262220;margin:0">Banco de dados — o que é imposto por permissão, não por disciplina</h2></div>
+  <table class="lyr">
+    <thead><tr><th style="width:22%">MECANISMO</th><th style="width:30%">EVIDÊNCIA QUE PRODUZ</th><th style="width:26%">ONDE APARECE</th><th style="width:22%">CONTROLE / ARTIGO</th></tr></thead>
+    <tbody>
+      <tr><td class="m">RLS + FORCE em toda tabela</td><td>Dump dos <span class="k">policies</span>; consulta cross-tenant retorna vazio</td><td>Migração · teste de isolamento (15+ tabelas)</td><td class="art">ISO A.5 controle de acesso</td></tr>
+      <tr><td class="m">Trilhas append-only <span style="font-weight:400;color:#6f675a">(0006 · D32)</span></td><td>Dump dos <span class="k">grants</span> + tentativa de UPDATE/DELETE <span style="color:#b3372f">negada</span></td><td>Migração 0006 · aceite §6.1</td><td class="art">AI Act 12 · imutabilidade</td></tr>
+      <tr><td class="m">Definições imutáveis <span style="font-weight:400;color:#6f675a">(0004)</span></td><td>Versão publicada não muda; nova versão = novo registro</td><td>/studio publicação · registry</td><td class="art">AI Act 12 · versionamento</td></tr>
+      <tr><td class="m">Cifra de campos <span class="k">sensitive</span> <span style="font-weight:400;color:#6f675a">(D20)</span></td><td><span style="color:#9a7b1e">••</span> mascarado por padrão; <span class="k">classification</span> persistida; salt por registro (ADR-0002)</td><td>/forms · reveal com motivo · P7</td><td class="art">AI Act 12 · LGPD</td></tr>
+      <tr><td class="m">Idempotência + replay</td><td>Mesma chave → mesmo efeito; replay determinístico</td><td>runtime · testes de replay</td><td class="art">ISO · integridade</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ============ LAYER 2 — RUNTIME ============ -->
+<div style="break-inside:avoid;margin-top:18px">
+  <div style="display:flex;align-items:baseline;gap:10px;border-bottom:2px solid #262220;padding-bottom:5px"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#9a7b1e">02</span><h2 style="font-family:'Source Serif 4',serif;font-size:18px;font-weight:600;color:#262220;margin:0">Runtime — supervisão humana e interrupção (Art. 14)</h2></div>
+  <table class="lyr">
+    <thead><tr><th style="width:22%">MECANISMO</th><th style="width:30%">EVIDÊNCIA QUE PRODUZ</th><th style="width:26%">ONDE APARECE</th><th style="width:22%">CONTROLE / ARTIGO</th></tr></thead>
+    <tbody>
+      <tr><td class="m">Gate humano (autonomia→gate)</td><td>Aprovação com <strong>escopo exato</strong> + motivo; ninguém aprova mundo obsoleto (409 · D28)</td><td>P1 · modo agente da Tasklist</td><td class="art">AI Act 14 · supervisão</td></tr>
+      <tr><td class="m">Kill-switch auditado <span style="font-weight:400;color:#6f675a">(D29)</span></td><td>Acionamento com motivo; em-execução fazem parada honesta; reativação auditada</td><td>P4 · <span class="k">tenant_audit_events</span></td><td class="art">AI Act 14 · interrupção</td></tr>
+      <tr><td class="m">Trilha de fatos do agente <span style="font-weight:400;color:#6f675a">(D27)</span></td><td>intenção→ação→I/O mascarado→decisão→evidência; origem rotulada</td><td>P2 · drill-down do Operate</td><td class="art">AI Act 12 · registros</td></tr>
+      <tr><td class="m"><span class="k">evidência-verificada</span> <span style="font-weight:400;color:#6f675a">(D30)</span></td><td>Rótulo <strong>exclusivo do runtime real</strong>, imposto por código; simulação nunca o exibe</td><td>P2 · shared-ui token + teste</td><td class="art">AI Act 12 · autenticidade</td></tr>
+      <tr><td class="m">Paradas honestas · budget</td><td><span class="k">BlockedDecision</span> nomeia nó/razão/contagem; estouro não continua</td><td>P2 · incidente “parada honesta”</td><td class="art">AI Act 14 · limites</td></tr>
+      <tr><td class="m">Invariante de tools <span style="font-weight:400;color:#6f675a">(D31)</span></td><td>irreversível/external nunca <span class="k">automatica</span>; runtime recusa sem gate</td><td>P5 catálogo · P6 lint</td><td class="art">AI Act 14 · barreira</td></tr>
+      <tr><td class="m">Fencing <span style="font-weight:400;color:#6f675a">(effect_key/lock/claim)</span></td><td>exatamente-uma-vez; token de claim; mundo obsoleto</td><td>runtime · Operate</td><td class="art">ISO · confiabilidade</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ============ LAYER 3 — LEDGER ============ -->
+<div style="break-inside:avoid;margin-top:18px">
+  <div style="display:flex;align-items:baseline;gap:10px;border-bottom:2px solid #262220;padding-bottom:5px"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#9a7b1e">03</span><h2 style="font-family:'Source Serif 4',serif;font-size:18px;font-weight:600;color:#262220;margin:0">Ledger &amp; integridade — a prova que não se pode reescrever</h2></div>
+  <table class="lyr">
+    <thead><tr><th style="width:22%">MECANISMO</th><th style="width:30%">EVIDÊNCIA QUE PRODUZ</th><th style="width:26%">ONDE APARECE</th><th style="width:22%">CONTROLE / ARTIGO</th></tr></thead>
+    <tbody>
+      <tr><td class="m">Cadeia hash + tombstones LGPD</td><td>Cada entrada referencia a anterior; <strong>nunca conteúdo pessoal</strong> (teste nomeado)</td><td>P7 · LedgerExplorer · dossiê</td><td class="art">AI Act 12 · LGPD</td></tr>
+      <tr><td class="m">Ancoragem de digest das trilhas <span style="font-weight:400;color:#6f675a">(D35)</span></td><td>Job ancora digest de intervalo; adulteração de 1 linha → verificação falha apontando o intervalo</td><td>Console de Auditoria (E3) · aceite §6.3</td><td class="art">AI Act 12 · integridade</td></tr>
+      <tr><td class="m">Ancoragem de Evidence Bundle</td><td>hash + bloco + entrada anterior; verificável</td><td>P7 · selo de ancoragem</td><td class="art">AI Act 12 · registros</td></tr>
+      <tr><td class="m">Export com recibo <span style="font-weight:400;color:#6f675a">(D35)</span></td><td>digest do arquivo ancorado; sem infra de chave nova</td><td>Recibo de export (E4)</td><td class="art">AI Act 12 · rastreável</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ============ LAYER 4 — APIs ============ -->
+<div style="break-inside:avoid;margin-top:18px">
+  <div style="display:flex;align-items:baseline;gap:10px;border-bottom:2px solid #262220;padding-bottom:5px"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#9a7b1e">04</span><h2 style="font-family:'Source Serif 4',serif;font-size:18px;font-weight:600;color:#262220;margin:0">APIs — toda ação sensível exige e audita motivo</h2></div>
+  <table class="lyr">
+    <thead><tr><th style="width:22%">MECANISMO</th><th style="width:30%">EVIDÊNCIA QUE PRODUZ</th><th style="width:26%">ONDE APARECE</th><th style="width:22%">CONTROLE / ARTIGO</th></tr></thead>
+    <tbody>
+      <tr><td class="m">Motivo obrigatório e auditado</td><td>reveal · cancelamento · resolução · reatribuição · kill-switch — cada um com motivo no evento</td><td>Console + P1/P4 · trilhas</td><td class="art">AI Act 12 · 14</td></tr>
+      <tr><td class="m"><span class="k">GET /v1/audit/export</span> <span style="font-weight:400;color:#6f675a">(D36)</span></td><td>JSON/CSV com filtros; permissão <span class="k">audit:export</span> ela própria auditada</td><td>E3/E4 · proposta AG-2</td><td class="art">AI Act 12 · acesso a registros</td></tr>
+      <tr><td class="m">XES / IEEE 1849 por instância</td><td>Log de eventos padrão de mercado exportável</td><td>Operate · export</td><td class="art">AI Act 12 · interoperável</td></tr>
+      <tr><td class="m">Cross-tenant = 404 sempre</td><td>Nunca revela existência de recurso de outro tenant</td><td>API · E5 (negação)</td><td class="art">ISO · isolamento</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ============ LAYER 5 — LOGS ============ -->
+<div style="break-inside:avoid;margin-top:18px">
+  <div style="display:flex;align-items:baseline;gap:10px;border-bottom:2px solid #262220;padding-bottom:5px"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#9a7b1e">05</span><h2 style="font-family:'Source Serif 4',serif;font-size:18px;font-weight:600;color:#262220;margin:0">Logs &amp; observabilidade — sensível nunca vaza</h2></div>
+  <table class="lyr">
+    <thead><tr><th style="width:22%">MECANISMO</th><th style="width:30%">EVIDÊNCIA QUE PRODUZ</th><th style="width:26%">ONDE APARECE</th><th style="width:22%">CONTROLE / ARTIGO</th></tr></thead>
+    <tbody>
+      <tr><td class="m">Redaction leak-fail</td><td>Teste que <strong>falha</strong> o build se dado sensível aparecer em log</td><td>CI · dossiê</td><td class="art">AI Act 12 · LGPD</td></tr>
+      <tr><td class="m">Bindings <span class="k">tenant_id + user_id</span> <span style="font-weight:400;color:#6f675a">(D34)</span></td><td>Todo log correlaciona tenant e usuário</td><td>observabilidade</td><td class="art">AI Act 12 · rastreável</td></tr>
+      <tr><td class="m">Negações de autorização <span style="font-weight:400;color:#6f675a">(D34)</span></td><td>Log estruturado (5 campos) + métrica; banco só p/ alta sensibilidade</td><td>E5 · <span class="k">tenant_audit_events</span></td><td class="art">AI Act 12 · segurança</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ============ LAYER 6 — TRILHAS ============ -->
+<div style="break-inside:avoid;margin-top:18px">
+  <div style="display:flex;align-items:baseline;gap:10px;border-bottom:2px solid #262220;padding-bottom:5px"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#9a7b1e">06</span><h2 style="font-family:'Source Serif 4',serif;font-size:18px;font-weight:600;color:#262220;margin:0">Trilhas de auditoria — ator sempre nomeado</h2></div>
+  <table class="lyr">
+    <thead><tr><th style="width:22%">MECANISMO</th><th style="width:30%">EVIDÊNCIA QUE PRODUZ</th><th style="width:26%">ONDE APARECE</th><th style="width:22%">CONTROLE / ARTIGO</th></tr></thead>
+    <tbody>
+      <tr><td class="m"><span class="k">history_events</span> (por instância)</td><td><span class="k">seq</span> determinístico; “cancelada por X · motivo Y”</td><td>Operate · Console (E3)</td><td class="art">AI Act 12 · registros</td></tr>
+      <tr><td class="m"><span class="k">tenant_audit_events</span> <span style="font-weight:400;color:#6f675a">(D33)</span></td><td>Governança sem instância: auth · config · tools · kill-switch · exports</td><td>Console (E3) · append-only</td><td class="art">AI Act 12 · governança</td></tr>
+      <tr><td class="m">Envelope de ator <span style="font-weight:400;color:#6f675a">(D33)</span></td><td><span class="k">{type: user|system|agent, id, requestId}</span> — campo de 1ª classe consultável</td><td>E2 badge tríplice · toda trilha</td><td class="art">AI Act 12 · 13</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ============ LAYER 7 — FRONTEND ============ -->
+<div style="break-inside:avoid;margin-top:18px">
+  <div style="display:flex;align-items:baseline;gap:10px;border-bottom:2px solid #262220;padding-bottom:5px"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#9a7b1e">07</span><h2 style="font-family:'Source Serif 4',serif;font-size:18px;font-weight:600;color:#262220;margin:0">Frontend — a prova visível, no momento da ação (Art. 13)</h2></div>
+  <table class="lyr">
+    <thead><tr><th style="width:22%">MECANISMO</th><th style="width:30%">EVIDÊNCIA QUE PRODUZ</th><th style="width:26%">ONDE APARECE</th><th style="width:22%">CONTROLE / ARTIGO</th></tr></thead>
+    <tbody>
+      <tr><td class="m">Classificação com consequências</td><td>Escolher “sensível” mostra cifrado·mascarado·fora de logs no momento</td><td>tela 02 /forms</td><td class="art">AI Act 13 · transparência</td></tr>
+      <tr><td class="m">Gate com escopo exato + world-delta</td><td>“o que muda no mundo se você aprovar”; aprova ESTE ato</td><td>P1</td><td class="art">AI Act 13 · 14</td></tr>
+      <tr><td class="m">Lint de rejeição explicada</td><td>Rejeita, explica, sugere; publicar bloqueado com motivo</td><td>tela 04 · P6</td><td class="art">AI Act 13 · 12</td></tr>
+      <tr><td class="m">Selo de procedência (E2)</td><td>ator + estado de evidência em todo ato governado</td><td>shared-ui · retrofit leve</td><td class="art">AI Act 13 · legibilidade</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ============ E4 — RECIBO DE EXPORT ============ -->
+<div style="break-before:page;margin-top:6px">
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:2px;color:#9a7b1e;margin-bottom:4px">E4</div>
+  <h2 style="font-family:'Source Serif 4',Georgia,serif;font-size:22px;font-weight:600;color:#262220;margin:0 0 6px">Anatomia do recibo de export</h2>
+  <p style="font-size:12.5px;color:#6f675a;margin:0 0 14px;max-width:66ch">Na v1 não há Console — alguém exporta via <span class="k">GET /v1/audit/export</span> e recebe um recibo. Este é o que um auditor confere para provar que o arquivo não foi adulterado. Sem infra de chave nova: o digest do arquivo é ancorado no ledger (D35).</p>
+  <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start">
+    <div style="flex:1;min-width:320px;background:#262220;border-radius:12px;overflow:hidden;box-shadow:0 4px 16px rgba(38,34,32,.16)">
+      <div style="padding:14px 18px;border-bottom:1px solid #3a352f"><div style="font-family:'IBM Plex Mono',monospace;font-size:8.5px;letter-spacing:1.5px;color:#c9a94a">RECIBO DE EXPORTAÇÃO DE AUDITORIA</div><div style="font-family:'IBM Plex Mono',monospace;font-size:13px;color:#f3f0e8;margin-top:5px">audit-export · acme-industria</div></div>
+      <div style="padding:6px 18px;font-family:'IBM Plex Mono',monospace;font-size:11px">
+        <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #332e29"><span style="color:#9a8f7e">export_id</span><span style="color:#e9e6dd">exp_2026-07-22_a91f</span></div>
+        <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #332e29"><span style="color:#9a8f7e">filtros</span><span style="color:#e9e6dd">período · ator · event_type</span></div>
+        <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #332e29"><span style="color:#9a8f7e">linhas</span><span style="color:#e9e6dd">3.412 eventos</span></div>
+        <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #332e29"><span style="color:#9a8f7e">digest (sha256)</span><span style="color:#8fd3b6">7c1e…b420</span></div>
+        <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #332e29"><span style="color:#9a8f7e">ancorado · bloco</span><span style="color:#e9e6dd">#4903 · 14:22:10</span></div>
+        <div style="display:flex;justify-content:space-between;padding:7px 0"><span style="color:#9a8f7e">solicitado por</span><span style="color:#e9e6dd">DPO · audit:export</span></div>
+      </div>
+      <div style="padding:12px 18px;border-top:1px solid #3a352f;font-size:10.5px;color:#9a8f7e;line-height:1.5">Verifique: recalcule o sha256 do arquivo e confronte com o digest ancorado no bloco. Iguais = íntegro.</div>
+    </div>
+    <div style="flex:1;min-width:260px">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1.5px;color:#9a7b1e;margin-bottom:8px">O QUE O AUDITOR CONFERE</div>
+      <ol style="margin:0;padding-left:18px;font-size:12.5px;line-height:1.6">
+        <li style="margin:5px 0">O <strong>digest</strong> do arquivo baixado bate com o ancorado no ledger.</li>
+        <li style="margin:5px 0">O <strong>bloco</strong> de ancoragem existe e encadeia com o anterior.</li>
+        <li style="margin:5px 0">Os <strong>filtros</strong> declarados no recibo correspondem ao conteúdo.</li>
+        <li style="margin:5px 0">A <strong>solicitação</strong> ela própria virou evento auditado (quem·quando·permissão).</li>
+      </ol>
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1.5px;color:#9a7b1e;margin:14px 0 6px">ONDE O RECIBO APARECE</div>
+      <p style="font-size:12px;color:#44403a;line-height:1.55;margin:0">Na v1: no corpo da resposta da API (documentado) e como cabeçalho do próprio arquivo. Proposta: também um e-mail ao solicitante com o <span class="k">export_id</span> e o bloco — <span style="color:#9a7b1e">se exigir campo novo no recibo, é <strong>ESCOPO</strong> → item da proposta AG-2</span>.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ============ E5 — NEGAÇÃO E RETENÇÃO ============ -->
+<div style="break-inside:avoid;margin-top:26px">
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:2px;color:#9a7b1e;margin-bottom:4px">E5</div>
+  <h2 style="font-family:'Source Serif 4',Georgia,serif;font-size:22px;font-weight:600;color:#262220;margin:0 0 12px">Padrões de negação e de retenção</h2>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+    <div style="border:1px solid #f0d9d6;background:#fdf7f6;border-radius:11px;padding:14px 16px">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1px;color:#b3372f;margin-bottom:6px">CROSS-TENANT · 404 SEMPRE</div>
+      <p style="font-size:12.5px;line-height:1.55;color:#7a4038;margin:0">Nunca revelar a <em>existência</em> de recurso de outro tenant. A resposta é idêntica à de um recurso inexistente — sem “sem permissão”, que já vazaria que existe.</p>
+    </div>
+    <div style="border:1px solid #f6edd4;background:#fdfaf1;border-radius:11px;padding:14px 16px">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1px;color:#9a7b1e;margin-bottom:6px">INTRA-TENANT · 403 POR PERSONA</div>
+      <p style="font-size:12.5px;line-height:1.55;color:#6d5a30;margin:0">Voz do 403 conforme a persona (definida na F3): negócio ouve “você não tem acesso a esta ação — fale com um administrador”; operador vê o detalhe técnico recolhível. A negação sensível vira evento (D34).</p>
+    </div>
+    <div style="border:1px solid #e2ddd3;background:#faf9f6;border-radius:11px;padding:14px 16px;grid-column:1/-1">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1px;color:#6f675a;margin-bottom:6px">RETENÇÃO &amp; EXPURGO · PADRÃO (F5 — só o padrão, não as telas)</div>
+      <p style="font-size:12.5px;line-height:1.55;color:#44403a;margin:0">Onde houver dado com prazo, a superfície indica <strong>política de retenção</strong> (“retido por N · expurgo em D”) e distingue expurgo de exclusão: no ledger, conteúdo pessoal já sai por <strong>tombstone</strong> (a cadeia permanece íntegra; o conteúdo, não). O Atlas afirma explicitamente: <strong>o ledger nunca contém conteúdo pessoal</strong> — é diferencial, não nota de rodapé.</p>
+    </div>
+  </div>
+</div>
+
+<div style="background:#262220;border-radius:12px;padding:18px 22px;margin-top:24px;break-inside:avoid">
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:2px;color:#c9a94a;margin-bottom:8px">O PRINCÍPIO QUE ATRAVESSA TODAS AS CAMADAS</div>
+  <p style="font-size:14px;line-height:1.6;color:#e9e6dd;margin:0"><strong style="color:#f3f0e8">Evidência nunca é conteúdo.</strong> O Atlas mostra provas com dados mascarados — jamais um exemplo com dado pessoal legível. <span class="k" style="color:#c9a94a">evidência-verificada</span> só existe no runtime real. O ledger nunca contém conteúdo pessoal. A prova de que um controle funciona não pode, ela mesma, violar o controle.</p>
+</div>
+
+<p style="font-size:11px;color:#9a8f7e;margin:14px 0 0;line-height:1.5;font-style:italic">Este Atlas é a contraparte visual do <span class="k" style="font-size:10px">docs/compliance/dossie.md</span> (D37): o dossiê é a matriz técnica atualizada a cada fase; o Atlas é a versão que se apresenta numa auditoria ou reunião de venda. Nenhum controle novo é criado aqui — o Atlas apenas torna legível o que a engenharia já impõe.</p>
+
+</div>
+</doc-page>
+</x-dc>
+</body>
+</html>

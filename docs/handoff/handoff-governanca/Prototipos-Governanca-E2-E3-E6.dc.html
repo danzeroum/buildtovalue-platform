@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#e9e6dd}
+a{color:#1a6a54;text-decoration:none}a:hover{color:#9a7b1e;text-decoration:underline}
+</style>
+</helmet>
+<div style="padding:48px 40px;font-family:'IBM Plex Sans',sans-serif;color:#262220;display:flex;flex-direction:column;gap:38px;align-items:center">
+
+<header style="width:1360px" data-screen-label="Cabeçalho">
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:2.5px;color:#9a7b1e;margin-bottom:6px">BUILDTOVALUE · ATLAS DE GOVERNANÇA · SUPERFÍCIES &amp; LINGUAGEM DE EVIDÊNCIA</div>
+  <h1 style="margin:0;font-family:'Source Serif 4',Georgia,serif;font-size:30px;font-weight:600;letter-spacing:-0.4px">Conformidade como superfície de produto — não PDF anexo</h1>
+  <p style="margin:10px 0 0;font-size:13.5px;color:#6f675a;max-width:940px;line-height:1.65">Três peças visuais que acompanham o Atlas (documento E1): <strong>E2</strong> a linguagem de evidência unificada (o “selo de procedência” que vira assinatura da governança), <strong>E3</strong> o Console de Auditoria como norte da F4 (desenhado agora para a API v1 nascer com os campos certos), e <strong>E6</strong> a prancha de venda. Mesmo idioma da plataforma; personas novas: auditor externo e DPO do cliente.</p>
+  <div style="display:flex;flex-wrap:wrap;gap:16px;margin-top:14px;font-size:11.5px;color:#6f675a">
+    <span>↓ E2 linguagem · E3 Console de Auditoria · E6 prancha de venda</span>
+    <span style="color:#1a6a54">■ shared-ui (v1)</span>
+    <span style="color:#9a7b1e">■ norte F4</span>
+  </div>
+</header>
+
+<!-- ============================ E2 — EVIDENCE LANGUAGE ============================ -->
+<section style="width:1360px" data-screen-label="E2 Linguagem de evidência">
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6f675a;margin-bottom:8px">E2 · <strong style="color:#262220">Linguagem visual de evidência</strong> — tokens + componentes no <span style="font-family:'IBM Plex Mono',monospace">shared-ui</span> · unifica sinais hoje espalhados</div>
+  <div style="background:#f3f1ea;border:1px solid #d8d3c6;border-radius:14px;padding:26px 30px;box-shadow:0 2px 10px rgba(38,34,32,0.06)">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:28px">
+      <!-- actor badges -->
+      <div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:1.5px;color:#9a7b1e;margin-bottom:4px">1 · BADGE DE ATOR (envelope D33 — sempre nomeado)</div>
+        <p style="font-size:12px;color:#6f675a;margin:0 0 14px;line-height:1.5">Todo ato governado carrega quem agiu, nos três tipos. Nunca enterrado em payload.</p>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;align-items:center;gap:12px;background:#fff;border:1px solid #e2ddd3;border-radius:10px;padding:11px 14px">
+            <span style="display:inline-flex;align-items:center;gap:6px;font-size:12.5px;background:#e7f2ec;border:1px solid #cfe6da;border-radius:999px;padding:4px 11px"><span style="width:18px;height:18px;border-radius:50%;background:#1a6a54;color:#fff;font-size:9px;display:inline-flex;align-items:center;justify-content:center;font-weight:600">AR</span>humano</span>
+            <span style="font-size:11.5px;color:#6f675a">pessoa nomeada · iniciais + verde · <span style="font-family:'IBM Plex Mono',monospace;font-size:10px">type:user</span></span>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;background:#fff;border:1px solid #e2ddd3;border-radius:10px;padding:11px 14px">
+            <span style="display:inline-flex;align-items:center;gap:6px;font-size:12.5px;background:#f3f1ea;border:1px solid #e2ddd3;border-radius:999px;padding:4px 11px;color:#44403a"><span style="width:18px;height:18px;border-radius:6px;background:#eceae3;color:#6f675a;font-size:10px;display:inline-flex;align-items:center;justify-content:center">⚙</span>sistema</span>
+            <span style="font-size:11.5px;color:#6f675a">job/scheduler · engrenagem · <span style="font-family:'IBM Plex Mono',monospace;font-size:10px">type:system</span></span>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;background:#fff;border:1px solid #e2ddd3;border-radius:10px;padding:11px 14px">
+            <span style="display:inline-flex;align-items:center;gap:6px;font-size:12.5px;background:#ecebf6;border:1px solid #d7d3ee;border-radius:999px;padding:4px 11px;color:#3f3785"><span style="width:18px;height:18px;border-radius:6px;background:#5b57b8;color:#fff;font-size:9px;display:inline-flex;align-items:center;justify-content:center">⬡</span>agente</span>
+            <span style="font-size:11.5px;color:#6f675a">agente de IA · hexágono violeta · <span style="font-family:'IBM Plex Mono',monospace;font-size:10px">type:agent</span></span>
+          </div>
+        </div>
+      </div>
+      <!-- evidence states -->
+      <div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:1.5px;color:#9a7b1e;margin-bottom:4px">2 · ESTADO DA EVIDÊNCIA (nunca só por cor — ícone+rótulo)</div>
+        <p style="font-size:12px;color:#6f675a;margin:0 0 14px;line-height:1.5">Um vocabulário só para o que hoje é ad-hoc (selo do P7, chip de efeito, aviso de sensível).</p>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;align-items:center;gap:12px;background:#fff;border:1px solid #e2ddd3;border-radius:10px;padding:11px 14px">
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;background:#fff;border:1px solid #d8d3c6;border-radius:6px;padding:3px 10px;color:#44403a">✎ auditado</span>
+            <span style="font-size:11.5px;color:#6f675a">ato com motivo registrado (reveal, cancelar, reatribuir…)</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;background:#fff;border:1px solid #e2ddd3;border-radius:10px;padding:11px 14px">
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;background:#e7f2ec;border:1px solid #cfe6da;border-radius:6px;padding:3px 10px;color:#1a6a54">✓ ancorado·verificável</span>
+            <span style="font-size:11.5px;color:#6f675a">hash na cadeia do ledger · recalculável</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;background:#fff;border:1px solid #e2ddd3;border-radius:10px;padding:11px 14px">
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;background:#fdfaf1;border:1px solid #f6edd4;border-radius:6px;padding:3px 10px;color:#9a7b1e">•• mascarado</span>
+            <span style="font-size:11.5px;color:#6f675a">campo sensível cifrado (D20) · fora de logs/exports</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;background:#fff;border:1px solid #e2ddd3;border-radius:10px;padding:11px 14px">
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;background:#fdf7f6;border:1px solid #f0d9d6;border-radius:6px;padding:3px 10px;color:#b3372f">⃠ negado</span>
+            <span style="font-size:11.5px;color:#6f675a">tentativa sem permissão · registrada se sensível (D34)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- composite: selo de procedência -->
+    <div style="margin-top:24px;border-top:1px solid #e2ddd3;padding-top:20px">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:1.5px;color:#9a7b1e;margin-bottom:4px">3 · O “SELO DE PROCEDÊNCIA” — ATOR + ESTADO, A ASSINATURA DA GOVERNANÇA</div>
+    <p style="font-size:12px;color:#6f675a;margin:0 0 14px;line-height:1.5">Composto, aparece onde quer que um ato governado ocorra — no Console, na trilha, no gate, no Evidence Bundle. É para a governança o que o dial de autonomia é para os agentes.</p>
+      <div style="display:flex;gap:12px;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:8px;background:#fff;border:1px solid #e2ddd3;border-radius:10px;padding:10px 14px">
+          <span style="width:20px;height:20px;border-radius:50%;background:#1a6a54;color:#fff;font-size:9px;display:inline-flex;align-items:center;justify-content:center;font-weight:600">AR</span>
+          <span style="font-size:12.5px"><strong>Ana Ruiz</strong> aprovou o envio</span>
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;background:#e7f2ec;border:1px solid #cfe6da;border-radius:6px;padding:2px 8px;color:#1a6a54">✓ ancorado</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;background:#fff;border:1px solid #e2ddd3;border-radius:10px;padding:10px 14px">
+          <span style="width:20px;height:20px;border-radius:6px;background:#5b57b8;color:#fff;font-size:9px;display:inline-flex;align-items:center;justify-content:center">⬡</span>
+          <span style="font-size:12.5px"><strong>Agente</strong> enviou e-mail</span>
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;background:#fff;border:1px solid #d8d3c6;border-radius:6px;padding:2px 8px;color:#44403a">✎ auditado</span>
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;background:#fdfaf1;border:1px solid #f6edd4;border-radius:6px;padding:2px 8px;color:#9a7b1e">•• dado mascarado</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;background:#fff;border:1px solid #e2ddd3;border-radius:10px;padding:10px 14px">
+          <span style="width:20px;height:20px;border-radius:6px;background:#eceae3;color:#6f675a;font-size:10px;display:inline-flex;align-items:center;justify-content:center">⚙</span>
+          <span style="font-size:12.5px"><strong>Sistema</strong> ancorou digest</span>
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;background:#e7f2ec;border:1px solid #cfe6da;border-radius:6px;padding:2px 8px;color:#1a6a54">✓ bloco #4821</span>
+        </div>
+      </div>
+      <div style="margin-top:16px;background:#faf9f6;border:1px dashed #d8d3c6;border-radius:10px;padding:12px 15px;font-size:11.5px;color:#6f675a;line-height:1.55"><strong style="color:#44403a">Retrofit leve:</strong> o selo do P7 (ancoragem), o chip de efeito (P1/P5), o aviso de sensível (tela 02) e o “cancelada por X · motivo Y” do histórico passam a falar este vocabulário único — mesma semântica, um só sistema. Sem redesenhar as telas: trocar o token.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ E3 — CONSOLE DE AUDITORIA ============================ -->
+<section style="width:1360px" data-screen-label="E3 Console de Auditoria">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6f675a">E3 · <strong style="color:#262220">Console de Auditoria</strong> — o auditor/DPO acha evidência em minutos · trilha unificada, integridade, export</span>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1px;background:#fdfaf1;color:#9a7b1e;border:1px solid #f6edd4;border-radius:999px;padding:2px 8px">NORTE F4 · API v1 NASCE COM OS CAMPOS</span>
+  </div>
+  <div style="background:#f3f1ea;border:1px solid #d8d3c6;border-radius:14px;overflow:hidden;box-shadow:0 2px 10px rgba(38,34,32,0.06)">
+    <div style="background:#ffffff;border-bottom:1px solid #e2ddd3;display:flex;align-items:center;gap:20px;padding:10px 20px">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:500;letter-spacing:1.5px">BUILDTOVALUE</div>
+      <nav style="display:flex;gap:4px;font-size:12.5px">
+        <span style="padding:6px 12px;border-radius:8px;color:#6f675a">Tarefas</span>
+        <span style="padding:6px 12px;border-radius:8px;color:#6f675a">Formulários</span>
+        <span style="padding:6px 12px;border-radius:8px;color:#6f675a">Operação</span>
+        <span style="padding:6px 12px;border-radius:8px;color:#6f675a">Estúdio</span>
+      </nav>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:10px">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;background:#e7f2ec;border:1px solid #cfe6da;border-radius:999px;padding:4px 12px;color:#1a6a54">⚖ auditoria · DPO</span>
+        <span style="width:28px;height:28px;border-radius:50%;background:#6f675a;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600">DP</span>
+      </div>
+    </div>
+    <div style="padding:12px 24px;border-bottom:1px solid #e2ddd3;background:#faf9f6;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6f675a">Administração · <span style="color:#262220">Auditoria</span> · trilha unificada · <span class="k" style="color:#44403a">history_events + tenant_audit_events</span></div>
+      <div style="display:flex;gap:8px"><span style="font-size:12px;border:1px solid #1a6a54;color:#1a6a54;border-radius:8px;padding:7px 14px;cursor:pointer">Exportar…</span></div>
+    </div>
+    <div style="display:flex;height:720px">
+      <!-- filters -->
+      <aside style="width:222px;flex-shrink:0;border-right:1px solid #e2ddd3;padding:16px;background:#faf9f6;overflow-y:auto">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1.5px;color:#9a7b1e;margin-bottom:8px">ATOR</div>
+        <div style="display:flex;flex-direction:column;gap:7px;font-size:12px;margin-bottom:16px">
+          <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" checked> <span style="display:inline-flex;align-items:center;gap:5px"><span style="width:14px;height:14px;border-radius:50%;background:#1a6a54;color:#fff;font-size:7px;display:inline-flex;align-items:center;justify-content:center">◍</span>humano</span></label>
+          <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" checked> <span style="display:inline-flex;align-items:center;gap:5px"><span style="width:14px;height:14px;border-radius:4px;background:#eceae3;color:#6f675a;font-size:8px;display:inline-flex;align-items:center;justify-content:center">⚙</span>sistema</span></label>
+          <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" checked> <span style="display:inline-flex;align-items:center;gap:5px"><span style="width:14px;height:14px;border-radius:4px;background:#5b57b8;color:#fff;font-size:7px;display:inline-flex;align-items:center;justify-content:center">⬡</span>agente</span></label>
+        </div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1.5px;color:#9a7b1e;margin-bottom:8px">PERÍODO</div>
+        <div style="font-size:12px;padding:8px 10px;border:1px solid #e2ddd3;border-radius:8px;background:#fff;margin-bottom:16px;display:flex;justify-content:space-between">últimos 7 dias <span style="color:#6f675a">▾</span></div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1.5px;color:#9a7b1e;margin-bottom:8px">TIPO DE EVENTO</div>
+        <div style="display:flex;flex-direction:column;gap:6px;font-size:11.5px;margin-bottom:16px;color:#44403a">
+          <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" checked> aprovação de gate</label>
+          <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" checked> kill-switch</label>
+          <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" checked> config de inteligência</label>
+          <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" checked> tools habilitadas</label>
+          <label style="display:flex;gap:8px;align-items:center"><input type="checkbox"> reveal de sensível</label>
+          <label style="display:flex;gap:8px;align-items:center"><input type="checkbox"> export de auditoria</label>
+        </div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1.5px;color:#9a7b1e;margin-bottom:8px">RECURSO</div>
+        <div style="font-size:12px;padding:8px 10px;border:1px solid #e2ddd3;border-radius:8px;background:#fff">todos ▾</div>
+      </aside>
+      <!-- unified trail -->
+      <div style="flex:1;overflow-y:auto;background:#ffffff">
+        <div style="display:grid;grid-template-columns:118px 1.6fr 1.3fr auto;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1px;color:#6f675a;background:#f8f6f0;padding:9px 18px;border-bottom:1px solid #e2ddd3;position:sticky;top:0">
+          <span>QUANDO</span><span>ATOR · EVENTO</span><span>RECURSO</span><span style="text-align:right">EVIDÊNCIA</span>
+        </div>
+        <!-- selected row -->
+        <div style="display:grid;grid-template-columns:118px 1.6fr 1.3fr auto;align-items:center;padding:12px 18px;border-bottom:1px solid #f0ede4;background:#f4faf6;border-left:3px solid #1a6a54">
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6f675a">14:03:07</span>
+          <span style="font-size:12.5px;display:flex;align-items:center;gap:7px"><span style="width:18px;height:18px;border-radius:50%;background:#1a6a54;color:#fff;font-size:8px;display:inline-flex;align-items:center;justify-content:center;font-weight:600">AR</span>aprovou gate de envio</span>
+          <span style="font-size:11.5px;color:#44403a;font-family:'IBM Plex Mono',monospace">inst_7b1a · CT-0311</span>
+          <span style="text-align:right"><span style="font-family:'IBM Plex Mono',monospace;font-size:9px;background:#e7f2ec;border:1px solid #cfe6da;border-radius:6px;padding:2px 7px;color:#1a6a54">✓ ancorado</span></span>
+        </div>
+        <div style="display:grid;grid-template-columns:118px 1.6fr 1.3fr auto;align-items:center;padding:12px 18px;border-bottom:1px solid #f0ede4">
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6f675a">14:03:07</span>
+          <span style="font-size:12.5px;display:flex;align-items:center;gap:7px"><span style="width:18px;height:18px;border-radius:5px;background:#5b57b8;color:#fff;font-size:8px;display:inline-flex;align-items:center;justify-content:center">⬡</span>enviou e-mail (send_email)</span>
+          <span style="font-size:11.5px;color:#44403a;font-family:'IBM Plex Mono',monospace">inst_7b1a · 3 dest.</span>
+          <span style="text-align:right;display:flex;gap:4px;justify-content:flex-end"><span style="font-family:'IBM Plex Mono',monospace;font-size:9px;background:#fdfaf1;border:1px solid #f6edd4;border-radius:6px;padding:2px 7px;color:#9a7b1e">••</span><span style="font-family:'IBM Plex Mono',monospace;font-size:9px;background:#fff;border:1px solid #d8d3c6;border-radius:6px;padding:2px 7px;color:#44403a">✎</span></span>
+        </div>
+        <div style="display:grid;grid-template-columns:118px 1.6fr 1.3fr auto;align-items:center;padding:12px 18px;border-bottom:1px solid #f0ede4">
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6f675a">11:20:44</span>
+          <span style="font-size:12.5px;display:flex;align-items:center;gap:7px"><span style="width:18px;height:18px;border-radius:50%;background:#1a6a54;color:#fff;font-size:8px;display:inline-flex;align-items:center;justify-content:center;font-weight:600">MP</span>acionou kill-switch</span>
+          <span style="font-size:11.5px;color:#44403a;font-family:'IBM Plex Mono',monospace">tenant · agentes</span>
+          <span style="text-align:right"><span style="font-family:'IBM Plex Mono',monospace;font-size:9px;background:#e7f2ec;border:1px solid #cfe6da;border-radius:6px;padding:2px 7px;color:#1a6a54">✓ ✎</span></span>
+        </div>
+        <div style="display:grid;grid-template-columns:118px 1.6fr 1.3fr auto;align-items:center;padding:12px 18px;border-bottom:1px solid #f0ede4">
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6f675a">09:02:00</span>
+          <span style="font-size:12.5px;display:flex;align-items:center;gap:7px"><span style="width:18px;height:18px;border-radius:5px;background:#eceae3;color:#6f675a;font-size:9px;display:inline-flex;align-items:center;justify-content:center">⚙</span>ancorou digest (intervalo)</span>
+          <span style="font-size:11.5px;color:#44403a;font-family:'IBM Plex Mono',monospace">trilhas · #4820–4903</span>
+          <span style="text-align:right"><span style="font-family:'IBM Plex Mono',monospace;font-size:9px;background:#e7f2ec;border:1px solid #cfe6da;border-radius:6px;padding:2px 7px;color:#1a6a54">✓ bloco</span></span>
+        </div>
+        <div style="display:grid;grid-template-columns:118px 1.6fr 1.3fr auto;align-items:center;padding:12px 18px;border-bottom:1px solid #f0ede4;opacity:.85">
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6f675a">08:41:11</span>
+          <span style="font-size:12.5px;display:flex;align-items:center;gap:7px"><span style="width:18px;height:18px;border-radius:50%;background:#6f675a;color:#fff;font-size:8px;display:inline-flex;align-items:center;justify-content:center;font-weight:600">JD</span>tentou reveal de sensível</span>
+          <span style="font-size:11.5px;color:#44403a;font-family:'IBM Plex Mono',monospace">RB-0142 · saúde</span>
+          <span style="text-align:right"><span style="font-family:'IBM Plex Mono',monospace;font-size:9px;background:#fdf7f6;border:1px solid #f0d9d6;border-radius:6px;padding:2px 7px;color:#b3372f">⃠ negado</span></span>
+        </div>
+        <div style="display:grid;grid-template-columns:118px 1.6fr 1.3fr auto;align-items:center;padding:12px 18px;border-bottom:1px solid #f0ede4">
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6f675a">ontem 17:30</span>
+          <span style="font-size:12.5px;display:flex;align-items:center;gap:7px"><span style="width:18px;height:18px;border-radius:50%;background:#1a6a54;color:#fff;font-size:8px;display:inline-flex;align-items:center;justify-content:center;font-weight:600">AR</span>habilitou tool send_email</span>
+          <span style="font-size:11.5px;color:#44403a;font-family:'IBM Plex Mono',monospace">tenant · tools</span>
+          <span style="text-align:right"><span style="font-family:'IBM Plex Mono',monospace;font-size:9px;background:#fff;border:1px solid #d8d3c6;border-radius:6px;padding:2px 7px;color:#44403a">✎ auditado</span></span>
+        </div>
+      </div>
+      <!-- event detail + integrity + export -->
+      <aside style="width:380px;flex-shrink:0;border-left:1px solid #e2ddd3;background:#faf9f6;overflow-y:auto">
+        <div style="padding:16px 18px;border-bottom:1px solid #e2ddd3">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:1.5px;color:#6f675a;margin-bottom:8px">DETALHE DO EVENTO · ENVELOPE COMPLETO</div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><span style="width:22px;height:22px;border-radius:50%;background:#1a6a54;color:#fff;font-size:9px;display:inline-flex;align-items:center;justify-content:center;font-weight:600">AR</span><div><div style="font-size:13px;font-weight:600">Ana Ruiz aprovou gate de envio</div><div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:#6f675a">2026-07-22 14:03:07</div></div></div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;background:#fff;border:1px solid #e2ddd3;border-radius:8px;padding:10px 12px;line-height:1.7;color:#44403a">actor: <span style="color:#1a6a54">{type:user, id:ana.ruiz,</span><br>&nbsp;&nbsp;<span style="color:#1a6a54">requestId:req_8f21}</span><br>event_type: gate.approved<br>resource: inst_7b1a / send_email<br>escopo: “ESTE envio · 3 dest.”<br>motivo: <span style="color:#8a6d16">“cotação aprovada p/ compra”</span><br>payload: <span style="color:#9a7b1e">•• mascarado (classificação)</span></div>
+        </div>
+        <div style="padding:16px 18px;border-bottom:1px solid #e2ddd3">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:1.5px;color:#6f675a;margin-bottom:10px">INTEGRIDADE</div>
+          <div style="background:#f4faf6;border:1px solid #cfe6da;border-radius:10px;padding:12px 14px">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span style="width:26px;height:26px;border-radius:50%;background:#1a6a54;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:13px">✓</span><div style="font-size:12.5px;color:#1a5544;font-weight:600">digest recalculado confere</div></div>
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#25453a;line-height:1.6">intervalo #4820–4903<br>digest 7c1e…b420 · bloco #4903</div>
+            <div style="margin-top:10px;display:flex;gap:8px"><span style="font-size:11.5px;background:#1a6a54;color:#fff;border-radius:7px;padding:7px 12px;cursor:pointer">Verificar integridade</span></div>
+          </div>
+        </div>
+        <div style="padding:16px 18px">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:1.5px;color:#6f675a;margin-bottom:8px">EXPORT COM RECIBO</div>
+          <p style="font-size:11.5px;color:#6f675a;line-height:1.5;margin:0 0 10px"><span class="k" style="color:#44403a">GET /v1/audit/export</span> · JSON/CSV · os filtros à esquerda · permissão <span style="font-family:'IBM Plex Mono',monospace;font-size:10px">audit:export</span> (ela própria auditada).</p>
+          <div style="display:flex;gap:8px"><span style="font-size:12px;background:#262220;color:#fff;border-radius:8px;padding:8px 14px;cursor:pointer">Exportar + recibo</span><span style="font-size:12px;border:1px solid #e2ddd3;color:#44403a;border-radius:8px;padding:8px 14px;cursor:pointer">Ver anatomia (E4)</span></div>
+        </div>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ E6 — SALES BOARD ============================ -->
+<section style="width:1360px" data-screen-label="E6 Prancha de venda">
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6f675a;margin-bottom:8px">E6 · <strong style="color:#262220">A prancha de venda da governança</strong> — o Atlas condensado num argumento</div>
+  <div style="background:#262220;border-radius:14px;padding:30px 34px;color:#e9e6dd">
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:2px;color:#c9a94a;margin-bottom:8px">A MESMA PLATAFORMA QUE EXECUTA O PROCESSO EXIBE A PROVA</div>
+    <h2 style="font-family:'Source Serif 4',Georgia,serif;font-size:25px;font-weight:600;margin:0 0 6px;color:#f3f0e8">Conformidade não é um PDF anexo. É uma superfície.</h2>
+    <p style="font-size:13px;color:#b7b0a2;margin:0 0 24px;max-width:860px;line-height:1.6">Todo ato do processo — humano, sistema ou agente — nasce com ator, motivo e evidência, e termina ancorado e exportável. Um auditor segue a jornada inteira sem sair do produto.</p>
+    <!-- the journey -->
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:stretch">
+      <div style="flex:1;min-width:150px;background:#2f2a25;border:1px solid #3f3931;border-radius:11px;padding:15px 16px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:#8fd3b6;margin-bottom:6px">01 · MODELOU</div>
+        <div style="font-size:13px;color:#f3f0e8;line-height:1.45">Processo e agente versionados, imutáveis após publicar.</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:#7d7568;margin-top:8px">Art. 12 · registros</div>
+      </div>
+      <div style="display:flex;align-items:center;color:#5f584e">→</div>
+      <div style="flex:1;min-width:150px;background:#2f2a25;border:1px solid #3f3931;border-radius:11px;padding:15px 16px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:#8fd3b6;margin-bottom:6px">02 · PUBLICOU C/ LINT</div>
+        <div style="font-size:13px;color:#f3f0e8;line-height:1.45">Rejeita o inseguro, explica o porquê. Nada entra sem gate.</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:#7d7568;margin-top:8px">Art. 13 · transparência</div>
+      </div>
+      <div style="display:flex;align-items:center;color:#5f584e">→</div>
+      <div style="flex:1;min-width:150px;background:#2f2a25;border:1px solid #4a4030;border-radius:11px;padding:15px 16px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:#e6c766;margin-bottom:6px">03 · HUMANO NO GATE</div>
+        <div style="font-size:13px;color:#f3f0e8;line-height:1.45">Aprova o efeito vendo “o que muda no mundo”. Escopo exato.</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:#7d7568;margin-top:8px">Art. 14 · supervisão</div>
+      </div>
+      <div style="display:flex;align-items:center;color:#5f584e">→</div>
+      <div style="flex:1;min-width:150px;background:#2f2a25;border:1px solid #3f3931;border-radius:11px;padding:15px 16px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:#8fd3b6;margin-bottom:6px">04 · ANCOROU</div>
+        <div style="font-size:13px;color:#f3f0e8;line-height:1.45">Cada ato, com ator e motivo, na cadeia hash — sem conteúdo pessoal.</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:#7d7568;margin-top:8px">Art. 12 · integridade</div>
+      </div>
+      <div style="display:flex;align-items:center;color:#5f584e">→</div>
+      <div style="flex:1;min-width:150px;background:#2f2a25;border:1px solid #3f3931;border-radius:11px;padding:15px 16px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:#8fd3b6;margin-bottom:6px">05 · EXPORTÁVEL</div>
+        <div style="font-size:13px;color:#f3f0e8;line-height:1.45">Recibo verificável a qualquer momento. A prova sai íntegra.</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:#7d7568;margin-top:8px">Art. 12 · acesso</div>
+      </div>
+    </div>
+    <div style="margin-top:24px;padding-top:18px;border-top:1px solid #3f3931;display:flex;gap:26px;flex-wrap:wrap">
+      <div style="flex:1;min-width:240px"><div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1px;color:#c9a94a;margin-bottom:6px">O DIFERENCIAL EM UMA FRASE</div><div style="font-size:15px;color:#f3f0e8;line-height:1.5;font-family:'Source Serif 4',serif">“Evidência nunca é conteúdo. A prova de que o controle funciona não viola o controle.”</div></div>
+      <div style="flex:1;min-width:240px"><div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1px;color:#c9a94a;margin-bottom:6px">PARA QUEM</div><div style="font-size:12.5px;color:#b7b0a2;line-height:1.6"><strong style="color:#e9e6dd">Auditor externo</strong> — acha evidência em minutos pelo Atlas.<br><strong style="color:#e9e6dd">DPO do cliente</strong> — filtra, exporta e prova integridade sozinho.</div></div>
+    </div>
+  </div>
+</section>
+
+</div>
+</x-dc>
+</body>
+</html>
