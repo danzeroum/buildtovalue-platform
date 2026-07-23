@@ -131,6 +131,37 @@ mergeada da PR #4). Crie pela UI (Releases → "Create a new release"/tag
   GATE. Candidata a entrar na migração da AG-2. A rota responde 409
   honesto apontando /resolution.
 
+## 2.5 Console D23 (leva 6, PR2 /tasks + /operate) — lacunas protótipo × contrato
+
+Implementei o console **fiel ao contrato /v1 já aprovado**; onde o protótipo
+(baixa→média fidelidade, G-UX-3) pede algo que o contrato não tem, registro
+aqui em vez de inventar shape (disciplina D19 + regra "pergunta antes do
+merge" para desvio de contrato — aqui NÃO há desvio de contrato, só do
+protótipo).
+
+- **«Aprovar/Reprovar» como dois botões (tela 01):** a conclusão
+  (`POST /v1/user-tasks/{id}/completion`) valida a submissão contra o form
+  PINADO e **rejeita chave desconhecida** (`validateSubmission` — "campo
+  desconhecido"). Logo, NÃO dá para injetar um `approved` fora do schema: o
+  console entrega **«Concluir tarefa»** (submete o form validado; se o
+  processo modela a decisão, ela é um CAMPO do form e o gateway ramifica).
+  Um approve/reject de primeira classe exige **extensão de contrato**: um
+  campo reservado de decisão no schema OU um `decision` no corpo da
+  conclusão. → **candidato à proposta da AG-2** (junto de dead-letter
+  payload e fencing D28).
+- **Rótulo humano da tarefa na lista:** `taskSummary` traz `elementId` +
+  `formRef`, não o rótulo do elemento no diagrama nem o nome do processo. A
+  lista mostra `elementId`/`formRef` (honesto); rótulo humano exigiria juntar
+  o diagrama por definição — enriquecimento futuro, não some do fluxo.
+- **Cartões de métrica do /operate (128 ativas, p95…):** não há endpoint de
+  contagem/agregação na v1, e o **p95 é medido na leva 7**. O console NÃO
+  fabrica totais — mostra lista + drill-down. Agregações = candidatas a um
+  endpoint de métricas (pós-v1).
+- **Edição de variável pelo operador (`PATCH …/variables`, leva 2):** existe
+  no servidor; o console PR2 expõe **revelação** (núcleo do D20) + exibição,
+  não edição de variável de instância em voo (ferramenta afiada, fora do
+  protótipo). Edição via console = follow-up.
+
 ## 3. Registro de fluxo (sem ação sua)
 
 - **~~Follow-up bpmn~~ RESOLVIDO (PR bpmn#169, mergeada 22/07):**
