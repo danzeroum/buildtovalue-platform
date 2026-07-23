@@ -302,6 +302,63 @@ versão. **Ação (bpmn, quando conveniente):** ajustar `publishConfig.tag`/flux
 `next` no changesets — o desalinhamento é no passo de publish/`npm publish
 --tag`). Registrar o fix no changelog do bpmn.
 
+## 2.10 AG-2.2 — caminho de grafo em PAYLOAD (COLAPSADO na etapa 3) ✅
+
+O AgentRunner (etapa 2) caminhava o grafo agentflow por um **resolver injetado**
+(`resolveGraph`) cujo stub lia o grafo do **payload do job** (`fromPayload:true`),
+com guarda dura em produção (`blocked: 'ungoverned-graph'`). Grafo de payload era
+NÃO-GOVERNADO (sem `validateGraph`/versão/lint).
+
+**COLAPSO FEITO (etapa 3, migração 0007):** o caminho de payload foi **DELETADO**.
+- `AgentJobInput.graph` e o par `fromPayload`/`ungoverned-graph` **saíram**; o
+  resolver de produção (worker) resolve `agentRef` contra `agent_definitions`
+  (`getAgentDefinitionByRef`) — grafo **governado** (validateGraph passou no deploy).
+- Ausência de grafo no registry = parada honesta `no-graph` (nunca corrida com
+  grafo não-governado). `runAgentJob`, walker e os testes de walk/budget/kill-switch
+  ficaram intactos (só a fonte do grafo mudou; injeção por closure nos testes).
+
+**SEAM REMANESCENTE (não-bloqueante, engenharia AG-2):** quem materializa o job
+`type:'agent'` a partir do `agentTask` é o **engine** (`@buildtovalue/engine`), que
+ainda NÃO emite `CreateJob{jobType:'agent'}`. O **pin** já é resolvido e gravado no
+START (`recordAgentPinsAtStart` → `history_events.agentPinResolved`, incidente
+`agentUnpublished` se a ref não publica); quando o engine emitir o job de agente,
+o payload carrega `agentRef` = o **pin efetivo** (nunca a ref flutuante) — a
+resolução flutuante acontece UMA vez no start, jamais por execução de job.
+
+**Trilha mascarada (etapa 3 §2, feita):** `persistAgentTrail` grava o I/O do
+agente em `history_events.agent_io`, **conservador por padrão** (só passa campo
+`none`; sensitive/personal/desconhecido → `MASKED_VALUE`). TESTE DE VAZAMENTO
+(`agent-trail-leak.test.ts`) falha se qualquer valor pessoal aparecer na coluna.
+O worker persiste a trilha após o walk (best-effort; não reverte a conclusão).
+Seam remanescente: o `io.input` (variáveis da instância que alimentam o agente)
+só é surfaçado quando o engine passar as vars ao job de agente — hoje a trilha
+grava `io.output` real do walk; a máscara já cobre input+output.
+
+**Lote de mudanças na biblioteca (agentflow, um único release):** para não gastar
+uma ida-e-volta de publicação por etapa, AGRUPAR num só changeset/minor:
+- `FactSource` += `'evidencia-verificada'` (D30, aceite 5) — só o `run` real emite;
+  simulação NUNCA (teste do aceite);
+- **emissão de `agentTask` (etapa 4):** o engine trata `agentTask` como ESPERA que
+  emite `CreateJob{jobType:'agent'}` + `agentRef` efetivo (extensão determinística
+  do avanço; NADA do interior do agente entra no engine);
+- o que a etapa 5 revelar (gate de tool D31 — `effectRequiresGate`).
+Peço **um** release do bpmn quando o lote fechar, não três improvisados.
+
+## 2.11 AG-2.2 etapa 4 — elo engine↔runtime + fronteira D27 (unificados)
+
+O elo que hoje falta (ponto honesto do gate da etapa 3): o engine não emite job de
+agente, então o `agentTask` nunca materializa e o runtime da AG-2.2 está desconectado.
+A etapa 4 fecha isso JUNTO com a fronteira D27 do replay:
+1. **bpmn (no lote acima):** `agentTask` = espera que emite `CreateJob(agent)` com o
+   **`agentRef` efetivo** (o pin da slice 2 viaja no payload do job); **confirmar que
+   o formato bate com o que o worker espera** (`payload.agentRef` + `payload.elementId`).
+   Declarar no changeset **o que passa a ser exposto** ao job (as variáveis da instância
+   que alimentam o agente — resolve o ponto honesto (2), o `io.input` da trilha).
+2. **fixtures de replay NOVAS** provando o avanço AO REDOR do agentTask, byte-idêntico:
+   `start → agentTask emite CreateJob(agent) → JobCompleted → avanço segue`.
+3. **lint do aceite 7 (invariante testada pelos DOIS lados):** nenhuma fixture de replay
+   contém interior de `agentTask` — proibição VERIFICADA, não só declarada.
+
 ## 3. Registro de fluxo (sem ação sua)
 
 - **~~Follow-up bpmn~~ RESOLVIDO (PR bpmn#169, mergeada 22/07):**
