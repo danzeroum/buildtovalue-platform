@@ -53,6 +53,8 @@ export interface AgentWalkResult {
   /** bloqueio da lib (budget/erro) com nó/razão. */
   blocked: { nodeId: string; cell: string; reason: string } | null;
   complete: boolean;
+  /** nós de DECISÃO que dispararam (do trail) — alimenta o elo `decisao` da cadeia D1. */
+  decisions?: string[];
   output?: Record<string, unknown>;
 }
 
@@ -118,6 +120,9 @@ export const simulateWalker: AgentWalker = async (graph, opts) => {
         }
       : null,
     complete: state.complete,
+    // elo `decisao` (D1): transições de decisão que dispararam, na ordem. O trail
+    // do agentflow já expõe type:'decision'+nodeId — sem mudança na lib.
+    decisions: state.trail.filter((t) => t.type === 'decision' && t.nodeId).map((t) => t.nodeId as string),
     output: finalOutput(state) ?? undefined,
   };
 };

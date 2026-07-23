@@ -78,6 +78,7 @@ describe('trilha de agente — TESTE DE VAZAMENTO em agent_io (etapa 3 §2)', ()
     const facts = buildAgentFacts({
       io: { input: { cpf: CPF, email: EMAIL, valor: 5000, segredo: SEGREDO }, output: { aprovado: true } },
       visitedNodes: ['llm-review', 'dec-approve'],
+      decisions: ['dec-approve'],
       complete: true,
     });
     await withTenant(api, tenant, (tx) =>
@@ -110,11 +111,12 @@ describe('trilha de agente — TESTE DE VAZAMENTO em agent_io (etapa 3 §2)', ()
     const io = rows.find((r) => r.agent_io)?.agent_io as { input?: Record<string, unknown> };
     expect(io.input?.valor).toBe(5000);
 
-    // (a) UM FATO POR LINHA: a cadeia intenção→ação→io→evidência, kind por linha.
+    // (a) UM FATO POR LINHA: a cadeia intenção→ação→io→decisão→evidência, kind por linha.
     const kinds = rows.map((r) => r.kind as string);
     expect(kinds).toContain('agent:intencao');
     expect(kinds).toContain('agent:acao');
     expect(kinds).toContain('agent:io');
+    expect(kinds).toContain('agent:decisao');
     expect(kinds).toContain('agent:evidencia');
     // duas ações (llm-review, dec-approve) → duas linhas distintas
     expect(kinds.filter((k) => k === 'agent:acao')).toHaveLength(2);
