@@ -58,7 +58,8 @@ describe('GET /v1/startable-definitions (etapa 5, escopo instances:start puro)',
     await migrator.end();
 
     sql = createDb(db.apiUrl, { max: 4 });
-    // duas definições publicadas (ordem de criação = ordem do cursor)
+    // aprovacao com DUAS versões (a @1 aposenta ao publicar @2) + onboarding
+    await deployProcessDefinition(sql, tenant, { name: 'aprovacao', diagram: serviceOnly('Aprovação'), engineVersion: 'test' });
     await deployProcessDefinition(sql, tenant, { name: 'aprovacao', diagram: serviceOnly('Aprovação'), engineVersion: 'test' });
     await deployProcessDefinition(sql, tenant, { name: 'onboarding', diagram: serviceOnly('Onboarding'), engineVersion: 'test' });
 
@@ -80,7 +81,7 @@ describe('GET /v1/startable-definitions (etapa 5, escopo instances:start puro)',
     await db?.drop();
   });
 
-  it('business (instances:start, SEM definitions:read) recebe a projeção {id,name,version}', async () => {
+  it('business (instances:start, SEM definitions:read) recebe {id,name,version,registryRef}; só a versão ativa', async () => {
     const token = await tokenFor('business');
     const res = await app.inject({
       method: 'GET',
@@ -89,14 +90,15 @@ describe('GET /v1/startable-definitions (etapa 5, escopo instances:start puro)',
     });
     expect(res.statusCode).toBe(200);
     const body = res.json();
+    // dois NOMES (não três linhas): aprovacao@2 + onboarding@1 — a @1 aposentou
     expect(body.items.length).toBe(2);
     for (const item of body.items) {
-      expect(Object.keys(item).sort()).toEqual(['id', 'name', 'version']);
-      // NUNCA vaza o modelo
-      expect(item).not.toHaveProperty('diagram');
-      expect(item).not.toHaveProperty('registryRef');
+      expect(Object.keys(item).sort()).toEqual(['id', 'name', 'registryRef', 'version']);
+      expect(item).not.toHaveProperty('diagram'); // NUNCA vaza o modelo
     }
-    expect(body.items.map((i: { name: string }) => i.name).sort()).toEqual(['aprovacao', 'onboarding']);
+    const aprovacao = body.items.find((i: { name: string }) => i.name === 'aprovacao');
+    expect(aprovacao.version).toBe(2);
+    expect(aprovacao.registryRef).toBe('aprovacao@2'); // canônico, usado verbatim
   });
 
   it('o MESMO business é 403 em /v1/process-definitions — escopo desta rota é instances:start PURO', async () => {

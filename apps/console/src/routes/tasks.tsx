@@ -522,9 +522,10 @@ function ReassignModal({ taskId, onClose, onDone }: { taskId: string; onClose: (
 
 /** Iniciar processo (tela 05) — fecha o fluxo-alvo; Idempotency-Key no POST. */
 function StartInstanceModal({ onClose }: { onClose: () => void }) {
-  // AG-2.1 etapa 5: projeção iniciável {id,name,version} escopada por
-  // `instances:start` PURO — o business lista o que iniciar sem `definitions:read`
-  // e sem receber o modelo (XML). O ref é reconstruído de name@version.
+  // AG-2.1 etapa 5: projeção iniciável {id,name,version,registryRef} escopada
+  // por `instances:start` PURO — o business lista o que iniciar sem
+  // `definitions:read` e sem receber o modelo (XML). Usa `registryRef` VERBATIM
+  // (nunca reconstrói name@version — quebraria sob normalização/caractere especial).
   const defs = useResource(
     (signal) => api.GET('/v1/startable-definitions', { params: { query: { limit: 50 } }, signal }),
     [],
@@ -589,23 +590,20 @@ function StartInstanceModal({ onClose }: { onClose: () => void }) {
             )}
             {defs.value.state === 'ready' && items.length > 0 && (
               <div className="def-list" role="radiogroup" aria-label="Definição">
-                {items.map((d) => {
-                  const defRef = `${d.name}@${d.version}`;
-                  return (
-                    <button
-                      key={d.id}
-                      type="button"
-                      role="radio"
-                      aria-checked={ref === defRef}
-                      className="def-item"
-                      data-selected={ref === defRef || undefined}
-                      onClick={() => setRef(defRef)}
-                    >
-                      <span className="def-name">{d.name}</span>
-                      <span className="mono def-ref">{defRef}</span>
-                    </button>
-                  );
-                })}
+                {items.map((d) => (
+                  <button
+                    key={d.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={ref === d.registryRef}
+                    className="def-item"
+                    data-selected={ref === d.registryRef || undefined}
+                    onClick={() => setRef(d.registryRef)}
+                  >
+                    <span className="def-name">{d.name}</span>
+                    <span className="mono def-ref">{d.registryRef}</span>
+                  </button>
+                ))}
               </div>
             )}
             <label className="field">

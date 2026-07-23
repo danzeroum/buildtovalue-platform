@@ -27,6 +27,8 @@ const startableSummarySchema = z.object({
   id: z.string().uuid(),
   name: z.string(),
   version: z.number().int(),
+  // identificador CANÔNICO (name@version) — o cliente inicia com ele verbatim
+  registryRef: z.string(),
 });
 
 const formSummarySchema = z.object({
@@ -202,7 +204,8 @@ export function registerDefinitionRoutes(rawApp: ZodApp, deps: ApiDeps): void {
       preHandler: [app.authenticate, app.requirePermission('instances:start')],
       schema: {
         tags: ['process-definitions'],
-        summary: 'Definições iniciáveis (projeção id/nome/versão, SEM XML) — escopo instances:start',
+        summary:
+          'Definições iniciáveis (projeção {id,name,version,registryRef}, SEM XML; só a versão ATIVA por nome) — escopo instances:start',
         security: [{ bearerAuth: [] }],
         querystring: pageQuerySchema,
         response: {
@@ -216,7 +219,12 @@ export function registerDefinitionRoutes(rawApp: ZodApp, deps: ApiDeps): void {
     async (req) => {
       const page = await registry.listStartable(req.auth!.tenantId, req.query);
       return {
-        items: page.items.map((d) => ({ id: d.id, name: d.name, version: d.version })),
+        items: page.items.map((d) => ({
+          id: d.id,
+          name: d.name,
+          version: d.version,
+          registryRef: d.registry_ref,
+        })),
         nextCursor: page.nextCursor,
       };
     },

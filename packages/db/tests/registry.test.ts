@@ -255,21 +255,29 @@ describe('registry (migração 0004) — deploy imutável e engine do registry',
     expect(again.ok && again.definition.registry_ref).toBe('aprovacao@2');
   });
 
-  it('listStartable: projeção {id,name,version} SEM diagrama; cursor estável (etapa 5)', async () => {
-    // já há aprovacao@1 e @2 do teste anterior; publica um 2º nome para paginar
+  it('listStartable: projeção {id,name,version,registryRef} SEM diagrama; SÓ a versão ativa (etapa 5)', async () => {
+    // o teste anterior deixou aprovacao@1 e @2; publica um 2º nome
     await deployProcessDefinition(api, tenant, { name: 'onboarding', diagram: validDiagram(), engineVersion: 'test' });
 
-    const page1 = await listStartableDefinitions(api, tenant, { limit: 2 });
-    expect(page1.items).toHaveLength(2);
-    // projeção MÍNIMA: só id/name/version — NADA de diagrama/registry_ref/xml
-    for (const item of page1.items) {
-      expect(Object.keys(item).sort()).toEqual(['id', 'name', 'version']);
+    const page = await listStartableDefinitions(api, tenant, { limit: 50 });
+    // projeção: só id/name/version/registry_ref — NADA de diagrama/xml
+    for (const item of page.items) {
+      expect(Object.keys(item).sort()).toEqual(['id', 'name', 'registry_ref', 'version']);
       expect(item).not.toHaveProperty('diagram');
     }
-    expect(page1.nextCursor).not.toBeNull();
+    // SOMENTE a versão ativa por nome: aprovacao aparece só @2 (a @1 aposentou)
+    const aprovacao = page.items.filter((i) => i.name === 'aprovacao');
+    expect(aprovacao).toHaveLength(1);
+    expect(aprovacao[0].version).toBe(2);
+    expect(aprovacao[0].registry_ref).toBe('aprovacao@2');
+    expect(page.items.some((i) => i.name === 'onboarding')).toBe(true);
+  });
 
-    // cursor avança sem repetir a linha de fronteira
-    const page2 = await listStartableDefinitions(api, tenant, { limit: 2, cursor: page1.nextCursor! });
+  it('listStartable: cursor estável não repete a linha de fronteira (etapa 5)', async () => {
+    const page1 = await listStartableDefinitions(api, tenant, { limit: 1 });
+    expect(page1.items).toHaveLength(1);
+    expect(page1.nextCursor).not.toBeNull();
+    const page2 = await listStartableDefinitions(api, tenant, { limit: 1, cursor: page1.nextCursor! });
     const ids1 = new Set(page1.items.map((i) => i.id));
     for (const item of page2.items) expect(ids1.has(item.id)).toBe(false);
   });

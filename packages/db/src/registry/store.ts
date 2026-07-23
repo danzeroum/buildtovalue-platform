@@ -192,17 +192,23 @@ export async function listProcessDefinitions(
 }
 
 /**
- * Projeção iniciável (AG-2.1, etapa 5 [GATE]): {id, name, version} — SEM
- * diagrama/XML. Serve o Console para quem tem `instances:start` mas NÃO
+ * Projeção iniciável (AG-2.1, etapa 5 [GATE]): {id, name, version, registryRef}
+ * — SEM diagrama/XML. Serve o Console para quem tem `instances:start` mas NÃO
  * `definitions:read` (o business): lista o que dá para iniciar sem expor o
- * modelo. O `definition_ref` que a instância aponta = `name@version`, então
- * o cliente reconstrói o ref a partir de name+version sem precisar do
- * `registry_ref` cru. Mesmo cursor opaco/estável das demais listagens.
+ * modelo. `registry_ref` (name@version) é o IDENTIFICADOR CANÔNICO que a
+ * instância aponta — o cliente o usa VERBATIM (reconstruir name@version no
+ * cliente quebraria sob normalização/slug ou nome com caractere especial).
+ *
+ * SOMENTE a versão ATIVA de cada nome: `DISTINCT ON (name) … version DESC`
+ * traz a última publicada por nome. Versão aposentada (substituída por uma
+ * mais nova) NÃO aparece — iniciar uma versão velha recriaria o beco que a
+ * etapa fecha. Deploy é imutável: não há rascunho, todo registro é publicado.
  */
 export interface StartableDefinitionRow {
   id: string;
   name: string;
   version: number;
+  registry_ref: string;
 }
 
 export async function listStartableDefinitions(
@@ -213,10 +219,18 @@ export async function listStartableDefinitions(
   const limit = Math.min(Math.max(options.limit ?? 20, 1), 100);
   const after = options.cursor ? decodeCursor(options.cursor) : undefined;
   return withTenant(sql, tenantId, async (tx) => {
+    // CTE `latest`: uma linha por nome (a maior versão). O RLS já restringe ao
+    // tenant, então DISTINCT ON (name) é por-tenant. Paginação estável sobre o
+    // conjunto filtrado, mesmo cursor opaco (created_at, id) das outras listas.
     const rows = await tx`
-      SELECT id, name, version,
+      WITH latest AS (
+        SELECT DISTINCT ON (name) id, name, version, registry_ref, created_at
+        FROM process_definitions
+        ORDER BY name, version DESC
+      )
+      SELECT id, name, version, registry_ref,
              created_at::text AS created_at_cursor
-      FROM process_definitions
+      FROM latest
       WHERE (${after?.createdAt ?? null}::text::timestamptz IS NULL
              OR (created_at, id) > (${after?.createdAt ?? null}::text::timestamptz, ${after?.id ?? null}::uuid))
       ORDER BY created_at, id
@@ -225,6 +239,7 @@ export async function listStartableDefinitions(
       id: r.id as string,
       name: r.name as string,
       version: r.version as number,
+      registry_ref: r.registry_ref as string,
     }));
     const nextCursor =
       rows.length > limit
