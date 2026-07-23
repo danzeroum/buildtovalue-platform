@@ -134,10 +134,21 @@ export async function dispatchOutboxOnce(
         const attempts = row.attempts + 1;
         const message = error instanceof Error ? error.message : String(error);
         if (attempts >= maxAttempts) {
-          await tx`INSERT INTO incidents (tenant_id, instance_id, kind, message, effect_key)
+          // D22 (AG-2.1): guarda o efeito no incidente para o /retry
+          // re-enfileirar (fecha a ERRATA §7). Só metadados de efeito — nunca
+          // conteúdo pessoal (o efeito é a intenção de despacho, não payload
+          // de formulário).
+          await tx`INSERT INTO incidents (tenant_id, instance_id, kind, message, effect_key, payload)
             VALUES (${row.tenant_id}, ${row.instance_id}, 'effectDispatchFailed',
                     ${`efeito ${row.effect.type} falhou ${attempts}x: ${message}`},
-                    ${`host:dead-letter:${row.effect_key}`})
+                    ${`host:dead-letter:${row.effect_key}`},
+                    ${tx.json({
+                      effect: row.effect,
+                      effectKey: row.effect_key,
+                      revision: row.revision,
+                      effectIndex: row.effect_index,
+                      engineVersion: row.engine_version,
+                    } as never)})
             ON CONFLICT (effect_key) DO NOTHING`;
           await tx`DELETE FROM outbox WHERE id = ${row.id}`;
           result.deadLettered += 1;

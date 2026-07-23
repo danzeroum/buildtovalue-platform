@@ -92,7 +92,7 @@ export async function listIncidents(
 }
 
 export type IncidentRetryOutcome =
-  | { ok: true; rearmedJobs: number }
+  | { ok: true; rearmedJobs: number; reEnqueuedEffects: number }
   | { ok: false; reason: 'notFound' | 'notOpen' | 'notRetryable'; message: string };
 
 /**
@@ -111,12 +111,42 @@ export async function retryIncident(
 ): Promise<IncidentRetryOutcome> {
   return withTenant(sql, tenantId, async (tx) => {
     const [incident] = await tx`
-      SELECT id, instance_id, kind, status FROM incidents
+      SELECT id, instance_id, kind, status, payload FROM incidents
       WHERE id = ${incidentId} FOR UPDATE`;
     if (!incident) return { ok: false, reason: 'notFound', message: 'incidente não existe' };
     if (incident.status !== 'open') {
       return { ok: false, reason: 'notOpen', message: `incidente está '${String(incident.status)}'` };
     }
+
+    // D22 (AG-2.1): dead-letter com o efeito guardado (migração 0006) volta à
+    // outbox — re-enfileiramento REAL, fecha a ERRATA §7.
+    if (incident.kind === 'effectDispatchFailed') {
+      const p = incident.payload as {
+        effect?: unknown;
+        effectKey?: string;
+        revision?: number;
+        effectIndex?: number;
+        engineVersion?: string;
+      } | null;
+      if (p && p.effect && typeof p.effectKey === 'string') {
+        await tx`
+          INSERT INTO outbox
+            (tenant_id, instance_id, effect, effect_key, revision, effect_index, engine_version)
+          VALUES (${tenantId}, ${incident.instance_id}, ${tx.json(p.effect as never)}, ${p.effectKey},
+                  ${p.revision ?? 0}, ${p.effectIndex ?? 0}, ${p.engineVersion ?? ''})
+          ON CONFLICT (effect_key) DO NOTHING`;
+        await tx`UPDATE incidents SET status = 'retried' WHERE id = ${incidentId}`;
+        await insertAuditEvent(tx, tenantId, String(incident.instance_id), 'incidentRetried', {
+          incidentId,
+          kind: 'effectDispatchFailed',
+          reEnqueuedEffects: 1,
+          actor,
+        });
+        return { ok: true, rearmedJobs: 0, reEnqueuedEffects: 1 };
+      }
+      // incidente anterior à 0006 (sem payload): mantém o 409 honesto.
+    }
+
     const rearmed = await tx`
       UPDATE jobs SET status = 'available', retries_left = 3, error = NULL,
         lock_token = NULL, lock_until = NULL
@@ -127,7 +157,7 @@ export async function retryIncident(
         reason: 'notRetryable',
         message:
           incident.kind === 'effectDispatchFailed'
-            ? 'efeito em dead-letter não é re-enfileirável na v1 (fila efêmera) — use /resolution; re-enfileiramento entra com a próxima migração'
+            ? 'efeito em dead-letter sem payload guardado (incidente anterior à migração 0006) — use /resolution'
             : 'nada re-tentável para este incidente (nenhum job failed na instância) — use /resolution',
       };
     }
@@ -138,7 +168,7 @@ export async function retryIncident(
       rearmedJobs: rearmed.count,
       actor,
     });
-    return { ok: true, rearmedJobs: rearmed.count };
+    return { ok: true, rearmedJobs: rearmed.count, reEnqueuedEffects: 0 };
   });
 }
 
