@@ -1,10 +1,14 @@
 import type { BpmnDiagram } from '@buildtovalue/core';
 import type { TransactionSql } from '../client.js';
 import { getToolDefinitionByRefTx } from '../registry/toolStore.js';
-import { historySeq } from '../runtime/outbox.js';
 import type { AgentActor } from './agentTrail.js';
-import { checkToolFresh, effectSelo, type EffectSelo } from './gate.js';
+import { checkToolFresh, effectSelo, getGateApprovalTx, type EffectSelo } from './gate.js';
 import { buildWorldDelta, deriveProcessConsequence, type WorldDelta } from './worldDelta.js';
+
+// seq da history_events = revision*100_000 + effectIndex (mesma fórmula de
+// historySeq; inline para NÃO importar de runtime/outbox — o outbox importa
+// este módulo no despacho do gate, e a importação cruzada criaria um ciclo).
+const SEAL_EFFECT_INDEX = 55_000;
 
 /**
  * O FIO do gate de tool (AG-2.2 etapa 5 slice 3, item 2, D31): world-delta →
@@ -103,11 +107,40 @@ export async function sealGatedEffectTx(
   // irreversível rodou SOB aprovação humana. Não é enfeite — é auditoria D31.
   await tx`INSERT INTO history_events
       (tenant_id, instance_id, seq, kind, payload, engine_version, effect_key)
-    VALUES (${args.tenantId}, ${args.instanceId}, ${historySeq(args.revision, 55_000)},
+    VALUES (${args.tenantId}, ${args.instanceId}, ${args.revision * 100_000 + SEAL_EFFECT_INDEX},
             'agent:acao',
             ${tx.json({ elementId: args.gateElementId, actor: args.actor, selo, message: `efeito sob gate: ${args.toolRef}` } as never)},
             ${args.engineVersion},
             ${`host:gate-effect:${args.instanceId}:${args.gateElementId}`})
     ON CONFLICT (effect_key) DO NOTHING`;
   return { executed: true, selo };
+}
+
+/**
+ * Entrada de EXECUÇÃO do efeito sob gate (chamada quando o serviceTask a jusante
+ * roda, por despacho normal). Resolve, do estado real, os insumos do selo — o
+ * world-delta do gate (`user_tasks.payload`: toolRef + effectClass) + a semente
+ * do aval (quem/quando) — e sela. Sem world-delta ou sem aprovação registrada:
+ * não é efeito selável (defensivo — o fluxo normal sempre tem os dois).
+ */
+export async function executeGatedEffectTx(
+  tx: TransactionSql,
+  args: { tenantId: string; instanceId: string; gateElementId: string; revision: number; engineVersion: string },
+): Promise<SealOutcome | { executed: false; reason: 'not-gated' }> {
+  const [gate] = await tx<{ payload: WorldDelta | null }[]>`
+    SELECT payload FROM user_tasks
+    WHERE instance_id = ${args.instanceId} AND element_id = ${args.gateElementId} AND is_gate = true`;
+  const wd = gate?.payload ?? undefined;
+  const approval = await getGateApprovalTx(tx, args.instanceId, args.gateElementId);
+  if (!wd || !wd.tool || !approval) return { executed: false, reason: 'not-gated' };
+  return sealGatedEffectTx(tx, {
+    tenantId: args.tenantId,
+    instanceId: args.instanceId,
+    gateElementId: args.gateElementId,
+    toolRef: wd.tool,
+    actor: approval.actor,
+    approvedAt: approval.approvedAt,
+    revision: args.revision,
+    engineVersion: args.engineVersion,
+  });
 }

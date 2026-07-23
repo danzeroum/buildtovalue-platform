@@ -5,7 +5,7 @@ import type { Sql, TransactionSql } from '../client.js';
 import { withTenant } from '../tenancy.js';
 import { conditionEvaluator } from '../runtime/definitions.js';
 import { effectRequiresGate } from '@buildtovalue/agentflow';
-import { deriveDecisionRouting, lintBlocks, lintDiagram, toolEffectGateViolations, type LintIssue } from './lint.js';
+import { deriveDecisionRouting, isBtvGate, lintBlocks, lintDiagram, toolEffectGateViolations, type LintIssue } from './lint.js';
 import { toolEffectOfTx } from './toolStore.js';
 
 /**
@@ -105,6 +105,11 @@ export async function deployProcessDefinition(
     // resolução do efeito é aqui (tx); a alcançabilidade no grafo é pura no lint.
     const gatedElementIds: string[] = [];
     for (const node of Object.values(input.diagram.nodes)) {
+      // um btv:gate que DECLARA a tool que governa (fonte do world-delta) É o
+      // próprio gate — não é um tool-user que exige OUTRO gate a jusante. A
+      // cobertura do efeito irreversível vem da autonomia do agente (lintAgentGates)
+      // e da posição do gate a montante do serviceTask que executa.
+      if (isBtvGate(node)) continue;
       const toolRef = typeof node.properties.toolRef === 'string' ? node.properties.toolRef : undefined;
       if (!toolRef) continue;
       const effect = await toolEffectOfTx(tx, toolRef);

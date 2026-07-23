@@ -123,7 +123,14 @@ export interface PlatformRuntime {
     complete(
       tenantId: string,
       taskId: string,
-      input: { claimToken: string; submission: Record<string, unknown>; user: string; decision?: string },
+      input: {
+        claimToken: string;
+        submission: Record<string, unknown>;
+        user: string;
+        decision?: string;
+        expectedInstanceRevision?: number;
+        requestId?: string;
+      },
     ): Promise<CompleteTaskOutcome>;
     assign(
       tenantId: string,

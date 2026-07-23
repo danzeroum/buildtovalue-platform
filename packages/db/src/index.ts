@@ -184,6 +184,7 @@ export {
   buildGatePayloadTx,
   setGatePayloadTx,
   sealGatedEffectTx,
+  executeGatedEffectTx,
   type SealOutcome,
 } from './agent/gateFio.js';
 export {
@@ -191,7 +192,9 @@ export {
   checkToolFresh,
   effectSelo,
   getGateState,
+  getGateApprovalTx,
   recordGateProposal,
+  recordGateApprovalTx,
   requestReproposal,
   verifyProposalFresh,
   type EffectSelo,

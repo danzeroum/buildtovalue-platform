@@ -238,6 +238,9 @@ export function registerUserTaskRoutes(rawApp: ZodApp, deps: ApiDeps): void {
           // não-vazia + teto de comprimento; a obrigatoriedade/recusa semântica
           // (declarada×enviada) é decidida NO SERVIDOR contra o BPMN → 422.
           decision: z.string().min(1).max(DECISION_MAX_LENGTH).optional(),
+          // etapa 5 (D28): SÓ o gate a usa — a revisão da instância que o cliente
+          // viu ao carregar o world-delta. Divergiu da atual → 409 proposta expirada.
+          expectedInstanceRevision: z.number().int().nonnegative().optional(),
         }),
         response: {
           200: z.object({ instanceStatus: z.string() }),
@@ -252,7 +255,11 @@ export function registerUserTaskRoutes(rawApp: ZodApp, deps: ApiDeps): void {
         claimToken: req.body.claimToken,
         submission: req.body.submission,
         user: req.auth!.sub,
+        requestId: String(req.id),
         ...(req.body.decision !== undefined ? { decision: req.body.decision } : {}),
+        ...(req.body.expectedInstanceRevision !== undefined
+          ? { expectedInstanceRevision: req.body.expectedInstanceRevision }
+          : {}),
       });
       if (!outcome.ok) {
         if ('errors' in outcome) {
