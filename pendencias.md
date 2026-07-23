@@ -414,6 +414,41 @@ Se algum virar necessidade da v1, **vira adendo** (passa pelo plano, não direto
    forma na saída — o auditor nunca recebe dois formatos para o mesmo conceito.
    Fixar no SHAPE da rota ANTES de implementar (senão vira retrabalho no export).
 
+## 2.15 AG-2.2 etapa 5 (D31) — isenção do btv:gate no lint de cobertura de tool ✅ APROVADA (reversível)
+
+**Decisão do dono (23/07): APROVADA e reversível.** No `deployProcessDefinition`
+(`packages/db/src/registry/store.ts`), o coletor de `gatedElementIds` do lint
+`EXEC_TOOL_EFFECT_UNGATED` passa a **pular nós `btv:gate`**: um gate que declara o
+`toolRef` que **governa** (fonte do world-delta do payload) É o próprio gate — exigir um
+btv:gate **a jusante do próprio gate** seria recursão. A cobertura do efeito irreversível
+continua vindo da **autonomia do agente a montante** (`lintAgentGates` / `reachableGateFrom`)
+e da posição do gate antes do `serviceTask` que executa. Provado no `agent-gate-e2e`
+(o deploy do gate-proc passa; o efeito só roda a jusante do gate aprovado, sob selo).
+**Reversível:** se preferir outra forma de ligar a tool ao gate (ex.: `toolRef` num nó
+dedicado a montante em vez do próprio gate), é troca localizada no coletor + no gate-open.
+
+## 2.16 AG-2.2 etapa 5 — dois candidatos a [ESCOPO] (decidir com o designer: etapa 5 ou AG-3)
+
+Levantados no fechamento do backend; descritos com CUSTO no inventário de superfícies
+(`docs/handoff/ag2-etapa5-inventario-superficies.md` §5) para a revisão G-UX-3.
+
+1. **`agentProposalExpired` persistido (hoje só 409).** A marcação do designer trata
+   "proposta expirada" como **estado com voz + ação ("reavaliar")** — para a UI pintar,
+   precisa ser consultável, não só o erro no ato de aprovar. **Custo:** SEM migração —
+   emitir um incidente `kind='agentProposalExpired'` (âmbar) quando o D28 recusa a
+   aprovação (tabela `incidents` já existe; `payload` já existe). Fio: ~1 ponto no
+   `completeUserTask` (no ramo `proposalExpired`) + o Operate lê o incidente. Leitura
+   antecipada do dono (23/07): **provavelmente entra na etapa 5**.
+2. **Reproposta sem rota exposta.** A Q4 fechou em "ação explícita + cap duro"; sem rota,
+   a **ação explícita não existe** (só a função `requestReproposal`, testada). **Custo:**
+   SEM migração (`instance_gate_state.reproposal_count` já existe) — uma **rota nova**
+   `POST /v1/agents/reproposta` (ou `…/gates/:id/repropose`), `operate:act`, que chama
+   `requestReproposal` (respeita o cap → estourou = parada honesta "reavaliação manual"),
+   grava fato na trilha e consome budget novo. Fio: rota + método no facade + fato.
+   Leitura antecipada do dono (23/07): **provavelmente entra junto**.
+
+Decisão final (etapa 5 × AG-3) é sua com o designer, após a revisão G-UX-3.
+
 ## 3. Registro de fluxo (sem ação sua)
 
 - **~~Follow-up bpmn~~ RESOLVIDO (PR bpmn#169, mergeada 22/07):**
