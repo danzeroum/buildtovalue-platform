@@ -98,6 +98,7 @@ export {
   assignUserTask,
   claimUserTask,
   completeUserTask,
+  DECISION_MAX_LENGTH,
   getUserTask,
   listUserTasks,
   unclaimUserTask,

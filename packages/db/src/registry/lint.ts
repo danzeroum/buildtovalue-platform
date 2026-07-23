@@ -29,7 +29,10 @@ export type LintCode =
   | 'EXEC_CONDITION_UNSUPPORTED'
   | 'EXEC_FORM_REF_MISSING'
   | 'EXEC_JOB_TYPE_MISSING'
-  | 'EXEC_GRAPH_UNREACHABLE';
+  | 'EXEC_GRAPH_UNREACHABLE'
+  | 'EXEC_DECISION_VAR_NO_GATEWAY'
+  | 'EXEC_DECISION_VAR_RESERVED'
+  | 'EXEC_DECISION_VAR_SENSITIVE';
 
 /** Subconjunto executável v1 (espelha o engine publicado — D19). */
 const SUPPORTED_TYPES = new Set([
@@ -192,6 +195,72 @@ export function lintDiagram(diagram: BpmnDiagram): LintIssue[] {
   }
 
   issues.push(...reachability(diagram));
+  issues.push(...decisionVarGatewayWarnings(diagram));
+  return issues;
+}
+
+/**
+ * D19 novo (etapa 6, opção B): userTask declara `decisionVar` mas NENHUM
+ * exclusiveGateway A JUSANTE lê essa variável — a decisão coletada não roteia
+ * nada (warning: publica, mas o Studio avisa). "A jusante" = alcançável por
+ * arestas de saída; a variável de um gateway é o lado esquerdo da condição de
+ * igualdade de suas saídas (a semântica real do avaliador — igualdade §2.6).
+ */
+function decisionVarGatewayWarnings(diagram: BpmnDiagram): LintIssue[] {
+  const issues: LintIssue[] = [];
+  const nodes = Object.values(diagram.nodes) as BpmnNode[];
+  const edges = Object.values(diagram.edges);
+  const declaring = nodes.filter(
+    (n) =>
+      n.type === 'userTask' &&
+      typeof n.properties.decisionVar === 'string' &&
+      (n.properties.decisionVar as string).length > 0,
+  );
+  if (declaring.length === 0) return issues;
+
+  const forward = new Map<string, string[]>();
+  for (const edge of edges) {
+    forward.set(edge.sourceId, [...(forward.get(edge.sourceId) ?? []), edge.targetId]);
+  }
+  // variáveis lidas por cada exclusiveGateway (LHS da condição de igualdade)
+  const gatewayVars = new Map<string, Set<string>>();
+  for (const node of nodes) {
+    if (node.type !== 'exclusiveGateway') continue;
+    const vars = new Set<string>();
+    for (const edge of edges.filter((e) => e.sourceId === node.id)) {
+      const expr = (edge.properties.conditionExpression ?? edge.properties.condition) as
+        | string
+        | undefined;
+      const lhs = expr ? /^\s*([A-Za-z_]\w*)\s*=/.exec(expr)?.[1] : undefined;
+      if (lhs) vars.add(lhs);
+    }
+    gatewayVars.set(node.id, vars);
+  }
+
+  for (const task of declaring) {
+    const decisionVar = task.properties.decisionVar as string;
+    const reached = new Set<string>();
+    const queue = [...(forward.get(task.id) ?? [])];
+    let read = false;
+    while (queue.length > 0) {
+      const id = queue.shift()!;
+      if (reached.has(id)) continue;
+      reached.add(id);
+      if (gatewayVars.get(id)?.has(decisionVar)) {
+        read = true;
+        break;
+      }
+      queue.push(...(forward.get(id) ?? []));
+    }
+    if (!read) {
+      issues.push({
+        code: 'EXEC_DECISION_VAR_NO_GATEWAY',
+        severity: 'warning',
+        elementId: task.id,
+        message: `userTask '${task.id}' declara decisionVar '${decisionVar}' mas nenhum gateway a jusante lê essa variável — a decisão não roteia nada`,
+      });
+    }
+  }
   return issues;
 }
 

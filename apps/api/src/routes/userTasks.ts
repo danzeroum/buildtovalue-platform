@@ -1,4 +1,5 @@
 import { PROBLEM_TYPES, problemSchema } from '@platform/api-contracts';
+import { DECISION_MAX_LENGTH } from '@platform/db';
 import type { FastifyReply } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { z } from 'zod';
@@ -109,7 +110,12 @@ export function registerUserTaskRoutes(rawApp: ZodApp, deps: ApiDeps): void {
         security: [{ bearerAuth: [] }],
         params: z.object({ id: z.string().uuid() }),
         response: {
-          200: taskSummarySchema.extend({ payload: z.record(z.string(), z.unknown()) }),
+          200: taskSummarySchema.extend({
+            payload: z.record(z.string(), z.unknown()),
+            // etapa 6: se não-null, a conclusão EXIGE `decision` (roteamento
+            // comparado por igualdade no gateway a jusante).
+            decisionVar: z.string().nullable(),
+          }),
           403: problemSchema,
           404: problemSchema,
         },
@@ -127,7 +133,7 @@ export function registerUserTaskRoutes(rawApp: ZodApp, deps: ApiDeps): void {
           detail: `esta task é dos papéis [${task.candidate_roles.join(', ')}]`,
         });
       }
-      return { ...summarize(task), payload: task.payload };
+      return { ...summarize(task), payload: task.payload, decisionVar: task.decision_var };
     },
   );
 
@@ -204,11 +210,21 @@ export function registerUserTaskRoutes(rawApp: ZodApp, deps: ApiDeps): void {
       schema: {
         tags: ['user-tasks'],
         summary: 'Conclui com o claimToken VIGENTE; validação no servidor pelo form pinado',
+        description:
+          'Conclusão fenced (só o claimToken vigente conclui). `decision` (etapa 6): valor de ' +
+          'ROTEAMENTO, exigido SSE o elemento declara `decisionVar` no BPMN (veja `decisionVar` no ' +
+          'detalhe da task). O gateway a jusante o compara por IGUALDADE (semântica real do avaliador, ' +
+          '§2.6). A decisão NUNCA é ignorada em silêncio: enviar `decision` sem `decisionVar` declarada, ' +
+          'ou concluir sem `decision` quando declarada, respondem 422 (nunca aceitar-e-descartar). ' +
+          'A decisão flui para `variables` (sob a decisionVar) E para `history_events` (quem decidiu o quê).',
         security: [{ bearerAuth: [] }],
         params: z.object({ id: z.string().uuid() }),
         body: z.object({
           claimToken: z.string().uuid(),
           submission: z.record(z.string(), z.unknown()),
+          // não-vazia + teto de comprimento; a obrigatoriedade/recusa semântica
+          // (declarada×enviada) é decidida NO SERVIDOR contra o BPMN → 422.
+          decision: z.string().min(1).max(DECISION_MAX_LENGTH).optional(),
         }),
         response: {
           200: z.object({ instanceStatus: z.string() }),
@@ -223,11 +239,22 @@ export function registerUserTaskRoutes(rawApp: ZodApp, deps: ApiDeps): void {
         claimToken: req.body.claimToken,
         submission: req.body.submission,
         user: req.auth!.sub,
+        ...(req.body.decision !== undefined ? { decision: req.body.decision } : {}),
       });
       if (!outcome.ok) {
         if ('errors' in outcome) {
           return problem(reply, 422, PROBLEM_TYPES.validation, 'Submissão inválida', String(req.id), {
             errors: outcome.errors,
+          });
+        }
+        // etapa 6: a decisão mal-endereçada é 422 EXPLÍCITO (nunca silêncio).
+        if (
+          outcome.reason === 'decisionRequired' ||
+          outcome.reason === 'decisionUnexpected' ||
+          outcome.reason === 'decisionInvalid'
+        ) {
+          return problem(reply, 422, PROBLEM_TYPES.validation, 'Decisão inválida', String(req.id), {
+            detail: outcome.message,
           });
         }
         if (outcome.reason === 'notFound') {

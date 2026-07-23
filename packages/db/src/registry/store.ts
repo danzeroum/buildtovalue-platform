@@ -1,7 +1,7 @@
 import { createEngine, type Engine } from '@buildtovalue/engine';
 import type { BpmnDiagram } from '@buildtovalue/core';
 import { validateFormSchema, type FormSchema, type SchemaIssue } from '@buildtovalue/forms';
-import type { Sql } from '../client.js';
+import type { Sql, TransactionSql } from '../client.js';
 import { withTenant } from '../tenancy.js';
 import { conditionEvaluator } from '../runtime/definitions.js';
 import { lintBlocks, lintDiagram, type LintIssue } from './lint.js';
@@ -47,19 +47,55 @@ export async function deployProcessDefinition(
   const issues = lintDiagram(input.diagram);
   return withTenant(sql, tenantId, async (tx) => {
     // formRefs do diagrama precisam EXISTIR no registry de forms (§2:
-    // EXEC_FORM_REF_MISSING resolve contra o registry, não só presença).
-    const formRefs = Object.values(input.diagram.nodes)
-      .filter((n) => n.type === 'userTask' && typeof n.properties.formRef === 'string')
-      .map((n) => ({ elementId: n.id, ref: n.properties.formRef as string }));
-    for (const { elementId, ref } of formRefs) {
-      const [found] = await tx`SELECT id FROM form_definitions WHERE ref = ${ref}`;
-      if (!found) {
-        issues.push({
-          code: 'EXEC_FORM_REF_MISSING',
-          severity: 'error',
-          elementId,
-          message: `formRef '${ref}' não existe no registry de formulários`,
-        });
+    // EXEC_FORM_REF_MISSING resolve contra o registry, não só presença). O
+    // MESMO passo carrega o schema para validar a decisionVar (etapa 6) contra
+    // os campos sensitive do formulário pinado.
+    const userTasks = Object.values(input.diagram.nodes).filter((n) => n.type === 'userTask');
+    for (const node of userTasks) {
+      const ref = typeof node.properties.formRef === 'string' ? node.properties.formRef : undefined;
+      let schema: FormSchema | undefined;
+      if (ref) {
+        const [found] = await tx<{ schema: FormSchema }[]>`
+          SELECT schema FROM form_definitions WHERE ref = ${ref}`;
+        if (!found) {
+          issues.push({
+            code: 'EXEC_FORM_REF_MISSING',
+            severity: 'error',
+            elementId: node.id,
+            message: `formRef '${ref}' não existe no registry de formulários`,
+          });
+        } else {
+          schema = found.schema;
+        }
+      }
+      // etapa 6 (opção B): decisionVar declarada no BPMN não pode COLIDIR com a
+      // variável reservada `value` nem com um campo `sensitive` do formulário —
+      // a decisão é roteamento (comparada por igualdade no gateway), jamais um
+      // slot de dado pessoal. Validado no DEPLOY (gate), não só em runtime.
+      const decisionVar =
+        typeof node.properties.decisionVar === 'string' && node.properties.decisionVar.length > 0
+          ? node.properties.decisionVar
+          : undefined;
+      if (decisionVar) {
+        if (decisionVar === 'value') {
+          issues.push({
+            code: 'EXEC_DECISION_VAR_RESERVED',
+            severity: 'error',
+            elementId: node.id,
+            message: `decisionVar '${decisionVar}' colide com a variável reservada 'value'`,
+          });
+        }
+        const sensitiveClash = (schema?.fields as { key: string; dataClassification?: string }[] | undefined)?.find(
+          (f) => f.key === decisionVar && f.dataClassification === 'sensitive',
+        );
+        if (sensitiveClash) {
+          issues.push({
+            code: 'EXEC_DECISION_VAR_SENSITIVE',
+            severity: 'error',
+            elementId: node.id,
+            message: `decisionVar '${decisionVar}' colide com o campo sensitive '${decisionVar}' do formulário — a decisão (roteamento) não pode ocupar um slot sensível`,
+          });
+        }
       }
     }
     if (lintBlocks(issues)) return { ok: false, issues };
@@ -130,6 +166,26 @@ export async function getProcessDefinition(
          OR id::text = ${idOrRef}`;
     return rows[0];
   });
+}
+
+/**
+ * decisionVar de um elemento (etapa 6, opção B): lê a propriedade declarada no
+ * BPMN do userTask `elementId` da definição `definitionRef`. Roda DENTRO de uma
+ * tx existente (RLS já ativo). Definição embutida (skeleton@1/example@1) não
+ * está no registry → `undefined` (não há decisionVar). Fonte única de verdade
+ * é o diagrama imutável — nada é duplicado em user_tasks.
+ */
+export async function getDefinitionDecisionVar(
+  tx: TransactionSql,
+  definitionRef: string,
+  elementId: string,
+): Promise<string | undefined> {
+  const [row] = await tx<{ diagram: BpmnDiagram }[]>`
+    SELECT diagram FROM process_definitions WHERE registry_ref = ${definitionRef}`;
+  if (!row) return undefined;
+  const node = row.diagram.nodes?.[elementId];
+  const dv = node?.properties?.decisionVar;
+  return typeof dv === 'string' && dv.length > 0 ? dv : undefined;
 }
 
 export async function getFormDefinitionByRef(

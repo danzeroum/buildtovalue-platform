@@ -272,6 +272,10 @@ function TaskFormLoaded({
 
   const [values, setValues] = useState<Record<string, unknown>>(initial);
   const [claimToken, setClaimToken] = useState<string | null>(null);
+  // etapa 6: se a task declara decisionVar, a decisão é OBRIGATÓRIA e roteia o
+  // gateway a jusante (comparada por igualdade). Sem ela, o servidor recusa 422.
+  const requiresDecision = typeof task.decisionVar === 'string' && task.decisionVar.length > 0;
+  const [decision, setDecision] = useState('');
   const [errors, setErrors] = useState<SubmissionErrors | undefined>();
   const [banner, setBanner] = useState<{ tone: 'danger' | 'success'; text: string } | null>(null);
   const [holder, setHolder] = useState<{ user: string; since: string } | null>(null);
@@ -326,9 +330,18 @@ function TaskFormLoaded({
       setBanner({ tone: 'danger', text: 'Assuma a tarefa antes de concluir (o claim gera o token exigido).' });
       return;
     }
+    // decisão obrigatória quando declarada — não deixamos o servidor 422 à toa.
+    if (requiresDecision && !decision.trim()) {
+      setBanner({ tone: 'danger', text: 'Esta tarefa exige uma decisão para rotear o processo.' });
+      return;
+    }
     const { data, error, response } = await api.POST('/v1/user-tasks/{id}/completion', {
       params: { path: { id: task.id } },
-      body: { claimToken, submission: local.values },
+      body: {
+        claimToken,
+        submission: local.values,
+        ...(requiresDecision ? { decision: decision.trim() } : {}),
+      },
     });
     if (error || !data) {
       if (response.status === 422) {
@@ -417,6 +430,31 @@ function TaskFormLoaded({
           onChange={(key, value) => setValues((v) => ({ ...v, [key]: value }))}
         />
       </div>
+
+      {requiresDecision && (
+        <div className="task-decision" data-locked={!claimToken || undefined}>
+          <label className="field">
+            <span>
+              Decisão <Tag tone="gold">roteia o processo</Tag>
+            </span>
+            <input
+              className="mono"
+              value={decision}
+              disabled={!claimToken}
+              required
+              aria-required="true"
+              aria-describedby="decision-hint"
+              placeholder={`valor de '${task.decisionVar}' (ex.: aprovar)`}
+              onChange={(e) => setDecision(e.target.value)}
+            />
+          </label>
+          <p id="decision-hint" className="foot-note">
+            Comparada por <strong>igualdade</strong> no próximo gateway (grava em{' '}
+            <span className="mono">{task.decisionVar}</span> e na trilha). Obrigatória: sem ela, a conclusão é
+            recusada.
+          </p>
+        </div>
+      )}
 
       <footer className="task-foot">
         <span className="foot-note">

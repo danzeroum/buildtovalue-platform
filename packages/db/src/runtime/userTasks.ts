@@ -3,7 +3,7 @@ import { validateSubmission, type SubmissionErrors } from '@buildtovalue/forms';
 import type { Sql } from '../client.js';
 import type { FieldCipher } from '../crypto/fieldCipher.js';
 import { withTenant } from '../tenancy.js';
-import { getFormDefinitionByRef } from '../registry/store.js';
+import { getDefinitionDecisionVar, getFormDefinitionByRef } from '../registry/store.js';
 import { advanceInstance } from './advance.js';
 import { insertAuditEvent } from './audit.js';
 import { conditionEvaluator } from './definitions.js';
@@ -96,6 +96,8 @@ export async function listUserTasks(
 export interface UserTaskDetail extends UserTaskListItem {
   payload: Record<string, unknown>;
   visible: boolean;
+  /** etapa 6: variável de decisão declarada no BPMN; null = não exige decisão. */
+  decision_var: string | null;
 }
 
 export async function getUserTask(
@@ -106,10 +108,19 @@ export async function getUserTask(
 ): Promise<UserTaskDetail | undefined> {
   return withTenant(sql, tenantId, async (tx) => {
     const [row] = await tx`
-      SELECT id, instance_id, element_id, form_ref, assignee, candidate_roles,
-             status, claimed_at, created_at, payload
-      FROM user_tasks WHERE id = ${taskId}`;
+      SELECT ut.id, ut.instance_id, ut.element_id, ut.form_ref, ut.assignee,
+             ut.candidate_roles, ut.status, ut.claimed_at, ut.created_at, ut.payload,
+             i.definition_ref
+      FROM user_tasks ut JOIN instances i ON i.id = ut.instance_id
+      WHERE ut.id = ${taskId}`;
     if (!row) return undefined;
+    // decisionVar do BPMN — o cliente sabe que ESTA task exige decisão e mostra
+    // o controle (obrigatório se declarado; recusado se não — etapa 6).
+    const decisionVar = await getDefinitionDecisionVar(
+      tx,
+      String(row.definition_ref),
+      String(row.element_id),
+    );
     return {
       ...(row as unknown as UserTaskListItem),
       payload: (row.payload ?? {}) as Record<string, unknown>,
@@ -117,6 +128,7 @@ export async function getUserTask(
         { assignee: row.assignee as string | null, candidate_roles: row.candidate_roles as string[] },
         viewer,
       ),
+      decision_var: decisionVar ?? null,
     };
   });
 }
@@ -183,10 +195,15 @@ export async function unclaimUserTask(
   });
 }
 
+/** Comprimento máximo de uma `decision` (token de roteamento, não conteúdo). */
+export const DECISION_MAX_LENGTH = 200;
+
 export type CompleteTaskOutcome =
   | { ok: true; instanceStatus: string }
   | { ok: false; reason: 'notFound' | 'notOpen' | 'staleClaim' | 'formMissing' | string; message: string }
-  | { ok: false; reason: 'invalidSubmission'; errors: SubmissionErrors };
+  | { ok: false; reason: 'invalidSubmission'; errors: SubmissionErrors }
+  // etapa 6 — a decisão NUNCA é ignorada em silêncio:
+  | { ok: false; reason: 'decisionRequired' | 'decisionUnexpected' | 'decisionInvalid'; message: string };
 
 /**
  * Completion com FENCING FORMAL (critério nomeado do aceite F3): só o
@@ -199,13 +216,24 @@ export async function completeUserTask(
   sql: Sql,
   tenantId: string,
   taskId: string,
-  input: { claimToken: string; submission: Record<string, unknown>; user: string; now: string },
+  input: {
+    claimToken: string;
+    submission: Record<string, unknown>;
+    user: string;
+    now: string;
+    /** etapa 6: valor de roteamento; obrigatória sse o elemento declara decisionVar. */
+    decision?: string;
+  },
   cipher?: FieldCipher,
 ): Promise<CompleteTaskOutcome> {
   const fenced = await withTenant(sql, tenantId, async (tx) => {
+    // JOIN com instances: o definition_ref localiza o diagrama para resolver a
+    // decisionVar declarada no BPMN (opção B) do elemento desta task.
     const [task] = await tx`
-      SELECT id, instance_id, wait_key, form_ref, status, claim_token
-      FROM user_tasks WHERE id = ${taskId} FOR UPDATE`;
+      SELECT ut.id, ut.instance_id, ut.wait_key, ut.element_id, ut.form_ref,
+             ut.status, ut.claim_token, i.definition_ref
+      FROM user_tasks ut JOIN instances i ON i.id = ut.instance_id
+      WHERE ut.id = ${taskId} FOR UPDATE`;
     if (!task) return { ok: false as const, reason: 'notFound' as const, message: 'task não existe' };
     if (task.status !== 'open') {
       return { ok: false as const, reason: 'notOpen' as const, message: `task está '${String(task.status)}' (conclusão dupla?)` };
@@ -223,14 +251,48 @@ export async function completeUserTask(
     }
     const validated = validateSubmission(form.schema, input.submission, conditionEvaluator);
     if (!validated.ok) return { ok: false as const, reason: 'invalidSubmission' as const, errors: validated.errors };
+
+    // etapa 6 — A DECISÃO NUNCA É IGNORADA EM SILÊNCIO (mesma família do
+    // /cancel e da parada honesta: nunca fingir que agiu):
+    const decisionVar = await getDefinitionDecisionVar(tx, String(task.definition_ref), String(task.element_id));
+    const decision = input.decision?.trim();
+    if (decisionVar && !decision) {
+      return {
+        ok: false as const,
+        reason: 'decisionRequired' as const,
+        message: `elemento '${String(task.element_id)}' declara decisionVar '${decisionVar}' — o campo 'decision' é obrigatório`,
+      };
+    }
+    if (!decisionVar && input.decision !== undefined) {
+      return {
+        ok: false as const,
+        reason: 'decisionUnexpected' as const,
+        message: `elemento '${String(task.element_id)}' não declara decisionVar — 'decision' não seria roteada; conclua sem 'decision'`,
+      };
+    }
+    if (decision && decision.length > DECISION_MAX_LENGTH) {
+      return {
+        ok: false as const,
+        reason: 'decisionInvalid' as const,
+        message: `'decision' excede ${DECISION_MAX_LENGTH} caracteres`,
+      };
+    }
+
     await tx`UPDATE user_tasks
       SET status = 'completed', completed_at = now(), claim_token = NULL
       WHERE id = ${taskId}`;
+    // a decisão entra nas variáveis do avanço sob a decisionVar: o engine a lê
+    // no gateway a jusante (igualdade) E o host a persiste em `variables`.
+    const values =
+      decisionVar && decision ? { ...validated.values, [decisionVar]: decision } : validated.values;
     return {
       ok: true as const,
       instanceId: String(task.instance_id),
       waitKey: String(task.wait_key),
-      values: validated.values,
+      elementId: String(task.element_id),
+      values,
+      decisionVar: decisionVar ?? null,
+      decision: decision ?? null,
     };
   });
   if (!fenced.ok) return fenced;
@@ -245,7 +307,22 @@ export async function completeUserTask(
       variables: {},
       submission: fenced.values,
     },
-    { cipher },
+    {
+      cipher,
+      // etapa 6: a decisão vai TAMBÉM para history_events (Operate + XES mostram
+      // quem decidiu o quê), na MESMA tx do avanço — atômica com a variável.
+      onApplied:
+        fenced.decisionVar && fenced.decision
+          ? async (tx) => {
+              await insertAuditEvent(tx, tenantId, fenced.instanceId, 'taskDecision', {
+                elementId: fenced.elementId,
+                decisionVar: fenced.decisionVar,
+                decision: fenced.decision,
+                actor: input.user,
+              });
+            }
+          : undefined,
+    },
   );
   if (!advanced.ok) return { ok: false, reason: advanced.reason, message: advanced.message };
   return { ok: true, instanceStatus: advanced.instance.status };

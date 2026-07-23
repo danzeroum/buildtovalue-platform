@@ -48,7 +48,7 @@ export function Button({ intent = 'neutral', busy, onClick, children, disabled, 
 }
 
 /** Tag de classificação/estado — sempre texto (nunca só cor). Piso 11px. */
-export function Tag({ tone, children }: { tone: 'personal' | 'sensitive' | 'neutral' | 'success'; children: ReactNode }) {
+export function Tag({ tone, children }: { tone: 'personal' | 'sensitive' | 'neutral' | 'success' | 'gold'; children: ReactNode }) {
   return (
     <span className="ui-tag" data-tone={tone}>
       {children}

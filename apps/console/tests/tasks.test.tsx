@@ -72,6 +72,29 @@ describe('TasksRoute — F3.4', () => {
     );
   });
 
+  it('etapa 6: task com decisionVar exige decisão e a envia no corpo (roteamento)', async () => {
+    seedHappyPath({
+      'GET /v1/user-tasks/{id}': () => ok({ ...TASK, payload: {}, decisionVar: 'decisao' }),
+    });
+    render(<TasksRoute />);
+    await userEvent.click(await screen.findByRole('button', { name: /aprovar_reembolso/ }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Assumir tarefa' }));
+    const parecer = await screen.findByLabelText(/Parecer/);
+    await userEvent.type(parecer, 'ok');
+
+    // sem decisão: a conclusão é barrada no cliente (não deixa 422 à toa)
+    await userEvent.click(screen.getByRole('button', { name: 'Concluir tarefa' }));
+    expect(await screen.findByText(/exige uma decisão/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Tarefa concluída/)).not.toBeInTheDocument();
+
+    // com decisão: vai no corpo do POST
+    await userEvent.type(screen.getByLabelText(/Decisão/), 'aprovar');
+    await userEvent.click(screen.getByRole('button', { name: 'Concluir tarefa' }));
+    expect(await screen.findByText(/Tarefa concluída/)).toBeInTheDocument();
+    const call = (api.POST as unknown as Mock).mock.calls.find((c) => c[0] === '/v1/user-tasks/{id}/completion');
+    expect(call?.[1]?.body?.decision).toBe('aprovar');
+  });
+
   it('422 do servidor mapeia erro por campo no MESMO renderer', async () => {
     seedHappyPath({
       'POST /v1/user-tasks/{id}/completion': () => fail(422, { errors: { parecer: ['valor não atende à validação'] } }) as ReturnType<typeof ok>,
