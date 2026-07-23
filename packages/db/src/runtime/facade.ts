@@ -1,5 +1,7 @@
 import type { Sql } from '../client.js';
 import { createFieldCipher, type KeyProvider } from '../crypto/fieldCipher.js';
+import { resumeAgentJobs as resumeAgentJobsRow, type PauseKind, type ResumeResult } from '../agent/resume.js';
+import type { AuditActor } from '../audit/tenantAudit.js';
 import {
   getIdempotentResponse,
   putIdempotentResponse,
@@ -171,13 +173,22 @@ export interface PlatformRuntime {
     error: string,
     now: string,
   ): Promise<FailOutcome>;
-  /** Parada honesta (§5): estaciona o job SEM incidente nem avanço da instância. */
+  /** Parada honesta (§5): estaciona o job SEM incidente nem avanço da instância.
+   * `pauseKind` (budget/kill-switch) discrimina a retomada (§5.2). */
   pauseJob(
     tenantId: string,
     jobId: string,
     lockToken: string,
     reason: string,
+    pauseKind: string,
   ): Promise<PauseOutcome>;
+  /** Retomada explícita (§5.2, budget) — o operador manda retomar. */
+  resumeAgentJobs(
+    tenantId: string,
+    pauseKind: PauseKind,
+    actor: AuditActor,
+    motivo: string,
+  ): Promise<ResumeResult>;
 }
 
 export type PauseOutcome =
@@ -305,11 +316,11 @@ export function createRuntime(
       }
       return { ok: true, status: 'available' };
     },
-    async pauseJob(tenantId, jobId, lockToken, reason) {
+    async pauseJob(tenantId, jobId, lockToken, reason, pauseKind) {
       // Parada honesta: estaciona o job. SEM advanceInstance (a instância NÃO
       // avança do agentTask — segue ativa, pausada), SEM incidente. O fato
       // agent:parada já foi gravado pelo worker; aqui só solta o job da fila.
-      const conclusion = await pauseJobRow(sql, tenantId, jobId, lockToken, reason);
+      const conclusion = await pauseJobRow(sql, tenantId, jobId, lockToken, reason, pauseKind);
       if (!conclusion.ok) {
         return {
           ok: false,
@@ -318,6 +329,9 @@ export function createRuntime(
         };
       }
       return { ok: true, status: 'paused' };
+    },
+    async resumeAgentJobs(tenantId, pauseKind, actor, motivo) {
+      return resumeAgentJobsRow(sql, tenantId, pauseKind, actor, motivo);
     },
   };
 }

@@ -59,7 +59,7 @@ describe('parada honesta × falha — o job estaciona, não vira incidente (§5)
     await seedAgentJob(`hs:${instanceId}:1`);
     const [locked] = await lockJobs(api, tenant, 'w1', { limit: 10 });
     expect(locked.type).toBe('agent');
-    const out = await pauseJob(api, tenant, locked.id, locked.lock_token!, 'kill-switch acionado — parada honesta');
+    const out = await pauseJob(api, tenant, locked.id, locked.lock_token!, 'kill-switch acionado — parada honesta', 'kill-switch');
     expect(out.ok).toBe(true);
 
     // job em 'paused' (não 'failed'); SEM incidente aberto; a fila não o re-pega.
@@ -75,7 +75,7 @@ describe('parada honesta × falha — o job estaciona, não vira incidente (§5)
   it('pauseJob respeita o fencing (lock_token velho → recusa)', async () => {
     await seedAgentJob(`hs:${instanceId}:2`);
     const [locked] = await lockJobs(api, tenant, 'w3', { limit: 10 });
-    const bad = await pauseJob(api, tenant, locked.id, '00000000-0000-0000-0000-000000000000', 'x');
+    const bad = await pauseJob(api, tenant, locked.id, '00000000-0000-0000-0000-000000000000', 'x', 'kill-switch');
     expect(bad).toMatchObject({ ok: false });
   });
 });

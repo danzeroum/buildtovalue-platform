@@ -143,10 +143,12 @@ export async function pauseJob(
   jobId: string,
   lockToken: string,
   reason: string,
+  pauseKind: string,
 ): Promise<JobConclusion> {
   return withTenant(sql, tenantId, async (tx) => {
     const rows = await tx<JobRow[]>`
-      UPDATE jobs SET status = 'paused', error = ${reason}, lock_token = NULL, lock_until = NULL
+      UPDATE jobs SET status = 'paused', error = ${reason}, pause_kind = ${pauseKind},
+                      lock_token = NULL, lock_until = NULL
       WHERE id = ${jobId} AND status = 'locked'
         AND lock_token = ${lockToken} AND lock_until >= now()
       RETURNING id, instance_id, wait_key, type, payload, status, lock_token, retries_left`;
