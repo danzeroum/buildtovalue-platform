@@ -219,21 +219,23 @@ duas implementações vivendo juntas sob teste de equivalência até o colapso).
 - **servidor** — `packages/db/src/runtime/formEvaluator.ts` (cópia rica; a
   conclusão de user task já a usa, fechando a §2.6 no runtime real).
 - **console** — `apps/console/src/sfeel.ts` `consoleEvaluator` (inalterado).
-- **corpus compartilhado** — `SFEEL_FORM_CORPUS` na bpmn é a FONTE; o espelho
-  byte-a-byte vive em `packages/db/tests/fixtures/sfeel-corpus.ts` e o teste
-  `apps/api/tests/form-evaluator-equivalence.test.ts` afirma **servidor ≡
-  console ≡ corpus** (bidirecional). A canônica roda o mesmo corpus na bpmn —
-  as três não podem divergir.
+- **corpus compartilhado** — `SFEEL_FORM_CORPUS` na bpmn é a FONTE, publicada no
+  subpath **`@buildtovalue/forms/corpus`** (fixture fora do bundle de runtime); o
+  espelho byte-a-byte vive em `packages/db/tests/fixtures/sfeel-corpus.ts` e o
+  teste `apps/api/tests/form-evaluator-equivalence.test.ts` afirma **servidor ≡
+  console ≡ corpus** (bidirecional). A canônica roda o mesmo corpus na bpmn — as
+  três não podem divergir.
 
 **PONTO DE COLAPSO (nomeado) — após publicar `@buildtovalue/forms@1.1.0-next.N`:**
 1. subir a dep nos 3 `package.json` da plataforma (db, api, console);
 2. servidor (`userTasks.ts`) e console (`tasks.tsx`) passam a importar
    `formExpressionEvaluator` da biblioteca;
-3. **DELETAR** `packages/db/src/runtime/formEvaluator.ts`,
-   `apps/console/src/sfeel.ts` (consoleEvaluator) e o espelho
+3. **DELETAR** as CÓPIAS do avaliador — `packages/db/src/runtime/formEvaluator.ts`
+   e `apps/console/src/sfeel.ts` (consoleEvaluator) — **E o espelho do corpus**
    `packages/db/tests/fixtures/sfeel-corpus.ts`;
-4. o teste de equivalência importa `SFEEL_FORM_CORPUS` da biblioteca e sobrevive
-   como **regressão contra a canônica**;
+4. o teste de equivalência importa `SFEEL_FORM_CORPUS` de
+   **`@buildtovalue/forms/corpus`** (fonte única) e sobrevive como **regressão
+   contra a canônica** — sem espelho, sem risco de drift silencioso;
 5. só ENTÃO restaurar expressões ricas no `seed-demo.ts` (o demo mostra o poder
    real, não o interim) — e a §2.6 fecha de verdade.
 
