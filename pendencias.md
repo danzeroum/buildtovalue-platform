@@ -348,6 +348,9 @@ uma ida-e-volta de publicação por etapa, AGRUPAR num só changeset/minor:
 - **emissão de `agentTask` (etapa 4):** o engine trata `agentTask` como ESPERA que
   emite `CreateJob{jobType:'agent'}` + `agentRef` efetivo (extensão determinística
   do avanço; NADA do interior do agente entra no engine);
+- **elo `decisão` da cadeia D1 (nota do designer):** hoje `buildAgentFacts` NÃO emite
+  `decisao` — falta o walker expor o TIPO do nó. Se depender do agentflow, entra no
+  mesmo lote (a cadeia incompleta vira lacuna visível quando o P2 desenhar a timeline);
 - o que a etapa 5 revelar (gate de tool D31 — `effectRequiresGate`).
 Peço **um** release do bpmn quando o lote fechar, não três improvisados.
 
@@ -396,6 +399,20 @@ Três pedidos que TOCAM contrato/schema/permrissão — **não implementar** na 
 3. **Iniciar versão anterior deliberadamente:** rollback permissionado — a projeção
    iniciável é latest-per-name de propósito (AG-2.1 etapa 5). F4/F5.
 Se algum virar necessidade da v1, **vira adendo** (passa pelo plano, não direto ao dev).
+
+## 2.14 Contrato — notas do designer que viram interface (registrar no shape)
+
+1. **Namespace `agent:*` no catálogo de event_type (D33):** o prefixo `agent:` das
+   linhas de trilha (`agent:pinResolved`, `agent:intencao|acao|io|decisao|evidencia|
+   parada`) virou INTERFACE no momento em que a timeline passou a ser filtrada por
+   `kind LIKE 'agent:%'`. Publicar no catálogo de `event_type` do contrato (insumo
+   AG-2 já pedia catálogo estável) — não é mais detalhe interno.
+2. **AG-2.3 (export) — normalização do envelope de ator:** o envelope `{type,id,
+   requestId}` existe em DUAS formas físicas — COLUNAS em `tenant_audit_events`
+   (`actor_type/actor_id/request_id`) e JSONB em `history_events`
+   (`payload->'actor'`). O `GET /v1/audit/export` deve NORMALIZAR as duas numa só
+   forma na saída — o auditor nunca recebe dois formatos para o mesmo conceito.
+   Fixar no SHAPE da rota ANTES de implementar (senão vira retrabalho no export).
 
 ## 3. Registro de fluxo (sem ação sua)
 
