@@ -490,6 +490,42 @@ export function registerRuntimeRoutes(rawApp: ZodApp, deps: ApiDeps): void {
     );
   }
 
+  // PARADA HONESTA (ADENDO-02 §5): estaciona o job de agente sem incidente nem
+  // avanço. `reason` = a voz da parada (budget/kill-switch). Distinta de /failure
+  // — parada honesta é âmbar/retomável, não card vermelho.
+  const honestStopBody = jobConclusionBody.extend({ reason: z.string().max(2000) });
+  app.post(
+    '/v1/jobs/:id/honest-stop',
+    {
+      preHandler: [app.authenticate, app.requirePermission('operate:act')],
+      schema: {
+        tags: ['jobs'],
+        summary: 'Parada honesta de um job (budget/kill-switch) — estaciona sem incidente (§5)',
+        security: [{ bearerAuth: [] }],
+        params: z.object({ id: z.string().uuid() }),
+        body: honestStopBody,
+        response: {
+          200: z.object({ status: z.literal('paused') }),
+          404: problemSchema,
+          409: problemSchema,
+        },
+      },
+    },
+    async (
+      req: { auth?: { tenantId: string }; params: { id: string }; body: z.infer<typeof honestStopBody>; id: unknown },
+      reply: FastifyReply,
+    ) => {
+      const outcome = await runtime.pauseJob(req.auth!.tenantId, req.params.id, req.body.lockToken, req.body.reason);
+      if (!outcome.ok) {
+        if (outcome.reason === 'notFound') {
+          return problem(reply, 404, PROBLEM_TYPES.notFound, 'Job não encontrado', String(req.id));
+        }
+        return problem(reply, 409, PROBLEM_TYPES.conflict, 'Parada honesta recusada', String(req.id), outcome.message);
+      }
+      return { status: outcome.status };
+    },
+  );
+
   app.post(
     '/v1/jobs/locks',
     {

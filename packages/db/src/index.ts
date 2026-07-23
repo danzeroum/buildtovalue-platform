@@ -138,6 +138,7 @@ export {
 export {
   completeJob,
   failJob,
+  pauseJob,
   listJobs,
   lockJobs,
   type JobConclusion,
@@ -148,6 +149,7 @@ export {
   createRuntime,
   type FailOutcome,
   type JobOutcome,
+  type PauseOutcome,
   type PlatformRuntime,
 } from './runtime/facade.js';
 export {
@@ -215,6 +217,7 @@ export {
 export {
   runAgentJob,
   simulateWalker,
+  isHonestStop,
   type AgentJobInput,
   type ResolvedAgentGraph,
   type AgentGraphResolver,

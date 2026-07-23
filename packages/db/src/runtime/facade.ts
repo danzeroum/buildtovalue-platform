@@ -54,6 +54,7 @@ import {
 import {
   completeJob as completeJobRow,
   failJob as failJobRow,
+  pauseJob as pauseJobRow,
   listJobs,
   lockJobs,
   type JobListItem,
@@ -170,7 +171,18 @@ export interface PlatformRuntime {
     error: string,
     now: string,
   ): Promise<FailOutcome>;
+  /** Parada honesta (§5): estaciona o job SEM incidente nem avanço da instância. */
+  pauseJob(
+    tenantId: string,
+    jobId: string,
+    lockToken: string,
+    reason: string,
+  ): Promise<PauseOutcome>;
 }
+
+export type PauseOutcome =
+  | { ok: true; status: 'paused' }
+  | { ok: false; reason: 'notFound' | 'staleToken' | 'notLocked'; message: string };
 
 export function createRuntime(
   sql: Sql,
@@ -292,6 +304,20 @@ export function createRuntime(
         return { ok: true, status: 'failed' };
       }
       return { ok: true, status: 'available' };
+    },
+    async pauseJob(tenantId, jobId, lockToken, reason) {
+      // Parada honesta: estaciona o job. SEM advanceInstance (a instância NÃO
+      // avança do agentTask — segue ativa, pausada), SEM incidente. O fato
+      // agent:parada já foi gravado pelo worker; aqui só solta o job da fila.
+      const conclusion = await pauseJobRow(sql, tenantId, jobId, lockToken, reason);
+      if (!conclusion.ok) {
+        return {
+          ok: false,
+          reason: conclusion.reason,
+          message: conclusion.reason === 'notFound' ? 'job não encontrado' : 'lock_token não é o vigente',
+        };
+      }
+      return { ok: true, status: 'paused' };
     },
   };
 }
