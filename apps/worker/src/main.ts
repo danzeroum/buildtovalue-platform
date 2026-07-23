@@ -8,6 +8,7 @@ import {
   dispatchOutboxOnce,
   lockJobs,
   runAgentJob,
+  type AgentJobInput,
   OUTBOX_CHANNEL,
   runtimeDepths,
   sweepDueTimersOnce,
@@ -37,17 +38,22 @@ const registry = createHandlerRegistry({
   log: (message, fields) => logger.info(fields ?? {}, message),
 });
 
-// AgentRunner (AG-2.2): materializa o `agentTask` (job type 'agent'). O interior
-// não é determinístico (D27) e NUNCA roda no CI. O provider REAL do piloto pluga
-// aqui (chave via secret://, nunca ecoada). Sem provider real nesta build, o
-// resolver devolve null → bloqueio HONESTO (voz de operador → incidente), nunca
-// uma conclusão silenciosa. Kill-switch em-execução e budget entram na etapa 2.
+// AgentRunner (AG-2.2 etapa 2): materializa o `agentTask` (job type 'agent') —
+// CAMINHA o grafo agentflow. O interior não é determinístico (D27). Parada
+// honesta em execução (kill-switch entre passos) + budget preservam a trilha
+// parcial → incidente com voz de operador, nunca conclusão silenciosa.
+// `resolveGraph` aqui é o STUB DEV/TESTE (grafo do payload, fromPayload=true) —
+// recusado em produção pela guarda dura. A etapa 3 troca por registry+pin.
 registry.register('agent', async (job) => {
-  const payload = {
-    prompt: typeof job.payload.prompt === 'string' ? job.payload.prompt : '',
+  const input = {
     elementId: typeof job.payload.elementId === 'string' ? job.payload.elementId : undefined,
+    graph: job.payload.graph as AgentJobInput['graph'],
+    fixtures: job.payload.fixtures as AgentJobInput['fixtures'],
   };
-  const outcome = await runAgentJob(sql, job.tenantId, payload, () => null);
+  const outcome = await runAgentJob(sql, job.tenantId, input, {
+    nodeEnv: config.NODE_ENV,
+    resolveGraph: async (i) => (i.graph ? { graph: i.graph, fromPayload: true } : null),
+  });
   return outcome.ok ? { ok: true, result: outcome.result } : { ok: false, error: outcome.message };
 });
 const waker = createWaker();

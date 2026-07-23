@@ -206,6 +206,9 @@ importers:
 
   packages/db:
     dependencies:
+      '@buildtovalue/agentflow':
+        specifier: 1.1.0-next.0
+        version: 1.1.0-next.0
       '@buildtovalue/core':
         specifier: 1.2.0-next.0
         version: 1.2.0-next.0

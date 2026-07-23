@@ -302,6 +302,27 @@ versão. **Ação (bpmn, quando conveniente):** ajustar `publishConfig.tag`/flux
 `next` no changesets — o desalinhamento é no passo de publish/`npm publish
 --tag`). Registrar o fix no changelog do bpmn.
 
+## 2.10 AG-2.2 — caminho de grafo em PAYLOAD (transitório sob gate)
+
+O AgentRunner (etapa 2) caminha o grafo agentflow por um **resolver injetado**
+(`resolveGraph`). Hoje o stub lê o grafo do **payload do job** (`fromPayload:true`)
+— caminho **DEV/TESTE**, com **guarda dura**: `NODE_ENV=production` recusa
+(`blocked: 'ungoverned-graph'`). Grafo de payload é NÃO-GOVERNADO: não passou por
+`validateGraph`, sem versão, sem lint — é a porta por onde um tool irreversível
+sem gate entraria antes da etapa 5.
+
+**PONTO DE COLAPSO (nomeado):** a **etapa 3 [GATE+MIGRAÇÃO]** DELETA o caminho de
+payload — o resolver passa a resolver `agentRef` contra o registry `agent_definitions`
+(pin na instância, D3), e `runAgentJob`/testes ficam intactos (só a implementação
+do resolver muda). O `fromPayload` e a guarda somem no colapso.
+
+**Lote de mudanças na biblioteca (agentflow, um único release):** para não gastar
+uma ida-e-volta de publicação por etapa, AGRUPAR num só changeset/minor:
+- `FactSource` += `'evidencia-verificada'` (D30, aceite 5) — só o `run` real emite;
+  simulação NUNCA (teste do aceite);
+- o que as etapas 3–5 revelarem (modelo de fato single-agent, gate de tool D31).
+Peço **um** release do bpmn quando o lote fechar (etapa 3), não três improvisados.
+
 ## 3. Registro de fluxo (sem ação sua)
 
 - **~~Follow-up bpmn~~ RESOLVIDO (PR bpmn#169, mergeada 22/07):**

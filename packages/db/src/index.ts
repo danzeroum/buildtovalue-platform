@@ -151,8 +151,15 @@ export {
 export { fixtureAiProvider, type AiProvider, type AiCompletion } from './agent/aiProvider.js';
 export {
   runAgentJob,
-  type AgentJobPayload,
+  simulateWalker,
+  type AgentJobInput,
+  type ResolvedAgentGraph,
+  type AgentGraphResolver,
+  type AgentWalker,
+  type AgentWalkResult,
+  type ShouldStop,
+  type StopReason,
   type AgentBlock,
+  type AgentRunDeps,
   type AgentRunOutcome,
-  type ProviderResolver,
 } from './agent/agentRunner.js';
