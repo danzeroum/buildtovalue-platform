@@ -173,12 +173,43 @@ async function applyEffect(
 ): Promise<void> {
   const effect = row.effect;
   switch (effect.type) {
-    case 'CreateJob':
+    case 'CreateJob': {
+      // SUBSTITUIÇÃO DO PIN (AG-2.2 etapa 4): o engine emite `agent` com a ref
+      // DECLARADA no payload; o host a troca pela EFETIVA, lida da tabela
+      // OPERACIONAL `instance_agent_pins` (resolvida no start) — NUNCA da trilha
+      // (auditoria ≠ execução, D13/D32). Grava as DUAS refs (auditor vê "declarou
+      // @latest, rodou @1.2.0"). Pin ausente → incidente `agentPinMissing`; JAMAIS
+      // resolver aqui (seria a resolução flutuante voltando pela porta dos fundos).
+      if (effect.jobType === 'agent') {
+        const payload = (effect.payload ?? {}) as { elementId?: unknown };
+        const elementId = typeof payload.elementId === 'string' ? payload.elementId : undefined;
+        const pinRows = elementId
+          ? await tx<{ declared_ref: string; effective_ref: string }[]>`
+              SELECT declared_ref, effective_ref FROM instance_agent_pins
+              WHERE instance_id = ${row.instance_id} AND element_id = ${elementId}`
+          : [];
+        const pin = pinRows[0];
+        if (!pin) {
+          await tx`INSERT INTO incidents (tenant_id, instance_id, kind, message, effect_key)
+            VALUES (${row.tenant_id}, ${row.instance_id}, 'agentPinMissing',
+                    ${`agentTask '${elementId ?? '?'}' sem pin operacional — o start não resolveu (nunca resolver no despacho)`},
+                    ${row.effect_key})
+            ON CONFLICT (effect_key) DO NOTHING`;
+          return;
+        }
+        const agentPayload = { elementId, declaredRef: pin.declared_ref, effectiveRef: pin.effective_ref };
+        await tx`INSERT INTO jobs (tenant_id, instance_id, wait_key, type, payload)
+          VALUES (${row.tenant_id}, ${row.instance_id}, ${effect.waitKey!}, 'agent',
+                  ${tx.json(agentPayload as never)})
+          ON CONFLICT (wait_key) DO NOTHING`;
+        return;
+      }
       await tx`INSERT INTO jobs (tenant_id, instance_id, wait_key, type, payload)
         VALUES (${row.tenant_id}, ${row.instance_id}, ${effect.waitKey!},
                 ${effect.jobType ?? 'noop'}, ${tx.json((effect.payload ?? {}) as never)})
         ON CONFLICT (wait_key) DO NOTHING`;
       return;
+    }
     case 'CancelJob':
       // Job cancelado não conclui: sai de available/locked; conclusão tardia
       // com token antigo cai no fencing (409). Terminais ficam como estão.

@@ -55,7 +55,9 @@ const registry = createHandlerRegistry({
 registry.register('agent', async (job) => {
   const input: AgentJobInput = {
     elementId: typeof job.payload.elementId === 'string' ? job.payload.elementId : undefined,
-    agentRef: typeof job.payload.agentRef === 'string' ? job.payload.agentRef : undefined,
+    // `effectiveRef` = o PIN substituído no despacho (etapa 4); o worker roda o
+    // grafo governado por ele, nunca pela ref declarada/flutuante.
+    agentRef: typeof job.payload.effectiveRef === 'string' ? job.payload.effectiveRef : undefined,
     fixtures: job.payload.fixtures as AgentJobInput['fixtures'],
   };
   const outcome = await runAgentJob(sql, job.tenantId, input, {
@@ -78,6 +80,7 @@ registry.register('agent', async (job) => {
         visitedNodes: outcome.walk.visitedNodes,
         complete: outcome.walk.complete,
         stopReason: outcome.ok ? undefined : outcome.message,
+        decisions: outcome.walk.decisions,
       });
       await withTenant(sql, job.tenantId, (tx) =>
         persistAgentTrail(tx, {

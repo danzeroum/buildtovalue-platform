@@ -233,16 +233,41 @@ export async function recordAgentPinsAtStart(
       // agente — `system`. Gravado desde já, consultável, sem migração retroativa.
       actor: { type: 'system', id: 'runtime' },
     };
+    // EVIDÊNCIA (append-only, D32): a versão efetiva aparece no history_events.
     await tx`INSERT INTO history_events
         (tenant_id, instance_id, seq, kind, payload, engine_version, effect_key)
       VALUES (${tenantId}, ${instanceId}, ${historySeq(0, index)}, 'agent:pinResolved',
               ${tx.json(pin as never)}, ${engineVersion},
               ${`host:agent-pin:${instanceId}:${node.id}`})
       ON CONFLICT (effect_key) DO NOTHING`;
+    // ESTADO OPERACIONAL (0008): a MESMA TX grava o pin na tabela dedicada que o
+    // despacho do CreateJob(agent) lê — nunca a trilha. Imutável; idempotente.
+    await tx`INSERT INTO instance_agent_pins
+        (tenant_id, instance_id, element_id, declared_ref, effective_ref)
+      VALUES (${tenantId}, ${instanceId}, ${node.id}, ${requestedRef}, ${resolved.pinnedRef})
+      ON CONFLICT (tenant_id, instance_id, element_id) DO NOTHING`;
     results.push({ ok: true, pin });
     index += 1;
   }
   return results;
+}
+
+/** Pin operacional lido no despacho do CreateJob(agent) — a fonte de execução
+ * (NUNCA a trilha). `null` quando não há pin para o (instância, elemento). */
+export interface OperationalAgentPin {
+  declaredRef: string;
+  effectiveRef: string;
+}
+
+export async function getInstanceAgentPin(
+  tx: TransactionSql,
+  instanceId: string,
+  elementId: string,
+): Promise<OperationalAgentPin | null> {
+  const [row] = await tx<{ declared_ref: string; effective_ref: string }[]>`
+    SELECT declared_ref, effective_ref FROM instance_agent_pins
+    WHERE instance_id = ${instanceId} AND element_id = ${elementId}`;
+  return row ? { declaredRef: row.declared_ref, effectiveRef: row.effective_ref } : null;
 }
 
 /**

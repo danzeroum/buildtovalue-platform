@@ -144,6 +144,8 @@ export function buildAgentFacts(input: {
   visitedNodes: string[];
   complete: boolean;
   stopReason?: string;
+  /** nós de decisão que dispararam (do walk) — elo `decisao` da cadeia D1. */
+  decisions?: string[];
 }): AgentFact[] {
   const facts: AgentFact[] = [];
   let step = 0;
@@ -161,6 +163,12 @@ export function buildAgentFacts(input: {
   }
   // I/O da corrida (input+output, mascarados na persistência).
   facts.push({ step: step++, kind: 'io', source: 'fixture', message: 'I/O da corrida', io: input.io });
+  // decisão: um fato por nó de decisão que roteou (fecha a cadeia D1 intenção→
+  // ação→io→DECISÃO→evidência). Derivado do trail — o valor roteado fica na
+  // variável de decisão (D13), a trilha registra QUE decidiu, não o dado.
+  for (const nodeId of input.decisions ?? []) {
+    facts.push({ step: step++, kind: 'decisao', source: 'fixture', message: `decisão em '${nodeId}'`, nodeId });
+  }
   // evidência: o resultado como evidência (só do output; nunca conteúdo pessoal).
   if (input.complete && input.io.output) {
     facts.push({

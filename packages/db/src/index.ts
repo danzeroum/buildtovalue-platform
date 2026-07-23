@@ -169,11 +169,13 @@ export {
   resolveAgentRef,
   resolveAgentRefTx,
   recordAgentPinsAtStart,
+  getInstanceAgentPin,
   type AgentDefinitionRow,
   type DeployAgentOutcome,
   type ResolvedAgentDefinition,
   type AgentPin,
   type AgentPinResult,
+  type OperationalAgentPin,
 } from './registry/agentStore.js';
 export {
   runAgentJob,
