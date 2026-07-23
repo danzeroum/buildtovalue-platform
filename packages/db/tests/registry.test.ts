@@ -10,6 +10,7 @@ import {
   engineForRef,
   getFormDefinitionByRef,
   listProcessDefinitions,
+  listStartableDefinitions,
 } from '../src/registry/store.js';
 import { createRuntime } from '../src/runtime/facade.js';
 import { advanceInstance } from '../src/runtime/advance.js';
@@ -252,6 +253,25 @@ describe('registry (migração 0004) — deploy imutável e engine do registry',
       engineVersion: 'test',
     });
     expect(again.ok && again.definition.registry_ref).toBe('aprovacao@2');
+  });
+
+  it('listStartable: projeção {id,name,version} SEM diagrama; cursor estável (etapa 5)', async () => {
+    // já há aprovacao@1 e @2 do teste anterior; publica um 2º nome para paginar
+    await deployProcessDefinition(api, tenant, { name: 'onboarding', diagram: validDiagram(), engineVersion: 'test' });
+
+    const page1 = await listStartableDefinitions(api, tenant, { limit: 2 });
+    expect(page1.items).toHaveLength(2);
+    // projeção MÍNIMA: só id/name/version — NADA de diagrama/registry_ref/xml
+    for (const item of page1.items) {
+      expect(Object.keys(item).sort()).toEqual(['id', 'name', 'version']);
+      expect(item).not.toHaveProperty('diagram');
+    }
+    expect(page1.nextCursor).not.toBeNull();
+
+    // cursor avança sem repetir a linha de fronteira
+    const page2 = await listStartableDefinitions(api, tenant, { limit: 2, cursor: page1.nextCursor! });
+    const ids1 = new Set(page1.items.map((i) => i.id));
+    for (const item of page2.items) expect(ids1.has(item.id)).toBe(false);
   });
 
   it('fim-a-fim: definição DEPLOYADA roda no engine do registry, com classificações do FORM', async () => {

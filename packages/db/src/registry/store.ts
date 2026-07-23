@@ -191,6 +191,49 @@ export async function listProcessDefinitions(
   });
 }
 
+/**
+ * Projeção iniciável (AG-2.1, etapa 5 [GATE]): {id, name, version} — SEM
+ * diagrama/XML. Serve o Console para quem tem `instances:start` mas NÃO
+ * `definitions:read` (o business): lista o que dá para iniciar sem expor o
+ * modelo. O `definition_ref` que a instância aponta = `name@version`, então
+ * o cliente reconstrói o ref a partir de name+version sem precisar do
+ * `registry_ref` cru. Mesmo cursor opaco/estável das demais listagens.
+ */
+export interface StartableDefinitionRow {
+  id: string;
+  name: string;
+  version: number;
+}
+
+export async function listStartableDefinitions(
+  sql: Sql,
+  tenantId: string,
+  options: { cursor?: string; limit?: number } = {},
+): Promise<Page<StartableDefinitionRow>> {
+  const limit = Math.min(Math.max(options.limit ?? 20, 1), 100);
+  const after = options.cursor ? decodeCursor(options.cursor) : undefined;
+  return withTenant(sql, tenantId, async (tx) => {
+    const rows = await tx`
+      SELECT id, name, version,
+             created_at::text AS created_at_cursor
+      FROM process_definitions
+      WHERE (${after?.createdAt ?? null}::text::timestamptz IS NULL
+             OR (created_at, id) > (${after?.createdAt ?? null}::text::timestamptz, ${after?.id ?? null}::uuid))
+      ORDER BY created_at, id
+      LIMIT ${limit + 1}`;
+    const items = rows.slice(0, limit).map((r) => ({
+      id: r.id as string,
+      name: r.name as string,
+      version: r.version as number,
+    }));
+    const nextCursor =
+      rows.length > limit
+        ? encodeCursor(String(rows[limit - 1].created_at_cursor), String(rows[limit - 1].id))
+        : null;
+    return { items, nextCursor };
+  });
+}
+
 export async function listFormDefinitions(
   sql: Sql,
   tenantId: string,
@@ -229,6 +272,11 @@ export interface PlatformRegistry {
     tenantId: string,
     options?: { cursor?: string; limit?: number; name?: string },
   ): Promise<Page<Omit<ProcessDefinitionRow, 'diagram'>>>;
+  /** Projeção iniciável {id,name,version} — escopo instances:start (etapa 5). */
+  listStartable(
+    tenantId: string,
+    options?: { cursor?: string; limit?: number },
+  ): Promise<Page<StartableDefinitionRow>>;
   lintForm(schema: FormSchema): SchemaIssue[];
   deployForm(
     tenantId: string,
@@ -248,6 +296,7 @@ export function createRegistry(sql: Sql, engineVersion: string): PlatformRegistr
       deployProcessDefinition(sql, tenantId, { ...input, engineVersion }),
     getProcess: (tenantId, idOrRef) => getProcessDefinition(sql, tenantId, idOrRef),
     listProcesses: (tenantId, options) => listProcessDefinitions(sql, tenantId, options),
+    listStartable: (tenantId, options) => listStartableDefinitions(sql, tenantId, options),
     lintForm: (schema) => validateFormSchema(schema),
     deployForm: (tenantId, input) => deployFormDefinition(sql, tenantId, input),
     getFormByRef: (tenantId, ref) => getFormDefinitionByRef(sql, tenantId, ref),

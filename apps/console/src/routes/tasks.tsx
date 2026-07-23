@@ -4,7 +4,7 @@ import { applyDefaults, validateSubmission, type FormSchema, type SubmissionErro
 import '@buildtovalue/forms-react/styles.css';
 import { api, problemMessage } from '../api/client.js';
 import { useResource } from '../api/useResource.js';
-import type { FormDefByRef, ProcessItem, TaskDetail, TaskItem } from '../api/types.js';
+import type { FormDefByRef, StartableItem, TaskDetail, TaskItem } from '../api/types.js';
 import { can } from '../capabilities.js';
 import { consoleEvaluator } from '../sfeel.js';
 import { relativeTime, shortId } from '../format.js';
@@ -49,10 +49,11 @@ export function TasksRoute() {
   }, [items, search]);
 
   if (!user) return null;
-  // Precisa de instances:start E definitions:read: sem a segunda, o modal não
-  // consegue listar o que iniciar (403) — não oferecemos um botão que dá em
-  // beco. A lacuna de RBAC (business tem start, não read) está em pendencias §2.5.
-  const canStart = can(user.role, 'instances:start') && can(user.role, 'definitions:read');
+  // Só `instances:start` (AG-2.1 etapa 5): o modal agora lista por
+  // GET /v1/startable-definitions — projeção {id,name,version} escopada pelo
+  // MESMO `instances:start`, sem exigir `definitions:read`. Fecha a lacuna de
+  // RBAC de pendencias §2.5 (o business inicia sem ganhar acesso ao modelo).
+  const canStart = can(user.role, 'instances:start');
 
   return (
     <section className="route tasks" aria-label="Tarefas">
@@ -521,8 +522,11 @@ function ReassignModal({ taskId, onClose, onDone }: { taskId: string; onClose: (
 
 /** Iniciar processo (tela 05) — fecha o fluxo-alvo; Idempotency-Key no POST. */
 function StartInstanceModal({ onClose }: { onClose: () => void }) {
+  // AG-2.1 etapa 5: projeção iniciável {id,name,version} escopada por
+  // `instances:start` PURO — o business lista o que iniciar sem `definitions:read`
+  // e sem receber o modelo (XML). O ref é reconstruído de name@version.
   const defs = useResource(
-    (signal) => api.GET('/v1/process-definitions', { params: { query: { limit: 50 } }, signal }),
+    (signal) => api.GET('/v1/startable-definitions', { params: { query: { limit: 50 } }, signal }),
     [],
   );
   const [ref, setRef] = useState<string | null>(null);
@@ -551,7 +555,7 @@ function StartInstanceModal({ onClose }: { onClose: () => void }) {
     setResult({ id: data.id });
   }
 
-  const items: ProcessItem[] = defs.value.state === 'ready' ? defs.value.data.items : [];
+  const items: StartableItem[] = defs.value.state === 'ready' ? defs.value.data.items : [];
 
   return (
     <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label="Iniciar processo">
@@ -585,20 +589,23 @@ function StartInstanceModal({ onClose }: { onClose: () => void }) {
             )}
             {defs.value.state === 'ready' && items.length > 0 && (
               <div className="def-list" role="radiogroup" aria-label="Definição">
-                {items.map((d) => (
-                  <button
-                    key={d.id}
-                    type="button"
-                    role="radio"
-                    aria-checked={ref === d.registryRef}
-                    className="def-item"
-                    data-selected={ref === d.registryRef || undefined}
-                    onClick={() => setRef(d.registryRef)}
-                  >
-                    <span className="def-name">{d.name}</span>
-                    <span className="mono def-ref">{d.registryRef}</span>
-                  </button>
-                ))}
+                {items.map((d) => {
+                  const defRef = `${d.name}@${d.version}`;
+                  return (
+                    <button
+                      key={d.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={ref === defRef}
+                      className="def-item"
+                      data-selected={ref === defRef || undefined}
+                      onClick={() => setRef(defRef)}
+                    >
+                      <span className="def-name">{d.name}</span>
+                      <span className="mono def-ref">{defRef}</span>
+                    </button>
+                  );
+                })}
               </div>
             )}
             <label className="field">

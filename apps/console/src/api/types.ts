@@ -27,6 +27,7 @@ export type TaskItem = Get200<'/v1/user-tasks'>['items'][number];
 export type TaskDetail = Get200<'/v1/user-tasks/{id}'>;
 export type FormDefByRef = Get200<'/v1/form-definitions/{ref}'>;
 export type ProcessItem = Get200<'/v1/process-definitions'>['items'][number];
+export type StartableItem = Get200<'/v1/startable-definitions'>['items'][number];
 
 export type InstanceItem = Get200<'/v1/instances'>['items'][number];
 export type InstanceDetail = Get200<'/v1/instances/{id}'>;
