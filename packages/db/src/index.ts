@@ -139,3 +139,12 @@ export {
   type AuditActor,
   type TenantAuditInput,
 } from './audit/tenantAudit.js';
+export {
+  getTenantAiConfig,
+  upsertTenantAiConfig,
+  setKillSwitch,
+  assertSecretRef,
+  type TenantAiConfig,
+  type AiConfigInput,
+} from './agent/tenantAiConfig.js';
+export { fixtureAiProvider, type AiProvider, type AiCompletion } from './agent/aiProvider.js';
