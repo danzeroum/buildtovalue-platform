@@ -181,6 +181,12 @@ export {
   type WorldDelta,
 } from './agent/worldDelta.js';
 export {
+  buildGatePayloadTx,
+  setGatePayloadTx,
+  sealGatedEffectTx,
+  type SealOutcome,
+} from './agent/gateFio.js';
+export {
   REPROPOSAL_CAP,
   checkToolFresh,
   effectSelo,
