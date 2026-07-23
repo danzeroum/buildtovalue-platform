@@ -1,12 +1,11 @@
 import { randomUUID } from 'node:crypto';
-import { validateSubmission, type SubmissionErrors } from '@buildtovalue/forms';
+import { formExpressionEvaluator, validateSubmission, type SubmissionErrors } from '@buildtovalue/forms';
 import type { Sql } from '../client.js';
 import type { FieldCipher } from '../crypto/fieldCipher.js';
 import { withTenant } from '../tenancy.js';
 import { getDefinitionDecisionInfo, getFormDefinitionByRef } from '../registry/store.js';
 import { advanceInstance } from './advance.js';
 import { insertAuditEvent } from './audit.js';
-import { formEvaluator } from './formEvaluator.js';
 
 /**
  * User tasks pelo CONTRATO público (shape §6): claim PERSISTENTE (D21 —
@@ -253,9 +252,9 @@ export async function completeUserTask(
     if (!form) {
       return { ok: false as const, reason: 'formMissing' as const, message: `form '${String(task.form_ref)}' não está no registry` };
     }
-    // avaliador RICO de formulário (não o de gateway, que é só igualdade) —
-    // fecha a divergência com o preview do console (etapa 7).
-    const validated = validateSubmission(form.schema, input.submission, formEvaluator);
+    // avaliador CANÔNICO de formulário (@buildtovalue/forms) — a MESMA função do
+    // preview do console; a divergência histórica (§2.6) fica fechada de vez.
+    const validated = validateSubmission(form.schema, input.submission, formExpressionEvaluator);
     if (!validated.ok) return { ok: false as const, reason: 'invalidSubmission' as const, errors: validated.errors };
 
     // etapa 6 — A DECISÃO NUNCA É IGNORADA EM SILÊNCIO (mesma família do

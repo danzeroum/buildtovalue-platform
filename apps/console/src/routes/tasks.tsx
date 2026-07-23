@@ -1,12 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { FormRenderer } from '@buildtovalue/forms-react';
-import { applyDefaults, validateSubmission, type FormSchema, type SubmissionErrors } from '@buildtovalue/forms';
+import { applyDefaults, formExpressionEvaluator, validateSubmission, type FormSchema, type SubmissionErrors } from '@buildtovalue/forms';
 import '@buildtovalue/forms-react/styles.css';
 import { api, problemMessage } from '../api/client.js';
 import { useResource } from '../api/useResource.js';
 import type { FormDefByRef, StartableItem, TaskDetail, TaskItem } from '../api/types.js';
 import { can } from '../capabilities.js';
-import { consoleEvaluator } from '../sfeel.js';
 import { relativeTime, shortId } from '../format.js';
 import { useSession } from '../shell.js';
 import { Button, NonIdeal, StatusPill, Tag } from '../ui/ui.js';
@@ -324,7 +323,7 @@ function TaskFormLoaded({
   async function complete() {
     setErrors(undefined);
     setBanner(null);
-    const local = validateSubmission(schema, values, consoleEvaluator);
+    const local = validateSubmission(schema, values, formExpressionEvaluator);
     if (!local.ok) {
       setErrors(local.errors);
       return;
@@ -427,7 +426,7 @@ function TaskFormLoaded({
         <FormRenderer
           schema={schema}
           values={values}
-          evaluator={consoleEvaluator}
+          evaluator={formExpressionEvaluator}
           errors={errors}
           disabled={!claimToken}
           onChange={(key, value) => setValues((v) => ({ ...v, [key]: value }))}

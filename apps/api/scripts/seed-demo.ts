@@ -41,15 +41,24 @@ function reembolsoForm(): FormSchema {
     title: 'Reembolso — aprovação',
     fields: [
       { key: 'colaborador', type: 'text', label: 'Colaborador', required: true, dataClassification: 'personal' },
-      { key: 'valor', type: 'number', label: 'Valor (R$)', required: true, dataClassification: 'internal' },
+      {
+        key: 'valor',
+        type: 'number',
+        label: 'Valor (R$)',
+        required: true,
+        dataClassification: 'internal',
+        // Avaliador CANÔNICO (@buildtovalue/forms) no servidor E no preview
+        // (colapso §2.7): a faixa rica com `and` vale idêntica nos dois lados.
+        validation: 'value > 0 and value <= 50000',
+        validationMessage: 'valor deve ficar entre 1 e 50.000',
+      },
       {
         key: 'justificativa',
         type: 'textarea',
         label: 'Justificativa',
         dataClassification: 'internal',
-        // Igualdade (subconjunto que o servidor E o preview avaliam hoje —
-        // ver pendencias §2.6: unificar o avaliador rico é item da AG-2.1).
-        visibleWhen: 'decisao = "reprovar"',
+        // comparação + disjunção: exigida quando o valor é alto OU foi reprovado
+        visibleWhen: 'valor > 5000 or decisao = "reprovar"',
       },
       // A DECISÃO é um CAMPO do form (não uma chave fora do schema): a v1
       // conclui com o form validado; um gateway pode ramificar por `decisao`.

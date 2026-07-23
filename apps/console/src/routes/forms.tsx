@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { FormRenderer } from '@buildtovalue/forms-react';
 import {
   applyDefaults,
+  formExpressionEvaluator,
   validateFormSchema,
   type DataClassification,
   type FieldType,
@@ -10,7 +11,6 @@ import {
 } from '@buildtovalue/forms';
 import '@buildtovalue/forms-react/styles.css';
 import { api, problemMessage } from '../api/client.js';
-import { consoleEvaluator } from '../sfeel.js';
 import { Button, Tag } from '../ui/ui.js';
 
 const FIELD_TYPES: FieldType[] = ['text', 'textarea', 'number', 'date', 'select', 'radio', 'checkbox'];
@@ -165,7 +165,7 @@ export function FormsRoute() {
           <FormRenderer
             schema={schema}
             values={previewValues}
-            evaluator={consoleEvaluator}
+            evaluator={formExpressionEvaluator}
             onChange={(key, value) => setPreviewValues((v) => ({ ...v, [key]: value }))}
           />
         </div>

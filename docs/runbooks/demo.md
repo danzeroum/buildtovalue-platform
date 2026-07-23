@@ -70,6 +70,13 @@ Cria o tenant `acme`, um usuário por persona (senha `demo1234`), o formulário
 pnpm --filter @platform/api run seed:demo
 ```
 
+> **Avaliador de forms unificado (colapso §2.7).** O `reembolso@1` do demo usa
+> expressões RICAS de verdade — `validation: value > 0 and value <= 50000` e
+> `visibleWhen: valor > 5000 or decisao = "reprovar"` — avaliadas pelo MESMO
+> `formExpressionEvaluator` de `@buildtovalue/forms` no preview do console E no
+> `validateSubmission` do servidor. Não há mais o interim só-igualdade: o que o
+> `/forms` desenha é exatamente o que o servidor aceita na conclusão.
+
 Personas (todas senha `demo1234`, organização `acme`):
 
 | e-mail | papel | faz |
