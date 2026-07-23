@@ -183,6 +183,30 @@ leitura); «Exportar XES» e abas Incidentes/Jobs/Timers gated por `operate:read
 Idempotency-Key estável por sessão do modal de início (re-tentativa não duplica
 instância).
 
+## 2.6 Avaliador de expressão: servidor × preview DIVERGEM (confirmado)
+
+Pergunta do dono na triagem final — **confirmada**:
+
+- **Servidor** (`validateSubmission` na conclusão de user task,
+  `packages/db/src/runtime/userTasks.ts:224`) injeta o `conditionEvaluator`
+  (`runtime/definitions.ts:77`) — o MESMO avaliador de GATEWAY do engine, que
+  suporta **só `variavel = literal`** (igualdade; regex `^var = literal$`).
+- **Preview do console** (`apps/console/src/sfeel.ts`) usa `consoleEvaluator` —
+  suporta comparações (`> >= < <= != =`) e `and`/`or`.
+
+**Consequência:** um form com `visibleWhen: 'valor > 5000'` ou
+`validation: 'value > 0 and value <= 50000'` (como o protótipo mostra) desenha
+certo no preview mas **reprova no servidor (422 "visibleWhen inválida")** na
+conclusão. O avaliador de gateway (igualdade, subconjunto v1) está CERTO para
+gateways; o BUG é o servidor **reusar** o de gateway para FORMS.
+
+**Correção (D10 — fonte única):** `@buildtovalue/forms` exporta o avaliador de
+FORM (comparações+and/or) e os DOIS lados consomem — console e o
+`validateSubmission` do servidor; apaga as duas cópias. É minor de biblioteca
+(bpmn) + consumo na plataforma → proponho como **item da AG-2.1** (v2 §4).
+Interim aplicado: o form do seed do demo usa só igualdade (`visibleWhen
+decisao = "reprovar"`), então o runbook conclui sem 422.
+
 ## 3. Registro de fluxo (sem ação sua)
 
 - **~~Follow-up bpmn~~ RESOLVIDO (PR bpmn#169, mergeada 22/07):**
