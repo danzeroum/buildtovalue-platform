@@ -149,3 +149,10 @@ export {
   type AiConfigInput,
 } from './agent/tenantAiConfig.js';
 export { fixtureAiProvider, type AiProvider, type AiCompletion } from './agent/aiProvider.js';
+export {
+  runAgentJob,
+  type AgentJobPayload,
+  type AgentBlock,
+  type AgentRunOutcome,
+  type ProviderResolver,
+} from './agent/agentRunner.js';

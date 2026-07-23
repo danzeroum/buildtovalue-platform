@@ -7,6 +7,7 @@ import {
   createFieldCipher,
   dispatchOutboxOnce,
   lockJobs,
+  runAgentJob,
   OUTBOX_CHANNEL,
   runtimeDepths,
   sweepDueTimersOnce,
@@ -34,6 +35,20 @@ const workerId = `worker-${process.pid}`;
 
 const registry = createHandlerRegistry({
   log: (message, fields) => logger.info(fields ?? {}, message),
+});
+
+// AgentRunner (AG-2.2): materializa o `agentTask` (job type 'agent'). O interior
+// não é determinístico (D27) e NUNCA roda no CI. O provider REAL do piloto pluga
+// aqui (chave via secret://, nunca ecoada). Sem provider real nesta build, o
+// resolver devolve null → bloqueio HONESTO (voz de operador → incidente), nunca
+// uma conclusão silenciosa. Kill-switch em-execução e budget entram na etapa 2.
+registry.register('agent', async (job) => {
+  const payload = {
+    prompt: typeof job.payload.prompt === 'string' ? job.payload.prompt : '',
+    elementId: typeof job.payload.elementId === 'string' ? job.payload.elementId : undefined,
+  };
+  const outcome = await runAgentJob(sql, job.tenantId, payload, () => null);
+  return outcome.ok ? { ok: true, result: outcome.result } : { ok: false, error: outcome.message };
 });
 const waker = createWaker();
 // Costura LGPD (D20): a varredura de timers avança instâncias que podem ter
