@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet">
+<style>
+doc-page:not(:defined){visibility:hidden}
+a{color:#1a6a54;text-decoration:none}a:hover{color:#9a7b1e;text-decoration:underline}
+</style>
+<script src="./doc-page.js"></script>
+</helmet>
+<doc-page margin="0.8in">
+<div style="font-family:'IBM Plex Sans',sans-serif;color:#44403a">
+
+<div style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:2.5px;color:#9a7b1e;margin-bottom:8px">PARECER DE DESIGN · AGENTES &amp; SQUADS · CANDIDATO A ADENDO-02</div>
+<h1 style="font-family:'Source Serif 4',Georgia,serif;font-size:30px;font-weight:600;letter-spacing:-0.5px;color:#262220;line-height:1.15;margin:0 0 14px">Parecer sobre as superfícies de plataforma para agentes e squads</h1>
+<div style="display:flex;flex-wrap:wrap;gap:6px 22px;font-size:12.5px;color:#6f675a;border-top:1px solid #e2ddd3;border-bottom:1px solid #e2ddd3;padding:10px 0;margin-bottom:22px">
+  <span style="white-space:nowrap"><strong style="color:#44403a;font-weight:600">De:</strong> Designer da plataforma BuildToValue</span>
+  <span style="white-space:nowrap"><strong style="color:#44403a;font-weight:600">Para:</strong> Governança do Plano (triagem → ADENDO-02)</span>
+  <span><strong style="color:#44403a;font-weight:600">Ref.:</strong> <span style="font-family:'IBM Plex Mono',monospace;font-size:11px">Prototipos Agentes e Squads.dc.html</span> (P1–P7) · H22 · agentflow A-1..A-7</span>
+  <span style="white-space:nowrap"><strong style="color:#44403a;font-weight:600">Data:</strong> 22 jul 2026</span>
+</div>
+
+<div style="background:#f4faf6;border:1px solid #dff0e6;border-left:4px solid #1a6a54;border-radius:12px;padding:16px 20px;margin-bottom:12px;break-inside:avoid">
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:1.8px;color:#1a6a54;margin-bottom:8px">SÍNTESE</div>
+  <p style="font-size:14.5px;line-height:1.6;color:#33413a;margin:0 0 12px"><strong style="color:#1a6a54">Recomendo aprovar a fatia v1 da §7</strong>, com os ajustes por superfície abaixo e duas adições de segurança que considero não-negociáveis. A frente é <em>menor</em> do que parece: o diferencial não pede runtime novo — pede telas de operação sobre o runtime que já passou por crash tests (§3), mais a implementação do H22 na biblioteca. O idioma visual é o da biblioteca (decisão C do parecer F3), então os dois mundos encaixam sem costura.</p>
+  <div style="display:flex;flex-direction:column;gap:7px;font-size:13px;color:#33413a">
+    <div style="display:flex;gap:10px"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;color:#1a6a54;flex-shrink:0;width:20px">a</span><span><strong>P1 é um modo do detalhe de tarefa</strong>, não uma rota nova — humanos e gates de agente na mesma Tasklist (D21/D15).</span></div>
+    <div style="display:flex;gap:10px"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;color:#1a6a54;flex-shrink:0;width:20px">b</span><span><strong>A trilha real cabe no drill-down do Operate</strong> (P2), não em rota própria — é o token do agentTask expandido.</span></div>
+    <div style="display:flex;gap:10px"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;color:#1a6a54;flex-shrink:0;width:20px">c</span><span><strong>O Squad Studio entra por ponte</strong> (<span style="font-family:'IBM Plex Mono',monospace;font-size:11px">?load=</span>, tela 08 do H22), não re-embutido — o editor é da biblioteca.</span></div>
+    <div style="display:flex;gap:10px"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;color:#1a6a54;flex-shrink:0;width:20px">d</span><span><strong>Mantenho a fatia; adiciono duas coisas baratas e críticas</strong> (world-delta em P1, confirmação auditada do kill-switch em P4). Detalhe no Bloco 2.</span></div>
+  </div>
+</div>
+
+<table style="width:100%;border-collapse:collapse;margin:18px 0 4px;font-size:12.5px">
+  <thead><tr>
+    <th style="text-align:left;padding:7px 8px;border-bottom:2px solid #262220;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1px;color:#6f675a;font-weight:500">SUPERFÍCIE</th>
+    <th style="text-align:left;padding:7px 8px;border-bottom:2px solid #262220;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1px;color:#6f675a;font-weight:500">FATIA v1 (§7)</th>
+    <th style="text-align:left;padding:7px 8px;border-bottom:2px solid #262220;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1px;color:#6f675a;font-weight:500">VEREDITO</th>
+  </tr></thead>
+  <tbody>
+    <tr><td style="padding:6px 8px;border-bottom:1px solid #e2ddd3;font-family:'IBM Plex Mono',monospace;font-size:11px">P1 Gate de agente</td><td style="padding:6px 8px;border-bottom:1px solid #e2ddd3;font-size:11.5px">completa</td><td style="padding:6px 8px;border-bottom:1px solid #e2ddd3"><span style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;background:#1a6a54;color:#fff;border-radius:999px;padding:2px 9px">APROVADO · EXEMPLAR</span></td></tr>
+    <tr><td style="padding:6px 8px;border-bottom:1px solid #e2ddd3;font-family:'IBM Plex Mono',monospace;font-size:11px">P2 Execução (Operate)</td><td style="padding:6px 8px;border-bottom:1px solid #e2ddd3;font-size:11.5px">completa</td><td style="padding:6px 8px;border-bottom:1px solid #e2ddd3"><span style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;background:#fdfaf1;color:#9a7b1e;border:1px solid #f6edd4;border-radius:999px;padding:2px 9px">APROVADO · 1 AJUSTE</span></td></tr>
+    <tr><td style="padding:6px 8px;border-bottom:1px solid #e2ddd3;font-family:'IBM Plex Mono',monospace;font-size:11px">P3 Squad em execução</td><td style="padding:6px 8px;border-bottom:1px solid #e2ddd3;font-size:11.5px">leitura</td><td style="padding:6px 8px;border-bottom:1px solid #e2ddd3"><span style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;background:#e7f2ec;color:#1a6a54;border:1px solid #cfe6da;border-radius:999px;padding:2px 9px">APROVADO (LEITURA)</span></td></tr>
+    <tr><td style="padding:6px 8px;border-bottom:1px solid #e2ddd3;font-family:'IBM Plex Mono',monospace;font-size:11px">P4 Inteligência do tenant</td><td style="padding:6px 8px;border-bottom:1px solid #e2ddd3;font-size:11.5px">completa</td><td style="padding:6px 8px;border-bottom:1px solid #e2ddd3"><span style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;background:#fdfaf1;color:#9a7b1e;border:1px solid #f6edd4;border-radius:999px;padding:2px 9px">APROVADO · +SEGURANÇA</span></td></tr>
+    <tr><td style="padding:6px 8px;border-bottom:1px solid #e2ddd3;font-family:'IBM Plex Mono',monospace;font-size:11px">P5 Catálogo de tools</td><td style="padding:6px 8px;border-bottom:1px solid #e2ddd3;font-size:11.5px">mínima</td><td style="padding:6px 8px;border-bottom:1px solid #e2ddd3"><span style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;background:#e7f2ec;color:#1a6a54;border:1px solid #cfe6da;border-radius:999px;padding:2px 9px">APROVADO (MÍNIMA)</span></td></tr>
+    <tr><td style="padding:6px 8px;border-bottom:1px solid #e2ddd3;font-family:'IBM Plex Mono',monospace;font-size:11px">P6 Deploy com lint</td><td style="padding:6px 8px;border-bottom:1px solid #e2ddd3;font-size:11.5px">completa</td><td style="padding:6px 8px;border-bottom:1px solid #e2ddd3"><span style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;background:#1a6a54;color:#fff;border-radius:999px;padding:2px 9px">APROVADO · EXEMPLAR</span></td></tr>
+    <tr><td style="padding:6px 8px;border-bottom:1px solid #e2ddd3;font-family:'IBM Plex Mono',monospace;font-size:11px">P7 Evidence Bundle</td><td style="padding:6px 8px;border-bottom:1px solid #e2ddd3;font-size:11.5px">card simples</td><td style="padding:6px 8px;border-bottom:1px solid #e2ddd3"><span style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;background:#e7f2ec;color:#1a6a54;border:1px solid #cfe6da;border-radius:999px;padding:2px 9px">APROVADO (CARD)</span></td></tr>
+  </tbody>
+</table>
+<p style="font-size:11.5px;color:#6f675a;margin:8px 0 0;line-height:1.5">Princípios que tratei como vinculantes de design (§4): IA rascunha·humanos assinam · trilha de fatos não “pensamento” · parada honesta é feature · efeito classifica/permissão decide/evidência explica · autonomia 0–5 como vocabulário · estado derivado por <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:#1a6a54">readinessState()</span>.</p>
+
+<!-- ============ BLOCO 1 ============ -->
+<div style="margin-top:30px;break-before:page">
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:2px;color:#9a7b1e;margin-bottom:4px">BLOCO 1</div>
+  <h2 style="font-family:'Source Serif 4',Georgia,serif;font-size:23px;font-weight:600;letter-spacing:-0.3px;color:#262220;margin:0 0 4px">Aprovação e ajustes, superfície a superfície</h2>
+  <p style="font-size:12.5px;color:#6f675a;margin:0 0 6px">Referência ao <span style="font-family:'IBM Plex Mono',monospace;font-size:11px">data-screen-label</span> dos protótipos P1–P7.</p>
+</div>
+
+<!-- P1 -->
+<div style="border:1px solid #dff0e6;background:#f8fcf9;border-radius:12px;padding:16px 18px;margin-top:16px;break-inside:avoid">
+  <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:8px">
+    <h3 style="font-family:'Source Serif 4',Georgia,serif;font-size:17px;font-weight:600;color:#262220;margin:0">P1 · Tarefa de gate</h3>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;background:#1a6a54;color:#fff;border-radius:999px;padding:2px 9px;white-space:nowrap">APROVADO · EXEMPLAR</span>
+  </div>
+  <p style="font-size:13.5px;line-height:1.6;margin:0"><strong style="color:#1a6a54">É a tela da frente e a demo de venda.</strong> Encarna “IA rascunha, humanos assinam”: a ação em linguagem de negócio, a tripla efeito/autorização/evidência como chips, o trecho da trilha que motivou o pedido, a autonomia como <em>dial</em> com o gate marcado, e o budget consumido. A inovação do <strong>world-delta</strong> (“se você aprovar, isto acontece no mundo”) é o que torna aprovação de agente legível para gente de negócio — nenhum concorrente faz isso.</p>
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:1.5px;color:#9a7b1e;margin:12px 0 4px">AJUSTES (menores)</div>
+  <ul style="margin:0;padding-left:18px;font-size:13.5px;line-height:1.55">
+    <li style="margin:5px 0">O escopo exato (“aprova ESTE envio, não a categoria”) precisa sobreviver à reabertura: se a instância mudou desde que a tarefa foi carregada (novos destinatários), o gate deve re-verificar e avisar — nunca aprovar um mundo obsoleto.</li>
+    <li style="margin:5px 0">“Escalar…” aqui é a reatribuição simples que decidi na F3 (decisão B) — mesmo componente, motivo auditado. Manter o verbo coerente entre Tasklist humana e gate de agente.</li>
+  </ul>
+</div>
+
+<!-- P2 -->
+<div style="border:1px solid #e2ddd3;border-radius:12px;padding:16px 18px;margin-top:14px;break-inside:avoid">
+  <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:8px">
+    <h3 style="font-family:'Source Serif 4',Georgia,serif;font-size:17px;font-weight:600;color:#262220;margin:0">P2 · Execução do agente no Operate</h3>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;background:#fdfaf1;color:#9a7b1e;border:1px solid #f6edd4;border-radius:999px;padding:2px 9px;white-space:nowrap">APROVADO · 1 AJUSTE</span>
+  </div>
+  <p style="font-size:13.5px;line-height:1.6;margin:0"><strong style="color:#1a6a54">Certo.</strong> O drill-down do token no <span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px">agentTask</span> abre a corrida real com a <strong>timeline unificada humano+agente</strong> — a tese do produto numa tela só. A parada honesta em âmbar (não vermelho) e o <span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px">BlockedDecision</span> como incidente com retry/resolve/escalar reusam o que o operador já conhece. Correto expor <span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px">executando</span>/<span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px">erro-de-integração</span> como estados do host, nunca derivados.</p>
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:1.5px;color:#9a7b1e;margin:12px 0 4px">AJUSTE</div>
+  <ul style="margin:0;padding-left:18px;font-size:13.5px;line-height:1.55">
+    <li style="margin:5px 0">A trilha real precisa da virtualização própria (o critério de 500 passos a 60fps do H22) e dos mesmos filtros da tela 07 — o protótipo mostra 5 fatos; a produção terá centenas. É requisito de implementação, não redesenho.</li>
+    <li style="margin:5px 0">O rótulo <span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px">evidência-verificada</span> (3º rótulo, exclusivo do runtime real) é o que diferencia esta trilha da simulação da biblioteca. Deixá-lo sempre visível e explicável.</li>
+  </ul>
+</div>
+
+<!-- P3 -->
+<div style="border:1px solid #e2ddd3;border-radius:12px;padding:16px 18px;margin-top:14px;break-inside:avoid">
+  <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:8px">
+    <h3 style="font-family:'Source Serif 4',Georgia,serif;font-size:17px;font-weight:600;color:#262220;margin:0">P3 · Squad em execução</h3>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;background:#e7f2ec;color:#1a6a54;border:1px solid #cfe6da;border-radius:999px;padding:2px 9px;white-space:nowrap">APROVADO (LEITURA)</span>
+  </div>
+  <p style="font-size:13.5px;line-height:1.6;margin:0"><strong style="color:#1a6a54">Concordo com leitura na v1.</strong> A visão de colaboração da tela 06 do H22 com dados reais — quem age, delegações em voo, autonomia da cadeia e o ponto exato onde o gate segura — já conta a história. As 6 arestas seguem a regra de acessibilidade E9 (traço+ícone+rótulo, nunca só cor). A versão rica/animada e a delegação multi-nível ficam para a F4, como proposto.</p>
+</div>
+
+<!-- P4 -->
+<div style="border:1px solid #e2ddd3;border-radius:12px;padding:16px 18px;margin-top:14px;break-inside:avoid">
+  <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:8px">
+    <h3 style="font-family:'Source Serif 4',Georgia,serif;font-size:17px;font-weight:600;color:#262220;margin:0">P4 · Inteligência do tenant</h3>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;background:#fdfaf1;color:#9a7b1e;border:1px solid #f6edd4;border-radius:999px;padding:2px 9px;white-space:nowrap">APROVADO · +SEGURANÇA</span>
+  </div>
+  <p style="font-size:13.5px;line-height:1.6;margin:0"><strong style="color:#1a6a54">Certo e crítico.</strong> Provider <strong>host-injetado</strong>, chave como referência ao secret manager (<span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px">secret://…</span>) — nunca campo em claro, respeitando o precedente do H9/KeyProvider e a cerca §2.7. Budget por tenant/processo e kill-switch presentes.</p>
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:1.5px;color:#9a7b1e;margin:12px 0 4px">ADIÇÃO DE SEGURANÇA (entra na v1)</div>
+  <ul style="margin:0;padding-left:18px;font-size:13.5px;line-height:1.55">
+    <li style="margin:5px 0">O <strong>kill-switch</strong> precisa de confirmação com motivo auditado e de deixar explícito o efeito no momento do clique: “agentes em execução fazem parada honesta; gates humanos seguem”. É a alavanca de emergência do tenant — não pode ser um toggle solto. Custo baixo (reusa o padrão de confirmação da F3), valor alto.</li>
+  </ul>
+</div>
+
+<!-- P5 -->
+<div style="border:1px solid #e2ddd3;border-radius:12px;padding:16px 18px;margin-top:14px;break-inside:avoid">
+  <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:8px">
+    <h3 style="font-family:'Source Serif 4',Georgia,serif;font-size:17px;font-weight:600;color:#262220;margin:0">P5 · Catálogo de tools com governança</h3>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;background:#e7f2ec;color:#1a6a54;border:1px solid #cfe6da;border-radius:999px;padding:2px 9px;white-space:nowrap">APROVADO (MÍNIMA)</span>
+  </div>
+  <p style="font-size:13.5px;line-height:1.6;margin:0"><strong style="color:#1a6a54">Mínima está correta.</strong> Habilitar/desabilitar tools por tenant, com efeito e autorização vindos do contrato (biblioteca) em leitura, e a trilha de quem habilitou o quê. A garantia visual de que <span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px">write-irreversible</span>/<span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px">external-commitment</span> nunca são “automática”, e que <span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px">proibida</span> aparece bloqueada, é o essencial. A matriz editável por tenant fica para F4.</p>
+</div>
+
+<!-- P6 -->
+<div style="border:1px solid #dff0e6;background:#f8fcf9;border-radius:12px;padding:16px 18px;margin-top:14px;break-inside:avoid">
+  <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:8px">
+    <h3 style="font-family:'Source Serif 4',Georgia,serif;font-size:17px;font-weight:600;color:#262220;margin:0">P6 · Deploy com lint de agente</h3>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;background:#1a6a54;color:#fff;border-radius:999px;padding:2px 9px;white-space:nowrap">APROVADO · EXEMPLAR</span>
+  </div>
+  <p style="font-size:13.5px;line-height:1.6;margin:0"><strong style="color:#1a6a54">A continuidade que eu queria ver.</strong> Os códigos <span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px">EFFECT_NEEDS_GATE</span>, <span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px">GATE_NOT_COVERING</span> e <span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px">AUTONOMY_CHAIN</span> aparecem na <em>mesma</em> UI de rejeição da tela 04 do Console que aprovei — rejeita, explica, sugere e desabilita o publicar mostrando o motivo (D19). A remediação em linguagem de negócio (“existe um atalho que pula a aprovação”) é exatamente o tom certo. “O grafo é quem manda” fica visível no painel de autonomia.</p>
+</div>
+
+<!-- P7 -->
+<div style="border:1px solid #e2ddd3;border-radius:12px;padding:16px 18px;margin-top:14px;break-inside:avoid">
+  <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:8px">
+    <h3 style="font-family:'Source Serif 4',Georgia,serif;font-size:17px;font-weight:600;color:#262220;margin:0">P7 · Evidence Bundle ancorado</h3>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;background:#e7f2ec;color:#1a6a54;border:1px solid #cfe6da;border-radius:999px;padding:2px 9px;white-space:nowrap">APROVADO (CARD)</span>
+  </div>
+  <p style="font-size:13.5px;line-height:1.6;margin:0"><strong style="color:#1a6a54">Card simples na v1, e é suficiente para fechar a história.</strong> O card da tela 07 do H22 + o selo de ancoragem no ledger real (hash, bloco, entrada anterior, verificável) usando o mesmo <span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px">canonicalJson</span>+cadeia do core da F3 — sem inventar formato de hash. A narrativa “modelou → publicou → executou com humano no gate → provou” é o fechamento de auditoria que nenhum concorrente conta ponta a ponta.</p>
+</div>
+
+<!-- ============ BLOCO 2 ============ -->
+<div style="margin-top:32px;break-before:page">
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:2px;color:#9a7b1e;margin-bottom:4px">BLOCO 2</div>
+  <h2 style="font-family:'Source Serif 4',Georgia,serif;font-size:23px;font-weight:600;letter-spacing:-0.3px;color:#262220;margin:0 0 4px">A fatia v1 (§7) e as perguntas em aberto</h2>
+  <p style="font-size:12.5px;color:#6f675a;margin:0 0 6px">As quatro perguntas (a–d) são minhas; respondo cada uma com justificativa curta.</p>
+</div>
+
+<div style="border:1px solid #e2ddd3;border-radius:12px;padding:18px 20px;margin-top:16px;break-inside:avoid">
+  <div style="display:flex;gap:12px;align-items:baseline;margin-bottom:4px"><span style="font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:500;color:#1a6a54">a</span><h3 style="font-family:'Source Serif 4',Georgia,serif;font-size:17px;font-weight:600;color:#262220;margin:0">P1 é tela própria ou um “modo agente” do detalhe de tarefa?</h3></div>
+  <div style="background:#e7f2ec;border-radius:8px;padding:9px 13px;margin:8px 0 10px"><span style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1.5px;color:#1a6a54">DECISÃO</span><p style="font-size:14px;line-height:1.5;color:#1a5544;margin:3px 0 0"><strong>Modo do detalhe de tarefa existente.</strong> Humanos e gates de agente vivem na mesma Tasklist, na mesma fila.</p></div>
+  <p style="font-size:13px;line-height:1.6;margin:0">O gate <em>é</em> uma user task (D21) — dar-lhe rota própria fragmentaria a fila e violaria o Console único (D15) e a consistência de IA (G-UX-4). O “modo agente” troca o corpo do detalhe (world-delta, tripla, trilha, dial) mantendo a moldura, o claim persistente e as ações da Tasklist. Um só lugar para “o que preciso decidir hoje”.</p>
+</div>
+
+<div style="border:1px solid #e2ddd3;border-radius:12px;padding:18px 20px;margin-top:14px;break-inside:avoid">
+  <div style="display:flex;gap:12px;align-items:baseline;margin-bottom:4px"><span style="font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:500;color:#1a6a54">b</span><h3 style="font-family:'Source Serif 4',Georgia,serif;font-size:17px;font-weight:600;color:#262220;margin:0">A trilha real cabe no drill-down do Operate ou pede rota própria?</h3></div>
+  <div style="background:#e7f2ec;border-radius:8px;padding:9px 13px;margin:8px 0 10px"><span style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1.5px;color:#1a6a54">DECISÃO</span><p style="font-size:14px;line-height:1.5;color:#1a5544;margin:3px 0 0"><strong>No drill-down do Operate</strong> (P2) — é o token do <span style="font-family:'IBM Plex Mono',monospace;font-size:12px">agentTask</span> expandido, não uma rota nova.</p></div>
+  <p style="font-size:13px;line-height:1.6;margin:0">A instância já é a unidade do Operate; a corrida do agente é uma camada dentro do token, com a mesma navegação (posição no diagrama → entrar no nó → trilha). Rota própria duplicaria breadcrumb, filtros e incidentes. Com virtualização, a trilha longa cabe sem sair do drill-down.</p>
+</div>
+
+<div style="border:1px solid #e2ddd3;border-radius:12px;padding:18px 20px;margin-top:14px;break-inside:avoid">
+  <div style="display:flex;gap:12px;align-items:baseline;margin-bottom:4px"><span style="font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:500;color:#1a6a54">c</span><h3 style="font-family:'Source Serif 4',Georgia,serif;font-size:17px;font-weight:600;color:#262220;margin:0">Squad Studio entra no /studio por ponte ou embutido?</h3></div>
+  <div style="background:#e7f2ec;border-radius:8px;padding:9px 13px;margin:8px 0 10px"><span style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1.5px;color:#1a6a54">DECISÃO</span><p style="font-size:14px;line-height:1.5;color:#1a5544;margin:3px 0 0"><strong>Por ponte</strong> (<span style="font-family:'IBM Plex Mono',monospace;font-size:12px">?load=&lt;versionId&gt;</span>, tela 08 do H22), não re-embutido.</p></div>
+  <p style="font-size:13px;line-height:1.6;margin:0">O Squad Studio é da biblioteca (diagrama padrão + toggle de perspectiva); a plataforma só acrescenta o fluxo de <strong>publicação</strong> — a mesma decisão de recorte do /studio na F3. Re-embutir criaria uma segunda cópia do editor para manter. A ponte preserva “voltar restaura estado” e mantém uma só fonte do editor. Coerente com a decisão C (identidade compartilhada).</p>
+</div>
+
+<div style="border:1px solid #e2ddd3;border-radius:12px;padding:18px 20px;margin-top:14px;break-inside:avoid">
+  <div style="display:flex;gap:12px;align-items:baseline;margin-bottom:4px"><span style="font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:500;color:#1a6a54">d</span><h3 style="font-family:'Source Serif 4',Georgia,serif;font-size:17px;font-weight:600;color:#262220;margin:0">O que eu cortaria ou acrescentaria da fatia v1?</h3></div>
+  <div style="background:#e7f2ec;border-radius:8px;padding:9px 13px;margin:8px 0 10px"><span style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1.5px;color:#1a6a54">DECISÃO</span><p style="font-size:14px;line-height:1.5;color:#1a5544;margin:3px 0 0"><strong>Mantenho a fatia. Acrescento duas coisas baratas; não corto nada.</strong></p></div>
+  <p style="font-size:13px;line-height:1.6;margin:0 0 8px">A fatia (P1/P2/P4/P6 completos; P5 mínima; P7 card; P3 leitura; H22 na biblioteca) está bem calibrada — cobre a demo (P1), a operação (P2), a segurança (P4/P6) e a auditoria (P7). Duas adições que considero parte do MVP por serem baratas e desproporcionalmente valiosas:</p>
+  <div style="border:1px dashed #d8d3c6;border-radius:8px;padding:10px 14px;font-size:12.5px;color:#44403a;line-height:1.6">
+    <div style="margin-bottom:5px"><strong style="color:#1a6a54">+ World-delta em P1</strong> — reusa dados que o gate já tem (efeito, destinatários, reversibilidade). É o que vende. <span style="color:#9a7b1e">Muda comportamento → ADENDO-02.</span></div>
+    <div><strong style="color:#1a6a54">+ Confirmação auditada do kill-switch em P4</strong> — reusa o padrão de confirmação da F3. Segurança de emergência do tenant.</div>
+  </div>
+  <p style="font-size:12.5px;line-height:1.6;margin:10px 0 0;color:#6f675a">Não corto P3 nem P7 da v1: mesmo em leitura/card, são o que prova a tese (colaboração) e fecha a auditoria — remover deixaria a demo pela metade.</p>
+</div>
+
+<!-- ============ BLOCO 3 ============ -->
+<div style="margin-top:32px;break-before:page">
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:2px;color:#9a7b1e;margin-bottom:4px">BLOCO 3</div>
+  <h2 style="font-family:'Source Serif 4',Georgia,serif;font-size:23px;font-weight:600;letter-spacing:-0.3px;color:#262220;margin:0 0 4px">Considerações adicionais</h2>
+  <p style="font-size:12.5px;color:#6f675a;margin:0 0 6px">Inovações, microcopy, IA entre os dois mundos, acessibilidade e o item de spec. <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:#9a7b1e">ESCOPO</span> = passa pelo plano.</p>
+</div>
+
+<div style="margin-top:16px;break-inside:avoid">
+  <h3 style="font-family:'Source Serif 4',Georgia,serif;font-size:16px;font-weight:600;color:#262220;margin:0 0 6px">As inovações (§6), encarnadas</h3>
+  <p style="font-size:13px;line-height:1.6;margin:0 0 4px">Cada aposta está desenhada numa tela concreta, não como conceito solto:</p>
+  <ul style="margin:0;padding-left:18px;font-size:13px;line-height:1.55">
+    <li style="margin:4px 0"><strong>Gate como contrato de confiança</strong> (P1) — world-delta em vez de diff técnico. <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#9a7b1e;background:#fdfaf1;border:1px solid #f6edd4;border-radius:5px;padding:1px 6px">ESCOPO</span></li>
+    <li style="margin:4px 0"><strong>Autonomia como dial</strong> (P1/P6) — a escala 0–5 como controle visual, com o gate (⚑) no ponto da cadeia, sempre com a derivação.</li>
+    <li style="margin:4px 0"><strong>Timeline unificada humano+agente</strong> (P2) — a tese do produto numa tela.</li>
+    <li style="margin:4px 0"><strong>Parada honesta como marca</strong> (P2/P3) — âmbar, nunca o vermelho de erro. “Eu não invento.”</li>
+  </ul>
+</div>
+
+<div style="margin-top:16px;break-inside:avoid">
+  <h3 style="font-family:'Source Serif 4',Georgia,serif;font-size:16px;font-weight:600;color:#262220;margin:0 0 6px">Microcopy &amp; arquitetura de informação</h3>
+  <ul style="margin:0;padding-left:18px;font-size:13px;line-height:1.55">
+    <li style="margin:4px 0">Fixar “<strong>parada honesta</strong>” como termo do produto (não “erro”, não “falhou”) — aparece em P2, P3 e nas mensagens de incidente.</li>
+    <li style="margin:4px 0">Os três rótulos de origem da trilha (<span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px">fixture</span> / <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px">evidência-declarada</span> / <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px">evidência-verificada</span>) precisam de legenda consistente entre biblioteca e plataforma — é a diferença entre modelar e executar.</li>
+    <li style="margin:4px 0">Mesmo componente de trilha nos dois mundos; o único acréscimo da plataforma é o rótulo <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px">verificada</span> e os estados de host. Nada de bifurcar a UI.</li>
+  </ul>
+</div>
+
+<div style="margin-top:16px;break-inside:avoid">
+  <h3 style="font-family:'Source Serif 4',Georgia,serif;font-size:16px;font-weight:600;color:#262220;margin:0 0 6px">Acessibilidade &amp; gate de implementação</h3>
+  <ul style="margin:0;padding-left:18px;font-size:13px;line-height:1.55">
+    <li style="margin:4px 0">As 6 arestas do squad distinguíveis sem cor (traço+ícone+rótulo, E9); chips de efeito nunca só por cor. Foco em aresta anuncia origem/destino/tipo.</li>
+    <li style="margin:4px 0">Herdar do gate da F3: estados de erro/vazio/carregando obrigatórios (a corrida de agente tem os seus: sem provider, budget estourado, trilha vazia) e <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px">axe serious = 0</span>.</li>
+    <li style="margin:4px 0">Contraste do âmbar da parada honesta sobre creme precisa passar AA no tamanho usado — verificar no token.</li>
+  </ul>
+</div>
+
+<div style="border-left:3px solid #9a7b1e;background:#fdfaf1;border-radius:0 10px 10px 0;padding:14px 18px;margin-top:16px;break-inside:avoid">
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:1.5px;color:#9a7b1e;margin-bottom:5px">ITEM DE SPEC — OPINIÃO, DECISÃO É TÉCNICA</div>
+  <p style="font-size:13px;line-height:1.6;margin:0">O <strong>3º rótulo da trilha</strong> (<span style="font-family:'IBM Plex Mono',monospace;font-size:11px">evidência-verificada</span>) sendo <strong>exclusivo do runtime real</strong> da plataforma é a decisão certa e devia ser aplicada com rigor: a UI nunca deve pintar “verificada” sobre uma simulação. Casa com a cerca §2.5 (trilha de fatos) e com o teto de <span style="font-family:'IBM Plex Mono',monospace;font-size:11px">apto-para-integração</span> do <span style="font-family:'IBM Plex Mono',monospace;font-size:11px">readinessState()</span> — a plataforma é a única fonte de <span style="font-family:'IBM Plex Mono',monospace;font-size:11px">executando</span>. Recomendo travar isso no design tokens/legenda para não vazar entre os dois mundos.</p>
+</div>
+
+<!-- Fecho -->
+<div style="background:#262220;border-radius:12px;padding:20px 22px;margin-top:26px;break-inside:avoid">
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:2px;color:#c9a94a;margin-bottom:8px">PRÓXIMOS PASSOS</div>
+  <ul style="margin:0;padding-left:18px;font-size:13.5px;line-height:1.6;color:#e9e6dd">
+    <li style="margin:5px 0">Protótipos P1–P7 entregues no idioma da plataforma; ajustes do Bloco 1 voltam ao arquivo.</li>
+    <li style="margin:5px 0">Respostas a–d e a fatia v1 viram o <strong style="color:#c9a94a">ADENDO-02</strong> (novo critério de lançamento, fases revisadas, aceites).</li>
+    <li style="margin:5px 0">Sinalizado como <strong style="color:#c9a94a">mudança de escopo</strong> (passa pelo plano, não direto ao dev): world-delta em P1; confirmação auditada do kill-switch em P4.</li>
+    <li style="margin:5px 0">A esteira F3 não para; o H22 na biblioteca pode adiantar em paralelo (ordem de PRs SL-1..SL-13 no handoff). Sigo no circuito: heurística nos PRs de interface (G-UX-1) e telas novas por mim antes do código (G-UX-3).</li>
+  </ul>
+</div>
+
+<p style="font-size:11.5px;color:#9a8f7e;margin:16px 0 0;line-height:1.5;font-style:italic">Parecer de produto e identidade, não re-auditoria de conformidade. O designer/viewer/simulador da biblioteca e as 9 telas do H22 não são reavaliados aqui — apenas as superfícies novas P1–P7 da plataforma.</p>
+
+</div>
+</doc-page>
+</x-dc>
+</body>
+</html>
