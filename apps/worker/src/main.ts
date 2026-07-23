@@ -106,7 +106,7 @@ registry.register('agent', async (job) => {
   // PARADA HONESTA × FALHA (§5): budget/kill-switch estacionam o job (âmbar, sem
   // incidente); no-config/no-graph/walk-error falham (incidente vermelho). O fato
   // agent:parada já foi gravado acima para os dois.
-  if (isHonestStop(outcome.blocked)) return { ok: false, honestStop: true, reason: outcome.message };
+  if (isHonestStop(outcome.blocked)) return { ok: false, honestStop: true, reason: outcome.message, kind: outcome.blocked };
   return { ok: false, error: outcome.message };
 });
 const waker = createWaker();
@@ -168,7 +168,7 @@ async function conclude(
   const body = run.ok
     ? { lockToken, ...(run.result ? { result: run.result } : {}) }
     : honestStop
-      ? { lockToken, reason: (run as { reason: string }).reason.slice(0, 2000) }
+      ? { lockToken, reason: (run as { reason: string }).reason.slice(0, 2000), kind: (run as { kind: string }).kind }
       : { lockToken, error: (run as { error: string }).error.slice(0, 2000) };
   const response = await fetch(`${apiBase}/v1/jobs/${jobId}/${path}`, {
     method: 'POST',

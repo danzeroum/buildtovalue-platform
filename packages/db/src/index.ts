@@ -169,6 +169,12 @@ export {
 } from './agent/tenantAiConfig.js';
 export { fixtureAiProvider, type AiProvider, type AiCompletion } from './agent/aiProvider.js';
 export {
+  resumeAgentJobs,
+  resumeAgentJobsTx,
+  type PauseKind,
+  type ResumeResult,
+} from './agent/resume.js';
+export {
   buildWorldDelta,
   deriveProcessConsequence,
   type ProcessConsequence,

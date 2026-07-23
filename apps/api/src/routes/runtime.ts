@@ -493,7 +493,10 @@ export function registerRuntimeRoutes(rawApp: ZodApp, deps: ApiDeps): void {
   // PARADA HONESTA (ADENDO-02 §5): estaciona o job de agente sem incidente nem
   // avanço. `reason` = a voz da parada (budget/kill-switch). Distinta de /failure
   // — parada honesta é âmbar/retomável, não card vermelho.
-  const honestStopBody = jobConclusionBody.extend({ reason: z.string().max(2000) });
+  const honestStopBody = jobConclusionBody.extend({
+    reason: z.string().max(2000),
+    kind: z.enum(['budget', 'kill-switch']),
+  });
   app.post(
     '/v1/jobs/:id/honest-stop',
     {
@@ -515,7 +518,7 @@ export function registerRuntimeRoutes(rawApp: ZodApp, deps: ApiDeps): void {
       req: { auth?: { tenantId: string }; params: { id: string }; body: z.infer<typeof honestStopBody>; id: unknown },
       reply: FastifyReply,
     ) => {
-      const outcome = await runtime.pauseJob(req.auth!.tenantId, req.params.id, req.body.lockToken, req.body.reason);
+      const outcome = await runtime.pauseJob(req.auth!.tenantId, req.params.id, req.body.lockToken, req.body.reason, req.body.kind);
       if (!outcome.ok) {
         if (outcome.reason === 'notFound') {
           return problem(reply, 404, PROBLEM_TYPES.notFound, 'Job não encontrado', String(req.id));
@@ -523,6 +526,34 @@ export function registerRuntimeRoutes(rawApp: ZodApp, deps: ApiDeps): void {
         return problem(reply, 409, PROBLEM_TYPES.conflict, 'Parada honesta recusada', String(req.id), outcome.message);
       }
       return { status: outcome.status };
+    },
+  );
+
+  // RETOMADA EXPLÍCITA (§5.2, budget): o operador manda retomar os jobs pausados
+  // por orçamento (após elevar o teto). Kill-switch retoma sozinho ao reativar.
+  app.post(
+    '/v1/agents/resume',
+    {
+      preHandler: [app.authenticate, app.requirePermission('operate:act')],
+      schema: {
+        tags: ['agents'],
+        summary: 'Retoma jobs de agente em parada honesta de budget (ação explícita do operador, §5.2)',
+        security: [{ bearerAuth: [] }],
+        body: z.object({ pauseKind: z.literal('budget'), motivo: z.string().max(2000) }),
+        response: { 200: z.object({ resumed: z.number() }), 404: problemSchema },
+      },
+    },
+    async (
+      req: { auth?: { tenantId: string; sub?: string }; body: { pauseKind: 'budget'; motivo: string }; id: unknown },
+      _reply: FastifyReply,
+    ) => {
+      const result = await runtime.resumeAgentJobs(
+        req.auth!.tenantId,
+        req.body.pauseKind,
+        { type: 'user', id: req.auth!.sub ?? 'operator', requestId: String(req.id) },
+        req.body.motivo,
+      );
+      return { resumed: result.resumed };
     },
   );
 

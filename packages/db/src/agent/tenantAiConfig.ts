@@ -1,6 +1,7 @@
 import type { Sql } from '../client.js';
 import { withTenant } from '../tenancy.js';
 import { recordTenantAuditEventTx, type AuditActor } from '../audit/tenantAudit.js';
+import { resumeAgentJobsTx } from './resume.js';
 
 /**
  * Inteligência do tenant (ADENDO-02 D29). O segredo do provider vive SÓ como
@@ -100,5 +101,10 @@ export async function setKillSwitch(
       motivo,
       payload: { killed },
     });
+    // §5.2: REATIVAR o kill-switch (→ false) devolve os agentes ao trabalho —
+    // retoma AUTOMATICAMENTE os jobs pausados por kill-switch, na MESMA TX.
+    if (!killed) {
+      await resumeAgentJobsTx(tx, tenantId, 'kill-switch', actor, `kill-switch reativado: ${motivo}`);
+    }
   });
 }
