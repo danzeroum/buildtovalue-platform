@@ -73,4 +73,35 @@ describe('dead-letter re-enfileirável (D22)', () => {
     const [inc2] = await withTenant(api, tenant, (tx) => tx`SELECT status FROM incidents WHERE id = ${inc.id}`);
     expect(inc2.status).toBe('retried');
   });
+
+  it('re-enfileiramento é atômico + idempotente por effect_key (crash-test D11 do caminho novo)', async () => {
+    // dead-letter isolado deste caso
+    const dlKey = effectKey(instance, 4, 0, 'OpenUserTask');
+    await withTenant(api, tenant, (tx) =>
+      insertEffects(tx, tenant, instance, [
+        { effectKey: dlKey, effect: { type: 'OpenUserTask', waitKey: 'dl-task-2', formRef: 'x' } as never },
+      ]),
+    );
+    await dispatchOutboxOnce(api, tenant, { maxAttempts: 1 });
+    const [inc] = await withTenant(
+      api,
+      tenant,
+      (tx) => tx`SELECT id FROM incidents WHERE payload->>'effectKey' = ${dlKey}`,
+    );
+
+    // 1º retry re-enfileira (reusa a effect_key ORIGINAL)
+    expect(await retryIncident(api, tenant, inc.id as string, 'op')).toMatchObject({ ok: true, reEnqueuedEffects: 1 });
+
+    // 2º retry: incidente já 'retried' (não 'open') → notOpen, NÃO re-enfileira
+    expect(await retryIncident(api, tenant, inc.id as string, 'op')).toMatchObject({ ok: false, reason: 'notOpen' });
+
+    // Backstop FÍSICO: forço o incidente de volta a 'open' (o PIOR caso de um
+    // crash que NÃO fosse atômico, que o withTenant/begin já previne) e retento.
+    // O re-INSERT do MESMO effect_key é no-op (ON CONFLICT / UNIQUE) — a outbox
+    // nunca fica com dois. É o UNIQUE(effect_key) segurando, D11.
+    await withTenant(api, tenant, (tx) => tx`UPDATE incidents SET status = 'open' WHERE id = ${inc.id}`);
+    await retryIncident(api, tenant, inc.id as string, 'op');
+    const rows = await withTenant(api, tenant, (tx) => tx`SELECT effect_key FROM outbox WHERE effect_key = ${dlKey}`);
+    expect(rows).toHaveLength(1);
+  });
 });
