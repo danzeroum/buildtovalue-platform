@@ -39,8 +39,8 @@ importers:
         specifier: 1.2.0-next.0
         version: 1.2.0-next.0
       '@buildtovalue/engine':
-        specifier: 1.1.0-next.1
-        version: 1.1.0-next.1
+        specifier: 1.1.0-next.3
+        version: 1.1.0-next.3
       '@buildtovalue/forms':
         specifier: 1.0.0-next.1
         version: 1.0.0-next.1
@@ -207,14 +207,14 @@ importers:
   packages/db:
     dependencies:
       '@buildtovalue/agentflow':
-        specifier: 1.1.0-next.0
-        version: 1.1.0-next.0
+        specifier: 1.1.0-next.1
+        version: 1.1.0-next.1
       '@buildtovalue/core':
         specifier: 1.2.0-next.0
         version: 1.2.0-next.0
       '@buildtovalue/engine':
-        specifier: 1.1.0-next.1
-        version: 1.1.0-next.1
+        specifier: 1.1.0-next.3
+        version: 1.1.0-next.3
       '@buildtovalue/forms':
         specifier: 1.0.0-next.1
         version: 1.0.0-next.1
@@ -352,6 +352,10 @@ packages:
     resolution: {integrity: sha512-bS3gU1W5pf2CIow9EGp3HZVr9PU3iWt4/x1HyarTgJT31pbAJGbjNIsm27/hOQpeZFrFX5im3aY+sZKtf9Rcfg==}
     engines: {node: '>=20'}
 
+  '@buildtovalue/agentflow@1.1.0-next.1':
+    resolution: {integrity: sha512-jtKGwo3VHQ7Yf/pm92DYJeE2KVtiW+Oh+xHHVZzS3McJtBnXmpeGzUp0LE6wXFvX0XCM43Y40aERz3lpdzgSog==}
+    engines: {node: '>=20'}
+
   '@buildtovalue/copilot@1.1.0-next.0':
     resolution: {integrity: sha512-bJLkT7eyT7GCSg6icZsaN54hEAxn0ZmFJdY/y4OV3ZpewvfJfqVAPFhIuQ2DZX4x9ijLyv+nhXpXmUQiXcgI8Q==}
     engines: {node: '>=20'}
@@ -360,8 +364,8 @@ packages:
     resolution: {integrity: sha512-PK8dfdTwkT2wFYQkJU1jf6Wiebm5pdIka/6Vvjn74nfa0NEKUdaVREjQEs6Bsg4Zme5JjSxANngXf3zAlSkdHw==}
     engines: {node: '>=20'}
 
-  '@buildtovalue/engine@1.1.0-next.1':
-    resolution: {integrity: sha512-9oz5Jt2cNCiVi9FbasdHT/Yt1JLS3vSGINop25NrnPku+cr99AUEwjdDLuuXjtl28EMZtqkSj7qcQJ2NRVozGQ==}
+  '@buildtovalue/engine@1.1.0-next.3':
+    resolution: {integrity: sha512-N6AqPS+cBf9DbC/FiCE98IY81BKgYVjwTURJuIVlvkTaUhSl2K9fjDkjwiwsac+bEZCCFFNM8fPlY6MNQvyTCA==}
     engines: {node: '>=20'}
 
   '@buildtovalue/forms-react@1.0.0-next.1':
@@ -2888,6 +2892,8 @@ snapshots:
 
   '@buildtovalue/agentflow@1.1.0-next.0': {}
 
+  '@buildtovalue/agentflow@1.1.0-next.1': {}
+
   '@buildtovalue/copilot@1.1.0-next.0':
     dependencies:
       '@buildtovalue/core': 1.2.0-next.0
@@ -2895,7 +2901,7 @@ snapshots:
 
   '@buildtovalue/core@1.2.0-next.0': {}
 
-  '@buildtovalue/engine@1.1.0-next.1':
+  '@buildtovalue/engine@1.1.0-next.3':
     dependencies:
       '@buildtovalue/core': 1.2.0-next.0
 
