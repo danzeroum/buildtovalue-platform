@@ -227,12 +227,24 @@ async function applyEffect(
         WHERE wait_key = ${effect.waitKey!} AND status = 'armed'`;
       return;
     case 'OpenUserTask':
+      // MARCADOR DE GATE (D31): resolvido AQUI, no despacho (disciplina do pin),
+      // contra a DEFINIÇÃO PINADA da instância (instances.definition_ref =
+      // process_definitions.registry_ref — a republicação mina um registry_ref
+      // NOVO, nunca toca instância em voo). Persistido em is_gate; o query nunca
+      // infere do diagrama. Definição embutida (skeleton@1/example@1) não está no
+      // registry → sem linha → COALESCE false (não há gate ali).
       await tx`INSERT INTO user_tasks
-          (tenant_id, instance_id, element_id, wait_key, form_ref, candidate_roles, payload)
+          (tenant_id, instance_id, element_id, wait_key, form_ref, candidate_roles, payload, is_gate)
         VALUES (${row.tenant_id}, ${row.instance_id}, ${effect.elementId!},
                 ${effect.waitKey!}, ${effect.formRef ?? ''},
                 ${effect.candidates ?? []},
-                ${tx.json((effect.payload ?? {}) as never)})
+                ${tx.json((effect.payload ?? {}) as never)},
+                COALESCE((
+                  SELECT (pd.diagram->'nodes'->${effect.elementId!}->'properties'->>'btvGate') = 'true'
+                  FROM process_definitions pd
+                  JOIN instances i ON i.definition_ref = pd.registry_ref
+                  WHERE i.id = ${row.instance_id}
+                ), false))
         ON CONFLICT (wait_key) DO NOTHING`;
       return;
     case 'CloseUserTask':
