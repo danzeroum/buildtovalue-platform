@@ -85,6 +85,9 @@ registry.register('agent', async (job) => {
           instanceId: job.instanceId,
           elementId: input.elementId ?? 'agentTask',
           agentRef: input.agentRef ?? '',
+          // envelope de ator (D33): o AGENTE corre esta trilha; id = pin efetivo,
+          // requestId = o job (correlação da corrida). Gravado desde já.
+          actor: { type: 'agent', id: input.agentRef ?? 'agentTask', requestId: job.jobId },
           facts,
           classifications,
           engineVersion: instance.engine_version,

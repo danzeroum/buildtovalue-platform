@@ -167,6 +167,8 @@ export interface AgentPin {
   version: string;
   /** true = a ref declarada era flutuante e foi pinada agora. */
   floating: boolean;
+  /** envelope de ator (D33) — quem resolveu o pin (o runtime = `system`). */
+  actor: { type: 'agent' | 'user' | 'system'; id: string; requestId?: string };
 }
 
 export type AgentPinResult =
@@ -227,10 +229,13 @@ export async function recordAgentPinsAtStart(
       resolvedRef: resolved.pinnedRef,
       version: resolved.definition.version,
       floating: resolved.floating,
+      // envelope de ator (D33): a resolução do pin é ato do RUNTIME (host), não do
+      // agente — `system`. Gravado desde já, consultável, sem migração retroativa.
+      actor: { type: 'system', id: 'runtime' },
     };
     await tx`INSERT INTO history_events
         (tenant_id, instance_id, seq, kind, payload, engine_version, effect_key)
-      VALUES (${tenantId}, ${instanceId}, ${historySeq(0, index)}, 'agentPinResolved',
+      VALUES (${tenantId}, ${instanceId}, ${historySeq(0, index)}, 'agent:pinResolved',
               ${tx.json(pin as never)}, ${engineVersion},
               ${`host:agent-pin:${instanceId}:${node.id}`})
       ON CONFLICT (effect_key) DO NOTHING`;

@@ -325,14 +325,21 @@ START (`recordAgentPinsAtStart` → `history_events.agentPinResolved`, incidente
 o payload carrega `agentRef` = o **pin efetivo** (nunca a ref flutuante) — a
 resolução flutuante acontece UMA vez no start, jamais por execução de job.
 
-**Trilha mascarada (etapa 3 §2, feita):** `persistAgentTrail` grava o I/O do
-agente em `history_events.agent_io`, **conservador por padrão** (só passa campo
-`none`; sensitive/personal/desconhecido → `MASKED_VALUE`). TESTE DE VAZAMENTO
-(`agent-trail-leak.test.ts`) falha se qualquer valor pessoal aparecer na coluna.
-O worker persiste a trilha após o walk (best-effort; não reverte a conclusão).
-Seam remanescente: o `io.input` (variáveis da instância que alimentam o agente)
-só é surfaçado quando o engine passar as vars ao job de agente — hoje a trilha
-grava `io.output` real do walk; a máscara já cobre input+output.
+**Trilha mascarada (etapa 3 §2, feita + gate do designer):** `persistAgentTrail`
+grava o I/O em `history_events.agent_io`, **conservador por padrão** (só passa
+campo `none`; sensitive/personal/desconhecido → `MASKED_VALUE`). TESTE DE VAZAMENTO
+(`agent-trail-leak.test.ts`) falha se qualquer valor pessoal aparecer.
+Dois requisitos do designer travados **desde já** (append-only não perdoa retro):
+- **(a) um fato por linha:** cada elo da cadeia D1 (`intenção → ação(por nó) → I/O
+  → [decisão] → evidência` + `parada`) é UMA linha, com `kind = agent:<elo>`
+  (filtrável por `kind LIKE 'agent:%'` sem abrir payload). `buildAgentFacts` emite
+  a cadeia; `decisao` entra quando o walker surfaçar o nó (a coluna já suporta).
+- **(b) envelope de ator D33** `{type,id,requestId}` em CADA fato de agente (e no
+  `agent:pinResolved` = `system/runtime`), no payload jsonb — **consultável** por
+  `payload->'actor'->>'type'`, sem coluna nova. A P2/P7 da AG-3 monta sem migração.
+Seam remanescente: o `io.input` (variáveis da instância) só é surfaçado quando o
+engine passar as vars ao job (etapa 4, §2.11) — hoje a trilha grava `io.output`
+real; a máscara já cobre input+output.
 
 **Lote de mudanças na biblioteca (agentflow, um único release):** para não gastar
 uma ida-e-volta de publicação por etapa, AGRUPAR num só changeset/minor:
@@ -358,6 +365,37 @@ A etapa 4 fecha isso JUNTO com a fronteira D27 do replay:
    `start → agentTask emite CreateJob(agent) → JobCompleted → avanço segue`.
 3. **lint do aceite 7 (invariante testada pelos DOIS lados):** nenhuma fixture de replay
    contém interior de `agentTask` — proibição VERIFICADA, não só declarada.
+
+## 2.12 shared-ui — refino de forma do designer (PR PRÓPRIA, pós-#23)
+
+Sete itens DIRETOS aprovados pelo designer (forma, não passam por adendo). Decisão
+minha: **PR própria** após o merge da #23 (não contaminar o gate de backend). Itens:
+1. Renomear tokens de papel: `--ui-role-gate-*` (decisão/gate) ≠ `--ui-role-warning-*`
+   (aviso) ≠ classificação (escala própria). Mesma cor hoje, divergível amanhã.
+2. `--ui-role-agent-*` (violeta) com teste AA AGORA — antes da AG-3, senão nasce ad-hoc.
+3. Piso 44px de alvo de toque: `.decision-option` (~28px), `.chip`, `.palette-pill`,
+   `.segment`. O gate P1 herda o mesmo controle → corrigir aqui corrige lá.
+4. Microcopy: "Liberar" = soltar a própria tarefa (unclaim); "Reatribuir" = passar a
+   outrem; **aposentar "Desatribuir"** (três palavras para dois atos).
+5. Rótulo humano no chip de decisão (hoje mostra `aprovar` cru minúsculo); o valor cru
+   segue sendo o dado auditado. Se o processo fornecer rótulo, usa; senão formata.
+6. Remover `var(--ui-surface-raised, #fff)` — o cabeçalho do app.css declara "nenhum hex".
+7. Forma canônica do controle: `DecisionOption {value, label, intent}`, cor pela intenção
+   e só quando conhecida (user task = routing dourado; gate P1 = affirmative/destructive/
+   neutral). O item a NÃO deixar passar — evita a AG-3 falar duas línguas.
+
+## 2.13 ESCOPO registrado como F4 (muda comportamento — vira adendo se virar v1)
+
+Três pedidos que TOCAM contrato/schema/permrissão — **não implementar** na v1:
+1. **Intenção por rota na publicação** (colorir "Reprovar" na user task): exige campo de
+   intenção por rota no schema+contrato do processo. Hoje a cor da decisão sai só quando
+   a intenção é conhecida (item 7 acima); "colorir Reprovar" é a fonte da intenção, F4.
+2. **Seletor de pessoas na reatribuição:** precisa de endpoint de MEMBROS do papel
+   candidato (`GET` de candidatos). Hoje a reatribuição é digitação de id (risco
+   typo→pessoa errada, anotado). F4 quando o endpoint existir.
+3. **Iniciar versão anterior deliberadamente:** rollback permissionado — a projeção
+   iniciável é latest-per-name de propósito (AG-2.1 etapa 5). F4/F5.
+Se algum virar necessidade da v1, **vira adendo** (passa pelo plano, não direto ao dev).
 
 ## 3. Registro de fluxo (sem ação sua)
 
