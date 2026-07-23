@@ -17,6 +17,7 @@ import { useSession } from '../shell.js';
 import { Button, NonIdeal, StatusPill, Tag } from '../ui/ui.js';
 
 type StatusFilter = '' | 'active' | 'incident' | 'completed' | 'cancelled';
+type OpTab = 'incidents' | 'jobs' | 'timers' | 'variables' | 'history';
 
 /**
  * /operate (F3.5) — persona de operador. Lista com cursor + filtros, drill-down
@@ -178,11 +179,15 @@ const PositionViewer = lazy(async () => {
 
 function InstanceDetailPane({ instanceId, onChanged }: { instanceId: string; onChanged: () => void }) {
   const user = useSession()!;
+  const canAct = can(user.role, 'operate:act');
+  const canReadOp = can(user.role, 'operate:read');
   const detail = useResource(
     (signal) => api.GET('/v1/instances/{id}', { params: { path: { id: instanceId } }, signal }),
     [instanceId],
   );
-  const [tab, setTab] = useState<'incidents' | 'jobs' | 'timers' | 'variables' | 'history'>('incidents');
+  // Incidentes/Jobs/Timers exigem operate:read; sem ela, começa em Variáveis
+  // (que usa instances:read). Não oferecemos aba que só devolveria 403.
+  const [tab, setTab] = useState<OpTab>(canReadOp ? 'incidents' : 'variables');
   const [cancelling, setCancelling] = useState(false);
 
   if (detail.value.state === 'loading') return <NonIdeal kind="loading" title="Carregando instância…" />;
@@ -199,8 +204,18 @@ function InstanceDetailPane({ instanceId, onChanged }: { instanceId: string; onC
     );
 
   const inst = detail.value.data;
-  const canAct = can(user.role, 'operate:act');
-  const canCancel = can(user.role, 'instances:cancel') || canAct;
+  const canCancel = canAct; // a rota de cancelamento exige operate:act
+  const tabs: [OpTab, string][] = [
+    ...(canReadOp
+      ? ([
+          ['incidents', 'Incidentes'],
+          ['jobs', 'Jobs'],
+          ['timers', 'Timers'],
+        ] as [OpTab, string][])
+      : []),
+    ['variables', 'Variáveis'],
+    ['history', 'Histórico'],
+  ];
 
   async function exportXes() {
     const { data } = await api.GET('/v1/instances/{id}/export', {
@@ -227,9 +242,11 @@ function InstanceDetailPane({ instanceId, onChanged }: { instanceId: string; onC
           </div>
         </div>
         <div className="doc-actions">
-          <Button intent="neutral" onClick={exportXes}>
-            Exportar XES
-          </Button>
+          {canReadOp && (
+            <Button intent="neutral" onClick={exportXes}>
+              Exportar XES
+            </Button>
+          )}
           {canCancel && inst.status === 'active' && (
             <Button intent="danger" onClick={() => setCancelling(true)}>
               Cancelar instância…
@@ -241,15 +258,7 @@ function InstanceDetailPane({ instanceId, onChanged }: { instanceId: string; onC
       <PositionSection instance={inst} />
 
       <div className="op-tabs" role="tablist" aria-label="Detalhe da instância">
-        {(
-          [
-            ['incidents', 'Incidentes'],
-            ['jobs', 'Jobs'],
-            ['timers', 'Timers'],
-            ['variables', 'Variáveis'],
-            ['history', 'Histórico'],
-          ] as const
-        ).map(([key, label]) => (
+        {tabs.map(([key, label]) => (
           <button
             key={key}
             type="button"
@@ -507,6 +516,10 @@ function VariablesTab({ instanceId, canReveal }: { instanceId: string; canReveal
         <tbody>
           {vars.map((v) => {
             const shown = v.name in revealed;
+            // FAIL-CLOSED (D20): mascara se o servidor sinalizou `masked` OU se a
+            // classificação é `sensitive` — nunca confia num único flag para não
+            // vazar caso o servidor esqueça de mascarar. Só a revelação auditada abre.
+            const mustMask = v.masked === true || v.classification === 'sensitive';
             return (
               <tr key={v.name} data-sensitive={v.classification === 'sensitive' || undefined}>
                 <td className="mono">{v.name}</td>
@@ -520,7 +533,7 @@ function VariablesTab({ instanceId, canReveal }: { instanceId: string; canReveal
                   )}
                 </td>
                 <td className="var-value">
-                  {v.masked && !shown ? (
+                  {mustMask && !shown ? (
                     <span className="masked" aria-label="valor mascarado">
                       ••••••
                     </span>
@@ -529,7 +542,7 @@ function VariablesTab({ instanceId, canReveal }: { instanceId: string; canReveal
                   )}
                 </td>
                 <td>
-                  {v.masked && !shown && canReveal && (
+                  {mustMask && !shown && canReveal && (
                     <Button intent="neutral" onClick={() => setRevealing(v.name)}>
                       Revelar…
                     </Button>

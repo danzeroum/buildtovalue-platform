@@ -181,17 +181,27 @@ function TaskDetailPane({ taskId, onChanged }: { taskId: string; onChanged: () =
     );
 
   const task = detail.value.data;
-  return <TaskForm task={task} me={user!.id} canReassign={can(user!.role, 'operate:act')} onChanged={onChanged} />;
+  return (
+    <TaskForm
+      task={task}
+      me={user!.id}
+      canWork={can(user!.role, 'tasks:work')}
+      canReassign={can(user!.role, 'operate:act')}
+      onChanged={onChanged}
+    />
+  );
 }
 
 function TaskForm({
   task,
   me,
+  canWork,
   canReassign,
   onChanged,
 }: {
   task: TaskDetail;
   me: string;
+  canWork: boolean;
   canReassign: boolean;
   onChanged: () => void;
 }) {
@@ -219,6 +229,7 @@ function TaskForm({
       task={task}
       formDef={form.value.data}
       me={me}
+      canWork={canWork}
       canReassign={canReassign}
       reassigning={reassigning}
       setReassigning={setReassigning}
@@ -231,6 +242,7 @@ function TaskFormLoaded({
   task,
   formDef,
   me,
+  canWork,
   canReassign,
   reassigning,
   setReassigning,
@@ -239,6 +251,7 @@ function TaskFormLoaded({
   task: TaskDetail;
   formDef: FormDefByRef;
   me: string;
+  canWork: boolean;
   canReassign: boolean;
   reassigning: boolean;
   setReassigning: (v: boolean) => void;
@@ -355,7 +368,7 @@ function TaskFormLoaded({
           </div>
         </div>
         <div className="doc-actions">
-          {mine && claimToken && (
+          {canWork && claimToken && (
             <Button intent="neutral" onClick={unclaim}>
               Desatribuir…
             </Button>
@@ -406,7 +419,9 @@ function TaskFormLoaded({
           A submissão é revalidada no servidor pelo MESMO schema antes de avançar a instância.
         </span>
         <div className="foot-actions">
-          {!claimToken ? (
+          {!canWork ? (
+            <span className="foot-note">Seu papel não trabalha tarefas — somente leitura.</span>
+          ) : !claimToken ? (
             <Button intent="primary" onClick={claim} disabled={held}>
               {mine ? 'Retomar (renova o claim)' : 'Assumir tarefa'}
             </Button>
@@ -511,12 +526,15 @@ function StartInstanceModal({ onClose }: { onClose: () => void }) {
   const [businessKey, setBusinessKey] = useState('');
   const [result, setResult] = useState<{ id: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Chave estável POR SESSÃO do modal: uma re-tentativa manual do MESMO início
+  // não cria uma segunda instância (o servidor replica a resposta 201).
+  const [idemKey] = useState(() => crypto.randomUUID());
 
   async function start() {
     setError(null);
     const { data, error: err, response } = await api.POST('/v1/instances', {
       body: { definitionRef: ref!, ...(businessKey.trim() ? { businessKey: businessKey.trim() } : {}) },
-      headers: { 'idempotency-key': crypto.randomUUID() },
+      headers: { 'idempotency-key': idemKey },
     });
     if (err || !data) {
       setError(problemMessage(err, `Não foi possível iniciar (HTTP ${response.status}).`));

@@ -123,8 +123,20 @@ describe('TasksRoute — F3.4', () => {
     expect(screen.getByRole('note')).toHaveTextContent(/versões novas valem só para instâncias futuras/);
   });
 
+  it('sem tasks:work (operador) a tarefa é SOMENTE LEITURA — sem «Assumir»', async () => {
+    seedHappyPath();
+    ctx.user = { id: 'op1', displayName: 'Op', email: 'op@acme.com', role: 'operator' };
+    render(<TasksRoute />);
+    await userEvent.click(await screen.findByRole('button', { name: /aprovar_reembolso/ }));
+    await screen.findByLabelText(/Parecer/);
+    expect(screen.getByText(/somente leitura/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Assumir tarefa' })).not.toBeInTheDocument();
+  });
+
   it('Iniciar processo: POST /v1/instances com Idempotency-Key (anti clique-duplo)', async () => {
     seedHappyPath();
+    // analista tem instances:start E definitions:read (persona que completa o fluxo)
+    ctx.user = { id: 'an1', displayName: 'Nara', email: 'nara@acme.com', role: 'analyst' };
     route('GET /v1/process-definitions', () => ok({ items: [{ id: 'p1', name: 'Reembolso de despesas', version: 8, registryRef: 'reembolso-de-despesas@8', engineVersion: '1.1.0', createdAt: TASK.createdAt }], nextCursor: null }));
     route('POST /v1/instances', () => ok({ id: '44444444-4444-4444-4444-444444444444', definitionRef: 'reembolso-de-despesas@8', status: 'active', revision: 0, businessKey: null }, 201));
     render(<TasksRoute />);

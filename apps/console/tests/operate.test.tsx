@@ -89,6 +89,38 @@ describe('OperateRoute — F3.5', () => {
     );
   });
 
+  it('D20 fail-closed: sensível SEM o flag masked ainda é mascarada (não confia em um só sinal)', async () => {
+    seedDetail({
+      'GET /v1/instances/{id}/variables': () =>
+        ok({
+          items: [
+            // servidor "esqueceu" masked:true, mas a classificação é sensível → mascara mesmo assim
+            { name: 'diagnostico', classification: 'sensitive', value: 'segredo clínico', updatedAt: now },
+          ],
+        }),
+    });
+    await openDetail();
+    await userEvent.click(screen.getByRole('tab', { name: 'Variáveis' }));
+    expect(await screen.findByLabelText('valor mascarado')).toBeInTheDocument();
+    expect(screen.queryByText(/segredo clínico/)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Revelar…' })).toBeInTheDocument();
+  });
+
+  it('Exportar XES é gated por operate:read (negócio não vê)', async () => {
+    seedDetail();
+    const first = render(<OperateRoute />);
+    await userEvent.click(await screen.findByRole('button', { name: /RB-2026-0142/ }));
+    await screen.findByRole('tab', { name: 'Variáveis' });
+    expect(screen.getByRole('button', { name: 'Exportar XES' })).toBeInTheDocument();
+    first.unmount();
+
+    ctx.user = { id: 'u1', displayName: 'Ana', email: 'ana@acme.com', role: 'business' };
+    render(<OperateRoute />);
+    await userEvent.click(await screen.findByRole('button', { name: /RB-2026-0142/ }));
+    await screen.findByRole('tab', { name: 'Variáveis' });
+    expect(screen.queryByRole('button', { name: 'Exportar XES' })).not.toBeInTheDocument();
+  });
+
   it('incidente: «Repetir» re-arma jobs; dead-letter (409) vira aviso honesto → Resolver', async () => {
     seedDetail({
       'POST /v1/incidents/{id}/retry': () => fail(409, { detail: 'dead-letter não re-enfileirável na v1' }) as ReturnType<typeof ok>,

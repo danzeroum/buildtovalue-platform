@@ -161,6 +161,25 @@ protótipo).
   no servidor; o console PR2 expõe **revelação** (núcleo do D20) + exibição,
   não edição de variável de instância em voo (ferramenta afiada, fora do
   protótipo). Edição via console = follow-up.
+- **RBAC: `instances:start` sem `definitions:read` (revisão adversarial da
+  PR2):** o papel **business** tem `instances:start` mas NÃO `definitions:read`.
+  O «Iniciar processo» (tela 05) lista definições via
+  `GET /v1/process-definitions` (`definitions:read`) → business receberia
+  **403** e não conseguiria escolher o que iniciar. O botão segue visível por
+  `instances:start` (fiel ao protótipo — "visível para papéis com permissão de
+  start"), e o modal mostra o estado **forbidden** honesto se a listagem negar.
+  **Decisão do dono:** (a) conceder `definitions:read` ao business; (b) um
+  endpoint de "definições iniciáveis" escopado por `instances:start`; ou (c)
+  retirar `instances:start` do business. Mudança de RBAC = **GATE**.
+
+**Correções aplicadas na revisão adversarial da PR2 (antes do merge):** ações
+de trabalho de tarefa gated por `tasks:work` (papel sem ela vê somente
+leitura); «Exportar XES» e abas Incidentes/Jobs/Timers gated por `operate:read`
+(o resto do Operate degrada com graça); cancelamento gated por `operate:act`
+(igual à rota); **D20 fail-closed** nas variáveis (mascara por
+`classification==='sensitive'` OU `masked`, nunca confia num só sinal);
+Idempotency-Key estável por sessão do modal de início (re-tentativa não duplica
+instância).
 
 ## 3. Registro de fluxo (sem ação sua)
 
