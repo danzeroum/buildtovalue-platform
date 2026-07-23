@@ -325,6 +325,15 @@ START (`recordAgentPinsAtStart` → `history_events.agentPinResolved`, incidente
 o payload carrega `agentRef` = o **pin efetivo** (nunca a ref flutuante) — a
 resolução flutuante acontece UMA vez no start, jamais por execução de job.
 
+**Trilha mascarada (etapa 3 §2, feita):** `persistAgentTrail` grava o I/O do
+agente em `history_events.agent_io`, **conservador por padrão** (só passa campo
+`none`; sensitive/personal/desconhecido → `MASKED_VALUE`). TESTE DE VAZAMENTO
+(`agent-trail-leak.test.ts`) falha se qualquer valor pessoal aparecer na coluna.
+O worker persiste a trilha após o walk (best-effort; não reverte a conclusão).
+Seam remanescente: o `io.input` (variáveis da instância que alimentam o agente)
+só é surfaçado quando o engine passar as vars ao job de agente — hoje a trilha
+grava `io.output` real do walk; a máscara já cobre input+output.
+
 **Lote de mudanças na biblioteca (agentflow, um único release):** para não gastar
 uma ida-e-volta de publicação por etapa, AGRUPAR num só changeset/minor:
 - `FactSource` += `'evidencia-verificada'` (D30, aceite 5) — só o `run` real emite;

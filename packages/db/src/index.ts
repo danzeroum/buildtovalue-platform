@@ -150,6 +150,16 @@ export {
 } from './agent/tenantAiConfig.js';
 export { fixtureAiProvider, type AiProvider, type AiCompletion } from './agent/aiProvider.js';
 export {
+  buildAgentFacts,
+  conservativeMaskingPolicy,
+  maskIo,
+  persistAgentTrail,
+  type AgentFact,
+  type AgentIo,
+  type Classification,
+  type Classifications,
+} from './agent/agentTrail.js';
+export {
   compareSemver,
   deployAgentDefinition,
   getAgentDefinitionByRef,

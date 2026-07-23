@@ -2,18 +2,23 @@ import { createServer } from 'node:http';
 import { loadConfig } from '@platform/config';
 import { signAccessToken } from '@platform/auth';
 import {
+  buildAgentFacts,
+  classificationsForRef,
   createDb,
   createEnvKeyProvider,
   createFieldCipher,
   dispatchOutboxOnce,
   getAgentDefinitionByRef,
+  getInstance,
   lockJobs,
+  persistAgentTrail,
   runAgentJob,
   type AgentJobInput,
   OUTBOX_CHANNEL,
   runtimeDepths,
   sweepDueTimersOnce,
   sweepIdempotencyKeys,
+  withTenant,
 } from '@platform/db';
 import { createLogger, createRuntimeMetrics } from '@platform/observability';
 import { createHandlerRegistry, type JobContext } from './handlers.js';
@@ -60,6 +65,36 @@ registry.register('agent', async (job) => {
       return def ? { graph: def.graph, fromPayload: false } : null;
     },
   });
+  // Trilha MASCARADA (etapa 3 §2): grava o I/O do agente em history_events.agent_io,
+  // CONSERVADOR por padrão (nunca em claro). A parada honesta também vira fato. As
+  // classificações vêm da definição da instância (mesmo mapa da costura LGPD F2).
+  // Best-effort: falha ao gravar a trilha é logada, não reverte a conclusão do job.
+  try {
+    const instance = await getInstance(sql, job.tenantId, job.instanceId);
+    if (instance) {
+      const classifications = await classificationsForRef(sql, job.tenantId, instance.definition_ref);
+      const facts = buildAgentFacts({
+        io: { output: outcome.walk.output ?? {} },
+        visitedNodes: outcome.walk.visitedNodes,
+        complete: outcome.walk.complete,
+        stopReason: outcome.ok ? undefined : outcome.message,
+      });
+      await withTenant(sql, job.tenantId, (tx) =>
+        persistAgentTrail(tx, {
+          tenantId: job.tenantId,
+          instanceId: job.instanceId,
+          elementId: input.elementId ?? 'agentTask',
+          agentRef: input.agentRef ?? '',
+          facts,
+          classifications,
+          engineVersion: instance.engine_version,
+          revision: instance.revision,
+        }),
+      );
+    }
+  } catch (error) {
+    logger.warn({ jobId: job.jobId, err: error }, 'trilha de agente não gravada (conclusão segue)');
+  }
   return outcome.ok ? { ok: true, result: outcome.result } : { ok: false, error: outcome.message };
 });
 const waker = createWaker();
