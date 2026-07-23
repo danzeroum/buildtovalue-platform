@@ -150,6 +150,16 @@ export {
 } from './agent/tenantAiConfig.js';
 export { fixtureAiProvider, type AiProvider, type AiCompletion } from './agent/aiProvider.js';
 export {
+  compareSemver,
+  deployAgentDefinition,
+  getAgentDefinitionByRef,
+  listAgentDefinitions,
+  resolveAgentRef,
+  type AgentDefinitionRow,
+  type DeployAgentOutcome,
+  type ResolvedAgentDefinition,
+} from './registry/agentStore.js';
+export {
   runAgentJob,
   simulateWalker,
   type AgentJobInput,
