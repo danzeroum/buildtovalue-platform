@@ -1,11 +1,20 @@
 import {
+  agentGateViolations,
   boundaryAttachedTo,
   parseTimerExpression,
+  reachableGateFrom,
   timerPropertyOf,
   type BpmnDiagram,
   type BpmnNode,
 } from '@buildtovalue/core';
+import { requiresDownstreamGate, type AutonomyLevel } from '@buildtovalue/agentflow';
 import { conditionEvaluator } from '../runtime/definitions.js';
+
+/** Um nó é um GATE humano (btv:gate) quando declara `properties.btvGate === true`
+ * — o marcador de domínio que o core (`reachableGateFrom`) consome por injeção. */
+export function isBtvGate(node: BpmnNode): boolean {
+  return node.properties.btvGate === true;
+}
 
 /**
  * Lint D19 (shape /v1 §2, severidades FIXADAS na pré-triagem de 22/07):
@@ -33,7 +42,9 @@ export type LintCode =
   | 'EXEC_DECISION_VAR_NO_GATEWAY'
   | 'EXEC_DECISION_VAR_FREE_TEXT'
   | 'EXEC_DECISION_VAR_RESERVED'
-  | 'EXEC_DECISION_VAR_SENSITIVE';
+  | 'EXEC_DECISION_VAR_SENSITIVE'
+  | 'EXEC_AGENT_GATE_MISSING'
+  | 'EXEC_TOOL_EFFECT_UNGATED';
 
 /** Subconjunto executável v1 (espelha o engine publicado — D19). */
 const SUPPORTED_TYPES = new Set([
@@ -42,14 +53,16 @@ const SUPPORTED_TYPES = new Set([
   'task',
   'userTask',
   'serviceTask',
+  'agentTask',
   'exclusiveGateway',
   'parallelGateway',
   'intermediateCatchEvent',
   'boundaryEvent',
 ]);
 
-/** Atividades que ESPERAM (janela real para um boundary disparar). */
-const WAITING_ACTIVITY_TYPES = new Set(['userTask', 'serviceTask']);
+/** Atividades que ESPERAM (janela real para um boundary disparar). O `agentTask`
+ * é espera de job (o engine emite CreateJob(agent) e pausa — etapa 4). */
+const WAITING_ACTIVITY_TYPES = new Set(['userTask', 'serviceTask', 'agentTask']);
 
 export function lintDiagram(diagram: BpmnDiagram): LintIssue[] {
   const issues: LintIssue[] = [];
@@ -135,7 +148,9 @@ export function lintDiagram(diagram: BpmnDiagram): LintIssue[] {
       }
     }
 
-    if (node.type === 'userTask' && !node.properties.formRef) {
+    // Gate D31 (etapa 5): um btv:gate é user task de DECISÃO (world-delta), não
+    // tarefa de formulário — não exige formRef pinado. As demais userTasks sim.
+    if (node.type === 'userTask' && !node.properties.formRef && !isBtvGate(node)) {
       issues.push({
         code: 'EXEC_FORM_REF_MISSING',
         severity: 'error',
@@ -197,6 +212,50 @@ export function lintDiagram(diagram: BpmnDiagram): LintIssue[] {
 
   issues.push(...reachability(diagram));
   issues.push(...decisionVarGatewayWarnings(diagram));
+  issues.push(...lintAgentGates(diagram));
+  return issues;
+}
+
+/**
+ * Gate D31 — regra de autonomia→gate (pura). Todo `agentTask` cujo `autonomyLevel`
+ * EXIGE gate (`requiresDownstreamGate`, ≤3) precisa de um `btv:gate` ALCANÇÁVEL a
+ * jusante. Delega ao `agentGateViolations` do core (SL-12) com o predicado de
+ * domínio `isBtvGate`. Erro de deploy: efeito de agente sem cobertura de gate.
+ */
+export function lintAgentGates(diagram: BpmnDiagram): LintIssue[] {
+  const violations = agentGateViolations(diagram, {
+    // `agentAutonomyLevelOf` devolve `number`; `requiresDownstreamGate` tipa
+    // `AutonomyLevel` (0–5) — o cast é seguro (a lib trata fora de faixa como não-gate).
+    requiresGate: (level: number) => requiresDownstreamGate(level as AutonomyLevel),
+    isGate: isBtvGate,
+    locale: 'pt',
+  });
+  return violations.map((v) => ({
+    code: 'EXEC_AGENT_GATE_MISSING' as const,
+    severity: 'error' as const,
+    elementId: v.nodeId,
+    message: `agentTask '${v.nodeId}' (autonomia ${v.autonomyLevel}) exige um btv:gate a jusante — ${v.remediation}`,
+  }));
+}
+
+/**
+ * Gate D31 — efeito de tool sem cobertura. Recebe os elementos cujo `toolRef`
+ * resolveu (no deploy, contra `tool_definitions`) para um efeito que EXIGE gate,
+ * e exige um `btv:gate` alcançável a jusante de cada um. A resolução do efeito é
+ * do deploy (tx-scoped); esta função é a parte PURA (alcançabilidade no grafo).
+ */
+export function toolEffectGateViolations(diagram: BpmnDiagram, gatedElementIds: string[]): LintIssue[] {
+  const issues: LintIssue[] = [];
+  for (const elementId of gatedElementIds) {
+    if (!reachableGateFrom(diagram, elementId, isBtvGate)) {
+      issues.push({
+        code: 'EXEC_TOOL_EFFECT_UNGATED',
+        severity: 'error',
+        elementId,
+        message: `'${elementId}' usa uma tool com efeito irreversível/external — exige um btv:gate a jusante (D31)`,
+      });
+    }
+  }
   return issues;
 }
 
