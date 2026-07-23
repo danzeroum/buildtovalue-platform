@@ -20,7 +20,9 @@ export interface JobContext {
 
 export type JobRunResult =
   | { ok: true; result?: Record<string, unknown> }
-  | { ok: false; error: string };
+  | { ok: false; error: string }
+  // PARADA HONESTA (§5): não é falha — estaciona o job sem incidente (budget/kill-switch).
+  | { ok: false; honestStop: true; reason: string };
 
 export type JobHandler = (job: JobContext) => Promise<JobRunResult>;
 

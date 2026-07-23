@@ -2,6 +2,7 @@ import { APPROVAL_GATE_AGENT, type AgentWorkflow, type Fixtures } from '@buildto
 import postgres from 'postgres';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
+  isHonestStop,
   runAgentJob,
   simulateWalker,
   type AgentGraphResolver,
@@ -119,7 +120,11 @@ describe('AgentRunner — walk + parada honesta em execução (AG-2.2 etapa 2)',
     expect(out).toMatchObject({ ok: false, blocked: 'kill-switch' });
     // trilha PARCIAL preservada: o 1º nó rodou antes do kill-switch
     expect(out.walk.visitedNodes).toEqual(['llm-review']);
-    if (!out.ok) expect(out.message).toMatch(/EM EXECUÇÃO/);
+    if (!out.ok) {
+      expect(out.message).toMatch(/EM EXECUÇÃO/);
+      // §5: kill-switch é PARADA HONESTA (âmbar, estaciona), não falha (incidente).
+      expect(isHonestStop(out.blocked)).toBe(true);
+    }
     // limpa p/ os próximos casos
     await setKillSwitch(api, tenant, false, actor, 'liberado');
   });

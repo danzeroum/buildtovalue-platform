@@ -10,6 +10,7 @@ import {
   dispatchOutboxOnce,
   getAgentDefinitionByRef,
   getInstance,
+  isHonestStop,
   lockJobs,
   persistAgentTrail,
   runAgentJob,
@@ -101,7 +102,12 @@ registry.register('agent', async (job) => {
   } catch (error) {
     logger.warn({ jobId: job.jobId, err: error }, 'trilha de agente não gravada (conclusão segue)');
   }
-  return outcome.ok ? { ok: true, result: outcome.result } : { ok: false, error: outcome.message };
+  if (outcome.ok) return { ok: true, result: outcome.result };
+  // PARADA HONESTA × FALHA (§5): budget/kill-switch estacionam o job (âmbar, sem
+  // incidente); no-config/no-graph/walk-error falham (incidente vermelho). O fato
+  // agent:parada já foi gravado acima para os dois.
+  if (isHonestStop(outcome.blocked)) return { ok: false, honestStop: true, reason: outcome.message };
+  return { ok: false, error: outcome.message };
 });
 const waker = createWaker();
 // Costura LGPD (D20): a varredura de timers avança instâncias que podem ter
@@ -154,11 +160,16 @@ async function conclude(
   run: Awaited<ReturnType<typeof registry.run>>,
 ): Promise<void> {
   const token = await machineToken(tenantId);
-  // nomes NOVOS do contrato (shape §5, decisão 10.a); aliases somem na F4
-  const path = run.ok ? 'completion' : 'failure';
+  // nomes NOVOS do contrato (shape §5, decisão 10.a); aliases somem na F4.
+  // PARADA HONESTA (§5): budget/kill-switch vão para /honest-stop (estaciona, sem
+  // incidente); falha real → /failure; sucesso → /completion.
+  const honestStop = !run.ok && 'honestStop' in run;
+  const path = run.ok ? 'completion' : honestStop ? 'honest-stop' : 'failure';
   const body = run.ok
     ? { lockToken, ...(run.result ? { result: run.result } : {}) }
-    : { lockToken, error: run.error.slice(0, 2000) };
+    : honestStop
+      ? { lockToken, reason: (run as { reason: string }).reason.slice(0, 2000) }
+      : { lockToken, error: (run as { error: string }).error.slice(0, 2000) };
   const response = await fetch(`${apiBase}/v1/jobs/${jobId}/${path}`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },

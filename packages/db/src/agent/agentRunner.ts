@@ -75,6 +75,19 @@ export type AgentBlock =
   | 'budget'
   | 'walk-error';
 
+/**
+ * PARADA HONESTA × FALHA (ADENDO-02 §5, marcação do designer): `budget` e
+ * `kill-switch` são pausas ESPERADAS e retomáveis (âmbar, nota de estado, sem
+ * incidente) — parada honesta é feature, não erro. `no-config`/`no-graph`/
+ * `walk-error` são falhas (vermelho, incidente). Converter parada honesta em
+ * card vermelho contradiz o §5 — daí a separação dos dois caminhos de conclusão.
+ */
+const HONEST_STOP_BLOCKS: ReadonlySet<AgentBlock> = new Set<AgentBlock>(['budget', 'kill-switch']);
+
+export function isHonestStop(block: AgentBlock): boolean {
+  return HONEST_STOP_BLOCKS.has(block);
+}
+
 export interface AgentRunDeps {
   resolveGraph: AgentGraphResolver;
   /** default: walker sobre agentflow.simulate (determinístico, atômico). */

@@ -8,7 +8,7 @@ export interface JobRow {
   wait_key: string;
   type: string;
   payload: Record<string, unknown>;
-  status: 'available' | 'locked' | 'completed' | 'failed';
+  status: 'available' | 'locked' | 'completed' | 'failed' | 'paused';
   lock_token: string | null;
   retries_left: number;
 }
@@ -130,6 +130,33 @@ export async function completeJob(
 }
 
 /** Falha com o token vigente: devolve à fila (retries) ou marca failed. */
+/**
+ * PARADA HONESTA (ADENDO-02 §5): estaciona o job de agente ('paused') sem
+ * consumir retry nem abrir incidente — o contrário de `failJob`. Mesmo fencing
+ * (lock_token vigente). O job sai da fila; a retomada é ação explícita (a fila só
+ * pega 'available'). `error` carrega a voz da parada (budget/kill-switch) para a
+ * coluna `error`, sem virar falha.
+ */
+export async function pauseJob(
+  sql: Sql,
+  tenantId: string,
+  jobId: string,
+  lockToken: string,
+  reason: string,
+): Promise<JobConclusion> {
+  return withTenant(sql, tenantId, async (tx) => {
+    const rows = await tx<JobRow[]>`
+      UPDATE jobs SET status = 'paused', error = ${reason}, lock_token = NULL, lock_until = NULL
+      WHERE id = ${jobId} AND status = 'locked'
+        AND lock_token = ${lockToken} AND lock_until >= now()
+      RETURNING id, instance_id, wait_key, type, payload, status, lock_token, retries_left`;
+    if (rows.length === 1) return { ok: true, job: rows[0] };
+    const [existing] = await tx`SELECT status FROM jobs WHERE id = ${jobId}`;
+    if (!existing) return { ok: false, reason: 'notFound' };
+    return { ok: false, reason: existing.status === 'locked' ? 'staleToken' : 'notLocked' };
+  });
+}
+
 export async function failJob(
   sql: Sql,
   tenantId: string,
