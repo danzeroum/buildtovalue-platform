@@ -62,7 +62,7 @@ registry.register('agent', async (job) => {
     resolveGraph: async (i) => {
       if (!i.agentRef) return null;
       const def = await getAgentDefinitionByRef(sql, job.tenantId, i.agentRef);
-      return def ? { graph: def.graph, fromPayload: false } : null;
+      return def ? { graph: def.graph } : null;
     },
   });
   // Trilha MASCARADA (etapa 3 §2): grava o I/O do agente em history_events.agent_io,
