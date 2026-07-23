@@ -5,6 +5,8 @@
   },
   "include": [
     "src",
-    "tests"
+    "tests",
+    "bench",
+    "scripts"
   ]
 }

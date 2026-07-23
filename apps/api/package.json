@@ -8,7 +8,9 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "dev": "tsx --env-file=../../.env src/server.ts",
     "start": "node dist/server.js",
-    "openapi:emit": "node dist/openapi-emit.js"
+    "openapi:emit": "node dist/openapi-emit.js",
+    "bench:p95": "tsx bench/advance-p95.ts",
+    "seed:demo": "tsx scripts/seed-demo.ts"
   },
   "dependencies": {
     "@fastify/rate-limit": "^10.2.2",
