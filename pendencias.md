@@ -226,7 +226,7 @@ duas implementações vivendo juntas sob teste de equivalência até o colapso).
   console ≡ corpus** (bidirecional). A canônica roda o mesmo corpus na bpmn — as
   três não podem divergir.
 
-**PONTO DE COLAPSO (nomeado) — após publicar `@buildtovalue/forms@1.1.0-next.N`:**
+**PONTO DE COLAPSO (nomeado) — após publicar `@buildtovalue/forms@1.0.0-next.1` (o minor entra como incremento de prerelease no modo `next`):**
 1. subir a dep nos 3 `package.json` da plataforma (db, api, console);
 2. servidor (`userTasks.ts`) e console (`tasks.tsx`) passam a importar
    `formExpressionEvaluator` da biblioteca;
