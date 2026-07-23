@@ -41,20 +41,15 @@ function reembolsoForm(): FormSchema {
     title: 'Reembolso — aprovação',
     fields: [
       { key: 'colaborador', type: 'text', label: 'Colaborador', required: true, dataClassification: 'personal' },
-      {
-        key: 'valor',
-        type: 'number',
-        label: 'Valor (R$)',
-        required: true,
-        dataClassification: 'internal',
-        validation: 'value > 0 and value <= 50000',
-      },
+      { key: 'valor', type: 'number', label: 'Valor (R$)', required: true, dataClassification: 'internal' },
       {
         key: 'justificativa',
         type: 'textarea',
         label: 'Justificativa',
         dataClassification: 'internal',
-        visibleWhen: 'valor > 5000',
+        // Igualdade (subconjunto que o servidor E o preview avaliam hoje —
+        // ver pendencias §2.6: unificar o avaliador rico é item da AG-2.1).
+        visibleWhen: 'decisao = "reprovar"',
       },
       // A DECISÃO é um CAMPO do form (não uma chave fora do schema): a v1
       // conclui com o form validado; um gateway pode ramificar por `decisao`.

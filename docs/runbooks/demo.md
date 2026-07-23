@@ -99,7 +99,11 @@ pnpm --filter @platform/console dev    # console :5173
    pinado (`reembolso@1`) habilita — o MESMO renderer de `/forms`.
 5. Preencha (ex.: Colaborador, Valor `1200`, Decisão *Aprovar*) → **Concluir
    tarefa**. A submissão é revalidada no servidor pelo mesmo schema; erro volta
-   por campo (tente Valor `-1` para ver o 422).
+   por campo (deixe a **Decisão** em branco para ver o 422 — campo obrigatório).
+   *(Nota: o form do demo usa `visibleWhen` de igualdade — «Justificativa»
+   aparece só quando a Decisão é «Reprovar» — porque o avaliador do servidor
+   ainda é o de igualdade; a unificação com o avaliador rico do preview é a
+   pendência §2.6.)*
 6. **Operação**: a instância aparece **concluída**; abra o drill-down (posição
    no diagrama, histórico, variáveis com sensível mascarada, XES).
 

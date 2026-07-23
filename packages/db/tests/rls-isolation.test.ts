@@ -99,7 +99,7 @@ describe('RLS — isolamento de tenants (migração 0001)', () => {
     );
   });
 
-  it('TODAS as 14 tabelas multi-tenant têm RLS FORÇADA (0001+0002+0003+0004)', async () => {
+  it('TODAS as 17 tabelas multi-tenant têm RLS FORÇADA (0001+0002+0003+0004+0006)', async () => {
     // Lista canônica: tabela nova sem entrar aqui + sem policy = este teste
     // ou o de vazamento abaixo ficam vermelhos.
     const tables = [
@@ -108,8 +108,9 @@ describe('RLS — isolamento de tenants (migração 0001)', () => {
       'variables', 'variable_search_keys', 'timers', 'user_tasks',
       'incidents', 'history_events',
       'process_definitions', 'form_definitions', 'idempotency_keys',
+      'tenant_audit_events', 'tenant_ai_config', 'tenant_tools', // 0006 (AG-2.1)
     ];
-    expect(tables).toHaveLength(14); // cobertura declarada (triagem F3.1)
+    expect(tables).toHaveLength(17); // cobertura declarada (AG-2.1)
     const rows = await api`
       SELECT relname, relrowsecurity, relforcerowsecurity
       FROM pg_class
@@ -118,6 +119,19 @@ describe('RLS — isolamento de tenants (migração 0001)', () => {
     for (const row of rows) {
       expect(row.relrowsecurity, `${row.relname} sem RLS`).toBe(true);
       expect(row.relforcerowsecurity, `${row.relname} sem FORCE RLS`).toBe(true);
+    }
+  });
+
+  it('trilhas são APPEND-ONLY por PERMISSÃO de banco (D32) — app_api não faz UPDATE/DELETE', async () => {
+    // A prova máxima do gate de conformidade (ADENDO-03): o runtime nunca
+    // atualiza/apaga trilha por design; a permissão remove até a possibilidade.
+    for (const table of ['history_events', 'tenant_audit_events']) {
+      await expect(
+        api.unsafe(`UPDATE ${table} SET tenant_id = tenant_id WHERE false`),
+      ).rejects.toThrow(/permission denied/i);
+      await expect(api.unsafe(`DELETE FROM ${table} WHERE false`)).rejects.toThrow(
+        /permission denied/i,
+      );
     }
   });
 
