@@ -84,6 +84,7 @@ export function OperateRoute() {
           <button
             type="button"
             className="chip danger"
+            aria-pressed={status === 'incident'}
             data-selected={status === 'incident' || undefined}
             onClick={() => {
               setStatus(status === 'incident' ? '' : 'incident');
@@ -263,6 +264,8 @@ function InstanceDetailPane({ instanceId, onChanged }: { instanceId: string; onC
             key={key}
             type="button"
             role="tab"
+            id={`op-tab-${key}`}
+            aria-controls="op-tabpanel"
             aria-selected={tab === key}
             className="op-tab"
             data-selected={tab === key || undefined}
@@ -273,7 +276,7 @@ function InstanceDetailPane({ instanceId, onChanged }: { instanceId: string; onC
         ))}
       </div>
 
-      <div className="op-tabpanel" role="tabpanel">
+      <div className="op-tabpanel" role="tabpanel" id="op-tabpanel" aria-labelledby={`op-tab-${tab}`}>
         {tab === 'incidents' && <IncidentsTab instanceId={inst.id} canAct={canAct} onChanged={onChanged} />}
         {tab === 'jobs' && <JobsTab instanceId={inst.id} />}
         {tab === 'timers' && <TimersTab instanceId={inst.id} />}
@@ -361,6 +364,7 @@ function IncidentsTab({ instanceId, canAct, onChanged }: { instanceId: string; c
   if (incidents.length === 0) return <NonIdeal kind="empty" title="Nenhum incidente" detail="Nada exige intervenção nesta instância." />;
 
   return (
+    <>
     <ul className="incident-list">
       {incidents.map((i) => (
         <li key={i.id} className="incident-card" data-status={i.status}>
@@ -388,18 +392,19 @@ function IncidentsTab({ instanceId, canAct, onChanged }: { instanceId: string; c
           )}
         </li>
       ))}
-      {resolving && (
-        <ResolveModal
-          incidentId={resolving}
-          onClose={() => setResolving(null)}
-          onDone={() => {
-            setResolving(null);
-            setReloadKey((n) => n + 1);
-            onChanged();
-          }}
-        />
-      )}
     </ul>
+    {resolving && (
+      <ResolveModal
+        incidentId={resolving}
+        onClose={() => setResolving(null)}
+        onDone={() => {
+          setResolving(null);
+          setReloadKey((n) => n + 1);
+          onChanged();
+        }}
+      />
+    )}
+    </>
   );
 }
 

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { FormRenderer } from '@buildtovalue/forms-react';
 import { applyDefaults, validateSubmission, type FormSchema, type SubmissionErrors } from '@buildtovalue/forms';
 import '@buildtovalue/forms-react/styles.css';
@@ -49,7 +49,10 @@ export function TasksRoute() {
   }, [items, search]);
 
   if (!user) return null;
-  const canStart = can(user.role, 'instances:start');
+  // Precisa de instances:start E definitions:read: sem a segunda, o modal não
+  // consegue listar o que iniciar (403) — não oferecemos um botão que dá em
+  // beco. A lacuna de RBAC (business tem start, não read) está em pendencias §2.5.
+  const canStart = can(user.role, 'instances:start') && can(user.role, 'definitions:read');
 
   return (
     <section className="route tasks" aria-label="Tarefas">
@@ -529,6 +532,11 @@ function StartInstanceModal({ onClose }: { onClose: () => void }) {
   // Chave estável POR SESSÃO do modal: uma re-tentativa manual do MESMO início
   // não cria uma segunda instância (o servidor replica a resposta 201).
   const [idemKey] = useState(() => crypto.randomUUID());
+  // Move o foco para dentro do diálogo ao abrir (a11y — captura de foco).
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    dialogRef.current?.focus();
+  }, []);
 
   async function start() {
     setError(null);
@@ -547,7 +555,7 @@ function StartInstanceModal({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label="Iniciar processo">
-      <div className="modal start-modal">
+      <div className="modal start-modal" ref={dialogRef} tabIndex={-1}>
         <header>
           <h2>Iniciar processo</h2>
           <button type="button" className="modal-close" onClick={onClose} aria-label="Fechar">

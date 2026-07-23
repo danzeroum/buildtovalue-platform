@@ -151,6 +151,13 @@ describe('TasksRoute — F3.4', () => {
     expect(await screen.findByText(/criada/)).toBeInTheDocument();
   });
 
+  it('«Iniciar processo» exige instances:start E definitions:read (business não vê — evita beco)', async () => {
+    seedHappyPath();
+    render(<TasksRoute />); // business: tem start, NÃO tem definitions:read
+    await screen.findByRole('button', { name: /aprovar_reembolso/ });
+    expect(screen.queryByRole('button', { name: /Iniciar processo/ })).not.toBeInTheDocument();
+  });
+
   it('lista vazia (primeiro dia) oferece «ver tarefas do meu papel»', async () => {
     route('GET /v1/user-tasks', () => ok({ items: [], nextCursor: null }));
     render(<TasksRoute />);

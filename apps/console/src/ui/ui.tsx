@@ -100,8 +100,10 @@ export function NonIdeal({
   action?: ReactNode;
 }) {
   if (kind === 'loading') {
+    // `aria-label` dá texto acessível ao estado de carregamento (o esqueleto é
+    // puramente visual) — leitor de tela anuncia "Carregando…", não silêncio.
     return (
-      <div className="ui-nonideal" data-kind="loading" aria-busy="true" aria-live="polite">
+      <div className="ui-nonideal" data-kind="loading" role="status" aria-busy="true" aria-live="polite" aria-label={title}>
         <div className="ui-skeleton" />
         <div className="ui-skeleton" />
         <div className="ui-skeleton short" />

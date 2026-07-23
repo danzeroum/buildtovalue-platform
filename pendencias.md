@@ -165,12 +165,14 @@ protótipo).
   PR2):** o papel **business** tem `instances:start` mas NÃO `definitions:read`.
   O «Iniciar processo» (tela 05) lista definições via
   `GET /v1/process-definitions` (`definitions:read`) → business receberia
-  **403** e não conseguiria escolher o que iniciar. O botão segue visível por
-  `instances:start` (fiel ao protótipo — "visível para papéis com permissão de
-  start"), e o modal mostra o estado **forbidden** honesto se a listagem negar.
-  **Decisão do dono:** (a) conceder `definitions:read` ao business; (b) um
-  endpoint de "definições iniciáveis" escopado por `instances:start`; ou (c)
-  retirar `instances:start` do business. Mudança de RBAC = **GATE**.
+  **403** e não conseguiria escolher o que iniciar. **Decisão de UX aplicada:**
+  o console exige `instances:start` **E** `definitions:read` para mostrar o
+  botão — não oferece um botão que dá em beco (revisão adversarial). Isso
+  DESVIA do protótipo ("visível para papéis com permissão de start"), porque o
+  contrato de RBAC torna o fluxo impossível para business. **Decisão do dono
+  (RBAC = GATE):** (a) conceder `definitions:read` ao business (o botão volta a
+  aparecer para ele); (b) um endpoint de "definições iniciáveis" escopado por
+  `instances:start`; ou (c) retirar `instances:start` do business.
 
 **Correções aplicadas na revisão adversarial da PR2 (antes do merge):** ações
 de trabalho de tarefa gated por `tasks:work` (papel sem ela vê somente
