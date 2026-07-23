@@ -1,0 +1,11 @@
+-- Migração 0013 — marcador de GATE consultável em user_tasks (AG-2.2 etapa 5
+-- slice 3, D31). Forward-only.
+--
+-- O gate de tool é um userTask com properties.btvGate=true a jusante do
+-- agentTask. Ele NÃO é uma tarefa comum: até a AG-3 (onde existe o modo-agente
+-- da Tasklist) não pode aparecer na fila do usuário de negócio. O marcador é
+-- RESOLVIDO no despacho do OpenUserTask (disciplina do pin, 0008) contra a
+-- DEFINIÇÃO PINADA da instância — não se infere do diagrama no query, nem se
+-- lê a versão latest (republicar entre o start e a abertura da task não
+-- reclassifica instância em voo). `false` por padrão: tarefa comum.
+ALTER TABLE user_tasks ADD COLUMN is_gate boolean NOT NULL DEFAULT false;

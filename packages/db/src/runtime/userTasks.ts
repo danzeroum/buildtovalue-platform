@@ -24,6 +24,9 @@ export interface UserTaskListItem {
   status: string;
   claimed_at: string | null;
   created_at: string;
+  /** D31: gate de tool (userTask btvGate). Marcador RESOLVIDO no despacho contra
+   *  a definição pinada — a Tasklist comum o EXCLUI (não é tarefa de negócio). */
+  is_gate: boolean;
 }
 
 export interface TaskViewer {
@@ -51,6 +54,10 @@ export async function listUserTasks(
     status?: string;
     instanceId?: string;
     filter?: 'mine' | 'role' | 'unassigned';
+    /** D31: por padrão a Tasklist NÃO mostra gates de tool (não são tarefa de
+     *  negócio; o modo-agente da fila é AG-3). Operate/superfície de gate passam
+     *  true para consultá-los explicitamente. */
+    includeGates?: boolean;
   } = {},
 ): Promise<{ items: UserTaskListItem[]; nextCursor: string | null }> {
   const limit = Math.min(Math.max(options.limit ?? 20, 1), 100);
@@ -66,10 +73,13 @@ export async function listUserTasks(
     // sobre a página (+1) — v1 com poucos papéis por tenant.
     const rows = await tx`
       SELECT id, instance_id, element_id, form_ref, assignee, candidate_roles,
-             status, claimed_at, created_at, created_at::text AS created_at_cursor
+             status, claimed_at, created_at, is_gate, created_at::text AS created_at_cursor
       FROM user_tasks
       WHERE (${options.status ?? null}::text IS NULL OR status = ${options.status ?? null})
         AND (${options.instanceId ?? null}::uuid IS NULL OR instance_id = ${options.instanceId ?? null})
+        -- D31: gate de tool NÃO é tarefa comum — some da Tasklist de negócio por
+        -- padrão (o modo-agente da fila é AG-3). includeGates=true traz de volta.
+        AND (${options.includeGates ?? false} = true OR is_gate = false)
         AND (${options.filter === 'mine'} = false OR assignee = ${viewer.sub})
         AND (${options.filter === 'unassigned'} = false OR assignee IS NULL)
         AND (${options.filter === 'role'} = false OR ${viewer.role} = ANY(candidate_roles))
@@ -111,7 +121,7 @@ export async function getUserTask(
     const [row] = await tx`
       SELECT ut.id, ut.instance_id, ut.element_id, ut.form_ref, ut.assignee,
              ut.candidate_roles, ut.status, ut.claimed_at, ut.created_at, ut.payload,
-             i.definition_ref
+             ut.is_gate, i.definition_ref
       FROM user_tasks ut JOIN instances i ON i.id = ut.instance_id
       WHERE ut.id = ${taskId}`;
     if (!row) return undefined;

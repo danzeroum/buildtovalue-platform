@@ -15,6 +15,9 @@ const taskSummarySchema = z.object({
   status: z.string(),
   claimedAt: z.string().nullable(),
   createdAt: z.string(),
+  // D31: gate de tool (userTask btvGate). A Tasklist comum já o EXCLUI no
+  // servidor; o campo serve ao Operate/superfície de gate (drill-down).
+  isGate: z.boolean(),
 });
 
 function problem(
@@ -41,6 +44,7 @@ function summarize(row: {
   status: string;
   claimed_at: string | null;
   created_at: string;
+  is_gate: boolean;
 }) {
   return {
     id: row.id,
@@ -52,6 +56,7 @@ function summarize(row: {
     status: row.status,
     claimedAt: row.claimed_at === null ? null : String(row.claimed_at),
     createdAt: String(row.created_at),
+    isGate: row.is_gate,
   };
 }
 
