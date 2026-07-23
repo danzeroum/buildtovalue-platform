@@ -1,12 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { FormRenderer } from '@buildtovalue/forms-react';
-import { applyDefaults, validateSubmission, type FormSchema, type SubmissionErrors } from '@buildtovalue/forms';
+import { applyDefaults, formExpressionEvaluator, validateSubmission, type FormSchema, type SubmissionErrors } from '@buildtovalue/forms';
 import '@buildtovalue/forms-react/styles.css';
 import { api, problemMessage } from '../api/client.js';
 import { useResource } from '../api/useResource.js';
-import type { FormDefByRef, ProcessItem, TaskDetail, TaskItem } from '../api/types.js';
+import type { FormDefByRef, StartableItem, TaskDetail, TaskItem } from '../api/types.js';
 import { can } from '../capabilities.js';
-import { consoleEvaluator } from '../sfeel.js';
 import { relativeTime, shortId } from '../format.js';
 import { useSession } from '../shell.js';
 import { Button, NonIdeal, StatusPill, Tag } from '../ui/ui.js';
@@ -49,10 +48,11 @@ export function TasksRoute() {
   }, [items, search]);
 
   if (!user) return null;
-  // Precisa de instances:start E definitions:read: sem a segunda, o modal não
-  // consegue listar o que iniciar (403) — não oferecemos um botão que dá em
-  // beco. A lacuna de RBAC (business tem start, não read) está em pendencias §2.5.
-  const canStart = can(user.role, 'instances:start') && can(user.role, 'definitions:read');
+  // Só `instances:start` (AG-2.1 etapa 5): o modal agora lista por
+  // GET /v1/startable-definitions — projeção {id,name,version} escopada pelo
+  // MESMO `instances:start`, sem exigir `definitions:read`. Fecha a lacuna de
+  // RBAC de pendencias §2.5 (o business inicia sem ganhar acesso ao modelo).
+  const canStart = can(user.role, 'instances:start');
 
   return (
     <section className="route tasks" aria-label="Tarefas">
@@ -271,6 +271,13 @@ function TaskFormLoaded({
 
   const [values, setValues] = useState<Record<string, unknown>>(initial);
   const [claimToken, setClaimToken] = useState<string | null>(null);
+  // etapa 6: se a task declara decisionVar, a decisão é OBRIGATÓRIA e roteia o
+  // gateway a jusante (comparada por igualdade). Sem ela, o servidor recusa 422.
+  const requiresDecision = typeof task.decisionVar === 'string' && task.decisionVar.length > 0;
+  // opções EXATAS derivadas do gateway (fecha o desencontro de valor: o usuário
+  // ESCOLHE, não digita). null/vazio = texto livre (gateway não-derivável).
+  const decisionOptions = task.decisionOptions ?? null;
+  const [decision, setDecision] = useState('');
   const [errors, setErrors] = useState<SubmissionErrors | undefined>();
   const [banner, setBanner] = useState<{ tone: 'danger' | 'success'; text: string } | null>(null);
   const [holder, setHolder] = useState<{ user: string; since: string } | null>(null);
@@ -316,7 +323,7 @@ function TaskFormLoaded({
   async function complete() {
     setErrors(undefined);
     setBanner(null);
-    const local = validateSubmission(schema, values, consoleEvaluator);
+    const local = validateSubmission(schema, values, formExpressionEvaluator);
     if (!local.ok) {
       setErrors(local.errors);
       return;
@@ -325,9 +332,18 @@ function TaskFormLoaded({
       setBanner({ tone: 'danger', text: 'Assuma a tarefa antes de concluir (o claim gera o token exigido).' });
       return;
     }
+    // decisão obrigatória quando declarada — não deixamos o servidor 422 à toa.
+    if (requiresDecision && !decision.trim()) {
+      setBanner({ tone: 'danger', text: 'Esta tarefa exige uma decisão para rotear o processo.' });
+      return;
+    }
     const { data, error, response } = await api.POST('/v1/user-tasks/{id}/completion', {
       params: { path: { id: task.id } },
-      body: { claimToken, submission: local.values },
+      body: {
+        claimToken,
+        submission: local.values,
+        ...(requiresDecision ? { decision: decision.trim() } : {}),
+      },
     });
     if (error || !data) {
       if (response.status === 422) {
@@ -410,12 +426,57 @@ function TaskFormLoaded({
         <FormRenderer
           schema={schema}
           values={values}
-          evaluator={consoleEvaluator}
+          evaluator={formExpressionEvaluator}
           errors={errors}
           disabled={!claimToken}
           onChange={(key, value) => setValues((v) => ({ ...v, [key]: value }))}
         />
       </div>
+
+      {requiresDecision && (
+        <div className="task-decision" data-locked={!claimToken || undefined}>
+          <span className="field-label">
+            Decisão <Tag tone="gold">roteia o processo</Tag>
+          </span>
+          {decisionOptions && decisionOptions.length > 0 ? (
+            // escolha EXATA das rotas do gateway — impossível um valor que não casa
+            <div className="decision-options" role="radiogroup" aria-label={`Decisão (${task.decisionVar})`} aria-describedby="decision-hint">
+              {decisionOptions.map((opt) => (
+                <button
+                  key={opt}
+                  type="button"
+                  role="radio"
+                  aria-checked={decision === opt}
+                  className="decision-option"
+                  data-selected={decision === opt || undefined}
+                  disabled={!claimToken}
+                  onClick={() => setDecision(opt)}
+                >
+                  {opt}
+                </button>
+              ))}
+            </div>
+          ) : (
+            // fallback honesto (gateway não-derivável): texto livre
+            <input
+              className="mono"
+              value={decision}
+              disabled={!claimToken}
+              required
+              aria-required="true"
+              aria-label={`Decisão (${task.decisionVar})`}
+              aria-describedby="decision-hint"
+              placeholder={`valor de '${task.decisionVar}'`}
+              onChange={(e) => setDecision(e.target.value)}
+            />
+          )}
+          <p id="decision-hint" className="foot-note">
+            Comparada por <strong>igualdade</strong> no próximo gateway (grava em{' '}
+            <span className="mono">{task.decisionVar}</span> e na trilha). Obrigatória: sem ela, a conclusão é
+            recusada.
+          </p>
+        </div>
+      )}
 
       <footer className="task-foot">
         <span className="foot-note">
@@ -521,8 +582,12 @@ function ReassignModal({ taskId, onClose, onDone }: { taskId: string; onClose: (
 
 /** Iniciar processo (tela 05) — fecha o fluxo-alvo; Idempotency-Key no POST. */
 function StartInstanceModal({ onClose }: { onClose: () => void }) {
+  // AG-2.1 etapa 5: projeção iniciável {id,name,version,registryRef} escopada
+  // por `instances:start` PURO — o business lista o que iniciar sem
+  // `definitions:read` e sem receber o modelo (XML). Usa `registryRef` VERBATIM
+  // (nunca reconstrói name@version — quebraria sob normalização/caractere especial).
   const defs = useResource(
-    (signal) => api.GET('/v1/process-definitions', { params: { query: { limit: 50 } }, signal }),
+    (signal) => api.GET('/v1/startable-definitions', { params: { query: { limit: 50 } }, signal }),
     [],
   );
   const [ref, setRef] = useState<string | null>(null);
@@ -551,7 +616,7 @@ function StartInstanceModal({ onClose }: { onClose: () => void }) {
     setResult({ id: data.id });
   }
 
-  const items: ProcessItem[] = defs.value.state === 'ready' ? defs.value.data.items : [];
+  const items: StartableItem[] = defs.value.state === 'ready' ? defs.value.data.items : [];
 
   return (
     <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label="Iniciar processo">

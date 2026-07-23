@@ -42,8 +42,8 @@ importers:
         specifier: 1.1.0-next.1
         version: 1.1.0-next.1
       '@buildtovalue/forms':
-        specifier: 1.0.0-next.0
-        version: 1.0.0-next.0
+        specifier: 1.0.0-next.1
+        version: 1.0.0-next.1
       '@fastify/rate-limit':
         specifier: ^10.2.2
         version: 10.3.0
@@ -88,11 +88,11 @@ importers:
         specifier: 1.2.0-next.0
         version: 1.2.0-next.0
       '@buildtovalue/forms':
-        specifier: 1.0.0-next.0
-        version: 1.0.0-next.0
+        specifier: 1.0.0-next.1
+        version: 1.0.0-next.1
       '@buildtovalue/forms-react':
-        specifier: 1.0.0-next.0
-        version: 1.0.0-next.0(react@19.2.8)
+        specifier: 1.0.0-next.1
+        version: 1.0.0-next.1(react@19.2.8)
       '@buildtovalue/react':
         specifier: 1.2.0-next.0
         version: 1.2.0-next.0(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -213,8 +213,8 @@ importers:
         specifier: 1.1.0-next.1
         version: 1.1.0-next.1
       '@buildtovalue/forms':
-        specifier: 1.0.0-next.0
-        version: 1.0.0-next.0
+        specifier: 1.0.0-next.1
+        version: 1.0.0-next.1
       postgres:
         specifier: ^3.4.7
         version: 3.4.9
@@ -361,14 +361,14 @@ packages:
     resolution: {integrity: sha512-9oz5Jt2cNCiVi9FbasdHT/Yt1JLS3vSGINop25NrnPku+cr99AUEwjdDLuuXjtl28EMZtqkSj7qcQJ2NRVozGQ==}
     engines: {node: '>=20'}
 
-  '@buildtovalue/forms-react@1.0.0-next.0':
-    resolution: {integrity: sha512-npsUhCA0x8OnrBbe+XRPYf7fz57RV8W0gCcX8frC7flowIvM5e+vvmmMc2SqfSik2GH10mTQhpG3mDf6WmRz1A==}
+  '@buildtovalue/forms-react@1.0.0-next.1':
+    resolution: {integrity: sha512-DaRO6fvP7HcdNHRicao+9l2fImY2/ruvQGABWYAxEqNUCL25ZZejQZgp5fmGCdbloTx8yfO8LJwb4ychxJoHPg==}
     engines: {node: '>=20'}
     peerDependencies:
       react: '>=18'
 
-  '@buildtovalue/forms@1.0.0-next.0':
-    resolution: {integrity: sha512-7Wk9Rq9V4qwCrEYdqw0Lqwx7kY6UT/pcNnOtL4infsKDgTP4vq3IUNz9hU4ADPpWSWdlEwIFM+fKOFsx2074OQ==}
+  '@buildtovalue/forms@1.0.0-next.1':
+    resolution: {integrity: sha512-7Mwehl5h6Rb/a1pn/KEL3xSFnO3dhLrh8fo7jKNPMNrDJgCaXzVlzjhy1x6HPmU9pel8SzXxraZIr/lfgYbwGg==}
     engines: {node: '>=20'}
 
   '@buildtovalue/identity@1.1.0-next.0':
@@ -2896,12 +2896,12 @@ snapshots:
     dependencies:
       '@buildtovalue/core': 1.2.0-next.0
 
-  '@buildtovalue/forms-react@1.0.0-next.0(react@19.2.8)':
+  '@buildtovalue/forms-react@1.0.0-next.1(react@19.2.8)':
     dependencies:
-      '@buildtovalue/forms': 1.0.0-next.0
+      '@buildtovalue/forms': 1.0.0-next.1
       react: 19.2.8
 
-  '@buildtovalue/forms@1.0.0-next.0': {}
+  '@buildtovalue/forms@1.0.0-next.1': {}
 
   '@buildtovalue/identity@1.1.0-next.0':
     dependencies:

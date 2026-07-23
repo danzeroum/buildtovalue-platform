@@ -17,8 +17,8 @@
     "react-dom": "^19.1.0",
     "react-router-dom": "^7.6.2",
     "@buildtovalue/core": "1.2.0-next.0",
-    "@buildtovalue/forms": "1.0.0-next.0",
-    "@buildtovalue/forms-react": "1.0.0-next.0",
+    "@buildtovalue/forms": "1.0.0-next.1",
+    "@buildtovalue/forms-react": "1.0.0-next.1",
     "@buildtovalue/react": "1.2.0-next.0"
   },
   "devDependencies": {

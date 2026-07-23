@@ -183,7 +183,16 @@ leitura); «Exportar XES» e abas Incidentes/Jobs/Timers gated por `operate:read
 Idempotency-Key estável por sessão do modal de início (re-tentativa não duplica
 instância).
 
-## 2.6 Avaliador de expressão: servidor × preview DIVERGEM (confirmado)
+## 2.6 ~~Avaliador de expressão: servidor × preview DIVERGEM~~ FECHADA (colapso §2.7)
+
+**Encerrada.** O servidor e o console agora importam o MESMO
+`formExpressionEvaluator` de `@buildtovalue/forms@1.0.0-next.1` — a divergência
+(servidor só-igualdade × preview rico) não existe mais. As cópias locais foram
+apagadas (ver §2.7). O seed do demo voltou a usar comparações + `and`/`or`
+(`value > 0 and value <= 50000`, `valor > 5000 or decisao = "reprovar"`) e passa
+igual nos dois lados. Diagnóstico histórico abaixo mantido para auditoria.
+
+### (histórico)
 
 Pergunta do dono na triagem final — **confirmada**:
 
@@ -206,6 +215,92 @@ FORM (comparações+and/or) e os DOIS lados consomem — console e o
 (bpmn) + consumo na plataforma → proponho como **item da AG-2.1** (v2 §4).
 Interim aplicado: o form do seed do demo usa só igualdade (`visibleWhen
 decisao = "reprovar"`), então o runbook conclui sem 422.
+
+## 2.7 ~~Avaliador de forms — coexistência transitória~~ COLAPSADA (fonte única)
+
+**Encerrada.** Publicado `@buildtovalue/forms@1.0.0-next.1`, o colapso foi
+executado: `db`/`api`/`console` subiram a dep para `1.0.0-next.1` (engine segue
+pinado em `1.1.0-next.1`); servidor e console importam `formExpressionEvaluator`
++ `@buildtovalue/forms/corpus`; as três coisas locais foram **DELETADAS**
+(`packages/db/src/runtime/formEvaluator.ts`, `apps/console/src/sfeel.ts`,
+`packages/db/tests/fixtures/sfeel-corpus.ts`). O teste
+`apps/api/tests/form-evaluator-equivalence.test.ts` virou **regressão contra a
+canônica** — roda o corpus publicado E falha se qualquer cópia local reaparecer.
+Plano histórico abaixo mantido para auditoria.
+
+### (histórico do plano de colapso)
+
+Precedente: **Anexo C item 2** (o mesmo tratamento de `simulation × engine` —
+duas implementações vivendo juntas sob teste de equivalência até o colapso).
+
+**Estado atual (3 implementações, ancoradas a UM corpus):**
+- **canônica** — `@buildtovalue/forms` `formExpressionEvaluator` (bpmn, branch
+  `claude/...decvzt`), default de `validateSubmission`; changeset `minor`
+  (`forms-canonical-evaluator.md`). Testada na bpmn contra `SFEEL_FORM_CORPUS`.
+- **servidor** — `packages/db/src/runtime/formEvaluator.ts` (cópia rica; a
+  conclusão de user task já a usa, fechando a §2.6 no runtime real).
+- **console** — `apps/console/src/sfeel.ts` `consoleEvaluator` (inalterado).
+- **corpus compartilhado** — `SFEEL_FORM_CORPUS` na bpmn é a FONTE, publicada no
+  subpath **`@buildtovalue/forms/corpus`** (fixture fora do bundle de runtime); o
+  espelho byte-a-byte vive em `packages/db/tests/fixtures/sfeel-corpus.ts` e o
+  teste `apps/api/tests/form-evaluator-equivalence.test.ts` afirma **servidor ≡
+  console ≡ corpus** (bidirecional). A canônica roda o mesmo corpus na bpmn — as
+  três não podem divergir.
+
+**PONTO DE COLAPSO (nomeado) — após publicar `@buildtovalue/forms@1.0.0-next.1` (o minor entra como incremento de prerelease no modo `next`):**
+1. subir a dep nos 3 `package.json` da plataforma (db, api, console);
+2. servidor (`userTasks.ts`) e console (`tasks.tsx`) passam a importar
+   `formExpressionEvaluator` da biblioteca;
+3. **DELETAR** as CÓPIAS do avaliador — `packages/db/src/runtime/formEvaluator.ts`
+   e `apps/console/src/sfeel.ts` (consoleEvaluator) — **E o espelho do corpus**
+   `packages/db/tests/fixtures/sfeel-corpus.ts`;
+4. o teste de equivalência importa `SFEEL_FORM_CORPUS` de
+   **`@buildtovalue/forms/corpus`** (fonte única) e sobrevive como **regressão
+   contra a canônica** — sem espelho, sem risco de drift silencioso;
+5. só ENTÃO restaurar expressões ricas no `seed-demo.ts` (o demo mostra o poder
+   real, não o interim) — e a §2.6 fecha de verdade.
+
+**Release do bpmn (ação do dono no gate):** `changeset` já commitado →
+`pnpm version-packages` (gera a PR de versão) → **merge da PR de versão** →
+`release.yml` publica. Lembrete do guarda que travou o **Release #1** (o job de
+publish exige o build verde de TODOS os pacotes + o `NPM_TOKEN`; o `pre.json`
+mantém a tag `next`). **Se o `workflow_dispatch` ainda devolver 403** pelo proxy,
+me avise que **você dispara pela UI do Actions** (mesmo procedimento do
+`phase-1`, §2.2).
+
+**Composição da PR de versão (bpmn#170) — corte final:** o `version-packages`
+batia num acoplamento: bumpar o engine (`next.1→next.2`, changeset pré-existente
+`ENGINE_VERSION`) quebrava 5 cenários do corpus de replay **D6** só na string de
+versão. Resolvido pela raiz (ver §2.8). A #170 publica os **dois juntos**:
+`forms@1.0.0-next.1` + `engine@1.1.0-next.2`; nenhuma aceitação nomeada regenerada.
+
+## 2.8 D6 REFINADO — replay compara projeção semântica, não versão
+
+**D6 refinado — o replay compara a projeção semântica do estado; `engineVersion`
+é gravada e verificada por asserção própria, não por igualdade byte-a-byte.
+Motivo: metadado de versão fazia o gate disparar por não-semântica e empurrava
+para regeneração rotineira do corpus** (e é na regeneração que uma regressão
+semântica real passaria batida, misturada às trocas de string). Feito em
+`packages/engine/tests/replay.test.ts` (bpmn): normaliza SÓ `engineVersion`;
+`stateSchemaVersion` segue byte-a-byte (é semântico — bump exige `migrateState`,
+D14). As fixtures NÃO foram regeneradas (passam em next.1 e next.2).
+
+**Pino do engine na plataforma:** a plataforma **NÃO** sobe para `engine@next.2`
+agora — continua pinada em `1.1.0-next.1` até um **upgrade deliberado** com o gate
+de conformidade/replay (D5 + §9.3). O release da #170 publica o engine; o consumo
+na plataforma é decisão à parte.
+
+## 2.9 bpmn — dist-tag `latest` aponta para prerelease (ação no repo bpmn)
+
+Observado pelo dono no publish: no npm, a dist-tag **`latest`** de
+`@buildtovalue/forms` (`1.0.0-next.1`) e de `@buildtovalue/core` (`1.2.0-next.0`)
+está apontando para **prerelease**. Prereleases devem sair sob a tag **`next`**,
+com `latest` reservada à última **estável**. Não bloqueia a plataforma (as deps
+são pinadas por versão exata, não por tag), mas engana `npm install pkg` sem
+versão. **Ação (bpmn, quando conveniente):** ajustar `publishConfig.tag`/fluxo do
+`release.yml` para publicar prereleases só em `next` (o `pre.json` já usa a tag
+`next` no changesets — o desalinhamento é no passo de publish/`npm publish
+--tag`). Registrar o fix no changelog do bpmn.
 
 ## 3. Registro de fluxo (sem ação sua)
 

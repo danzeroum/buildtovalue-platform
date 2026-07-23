@@ -29,7 +29,11 @@ export type LintCode =
   | 'EXEC_CONDITION_UNSUPPORTED'
   | 'EXEC_FORM_REF_MISSING'
   | 'EXEC_JOB_TYPE_MISSING'
-  | 'EXEC_GRAPH_UNREACHABLE';
+  | 'EXEC_GRAPH_UNREACHABLE'
+  | 'EXEC_DECISION_VAR_NO_GATEWAY'
+  | 'EXEC_DECISION_VAR_FREE_TEXT'
+  | 'EXEC_DECISION_VAR_RESERVED'
+  | 'EXEC_DECISION_VAR_SENSITIVE';
 
 /** Subconjunto executável v1 (espelha o engine publicado — D19). */
 const SUPPORTED_TYPES = new Set([
@@ -192,6 +196,107 @@ export function lintDiagram(diagram: BpmnDiagram): LintIssue[] {
   }
 
   issues.push(...reachability(diagram));
+  issues.push(...decisionVarGatewayWarnings(diagram));
+  return issues;
+}
+
+const DECISION_EQ_LHS = /^\s*([A-Za-z_]\w*)\s*=/;
+const DECISION_EQ_STRING = /^\s*([A-Za-z_]\w*)\s*=\s*"([^"]*)"\s*$/;
+
+export interface DecisionRouting {
+  /** decisionVar declarada no elemento (null = não declara). */
+  decisionVar: string | null;
+  /** algum exclusiveGateway a jusante compara a decisionVar. */
+  readByGateway: boolean;
+  /**
+   * Valores EXATOS que roteiam (RHS das igualdades `decisionVar = "literal"`
+   * dos gateways a jusante), ordenados/dedup. `null` = não derivável (nenhum
+   * literal string enumerável) → cai para texto livre (com aviso no lint).
+   */
+  options: string[] | null;
+}
+
+/**
+ * Deriva o roteamento da decisão de um userTask (etapa 6, adição): o MESMO
+ * caminhamento a jusante do lint extrai, além de "algum gateway lê a var", os
+ * VALORES comparados por igualdade — as opções exatas. É a fonte única de
+ * `decisionOptions` (detalhe da task, escolha do console, e a recusa 422 de
+ * valor fora da lista). Gateway é só-igualdade por D19, então o RHS string é o
+ * conjunto de rotas possíveis; valor fora dele NUNCA casaria (aprovação inócua).
+ */
+export function deriveDecisionRouting(diagram: BpmnDiagram, elementId: string): DecisionRouting {
+  const node = diagram.nodes[elementId] as BpmnNode | undefined;
+  const dv = node?.properties.decisionVar;
+  const decisionVar = typeof dv === 'string' && dv.length > 0 ? dv : null;
+  if (!decisionVar) return { decisionVar: null, readByGateway: false, options: null };
+
+  const edges = Object.values(diagram.edges);
+  const forward = new Map<string, string[]>();
+  for (const edge of edges) {
+    forward.set(edge.sourceId, [...(forward.get(edge.sourceId) ?? []), edge.targetId]);
+  }
+  const reached = new Set<string>();
+  const queue = [...(forward.get(elementId) ?? [])];
+  while (queue.length > 0) {
+    const id = queue.shift()!;
+    if (reached.has(id)) continue;
+    reached.add(id);
+    queue.push(...(forward.get(id) ?? []));
+  }
+
+  let readByGateway = false;
+  const options = new Set<string>();
+  for (const id of reached) {
+    const gw = diagram.nodes[id] as BpmnNode | undefined;
+    if (gw?.type !== 'exclusiveGateway') continue;
+    for (const edge of edges.filter((e) => e.sourceId === id)) {
+      const expr = (edge.properties.conditionExpression ?? edge.properties.condition) as
+        | string
+        | undefined;
+      if (!expr || DECISION_EQ_LHS.exec(expr)?.[1] !== decisionVar) continue;
+      readByGateway = true;
+      const lit = DECISION_EQ_STRING.exec(expr)?.[2];
+      if (lit !== undefined) options.add(lit);
+    }
+  }
+  return {
+    decisionVar,
+    readByGateway,
+    options: readByGateway && options.size > 0 ? [...options].sort() : null,
+  };
+}
+
+/**
+ * D19 (etapa 6): userTask com `decisionVar` — warning se nenhum gateway a
+ * jusante a lê (decisão não roteia nada), OU se lê mas os valores não são
+ * enumeráveis (degrada para texto livre; nunca falha fechado num caso legítimo).
+ */
+function decisionVarGatewayWarnings(diagram: BpmnDiagram): LintIssue[] {
+  const issues: LintIssue[] = [];
+  const declaring = (Object.values(diagram.nodes) as BpmnNode[]).filter(
+    (n) =>
+      n.type === 'userTask' &&
+      typeof n.properties.decisionVar === 'string' &&
+      (n.properties.decisionVar as string).length > 0,
+  );
+  for (const task of declaring) {
+    const routing = deriveDecisionRouting(diagram, task.id);
+    if (!routing.readByGateway) {
+      issues.push({
+        code: 'EXEC_DECISION_VAR_NO_GATEWAY',
+        severity: 'warning',
+        elementId: task.id,
+        message: `userTask '${task.id}' declara decisionVar '${routing.decisionVar}' mas nenhum gateway a jusante lê essa variável — a decisão não roteia nada`,
+      });
+    } else if (routing.options === null) {
+      issues.push({
+        code: 'EXEC_DECISION_VAR_FREE_TEXT',
+        severity: 'warning',
+        elementId: task.id,
+        message: `userTask '${task.id}': o gateway a jusante lê '${routing.decisionVar}' mas sem valores string enumeráveis — a decisão cai para TEXTO LIVRE (o console não oferece escolha exata)`,
+      });
+    }
+  }
   return issues;
 }
 

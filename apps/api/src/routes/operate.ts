@@ -131,17 +131,17 @@ export function registerOperateRoutes(rawApp: ZodApp, deps: ApiDeps): void {
         summary: 'Re-tenta a causa: jobs failed voltam a available com retries restaurados (auditado)',
         description:
           'Re-arma jobs `failed` da instância (retries restaurados) e marca o incidente `retried`. ' +
-          'LIMITAÇÃO v1 (ERRATA §7 do contrato): efeito em DEAD-LETTER ' +
-          "(`kind = 'effectDispatchFailed'`) NÃO é re-enfileirável — a outbox é fila efêmera e o " +
-          'payload não é persistido no incidente. Nesse caso a rota responde 409 problem+json ' +
-          'apontando /resolution (sem falso sucesso). Re-enfileiramento com payload persistido ' +
-          'exige coluna nova em incidents (migração da AG-2).',
+          "AG-2.1 (D22): efeito em DEAD-LETTER (`kind = 'effectDispatchFailed'`) agora É " +
+          're-enfileirável — o efeito é persistido em `incidents.payload` (migração 0006) e o ' +
+          'retry o devolve à outbox (`reEnqueuedEffects`). Incidente anterior à 0006 (sem payload) ' +
+          'ou incidente sem nada a re-tentar respondem 409 apontando /resolution (sem falso sucesso). ' +
+          'Substitui a LIMITAÇÃO da ERRATA §7 do contrato.',
         security: [{ bearerAuth: [] }],
         params: z.object({ id: z.string().uuid() }),
         response: {
-          200: z.object({ rearmedJobs: z.number().int() }),
+          200: z.object({ rearmedJobs: z.number().int(), reEnqueuedEffects: z.number().int() }),
           404: problemSchema,
-          409: problemSchema.describe('Incidente não re-tentável (ex.: dead-letter) — use /resolution'),
+          409: problemSchema.describe('Incidente não re-tentável (sem job failed e sem efeito guardado) — use /resolution'),
         },
       },
     },
@@ -153,7 +153,7 @@ export function registerOperateRoutes(rawApp: ZodApp, deps: ApiDeps): void {
         }
         return problem(reply, 409, PROBLEM_TYPES.conflict, 'Retry recusado', String(req.id), outcome.message);
       }
-      return { rearmedJobs: outcome.rearmedJobs };
+      return { rearmedJobs: outcome.rearmedJobs, reEnqueuedEffects: outcome.reEnqueuedEffects };
     },
   );
 

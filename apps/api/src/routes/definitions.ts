@@ -23,6 +23,14 @@ const processSummarySchema = z.object({
   createdAt: z.string(),
 });
 
+const startableSummarySchema = z.object({
+  id: z.string().uuid(),
+  name: z.string(),
+  version: z.number().int(),
+  // identificador CANÔNICO (name@version) — o cliente inicia com ele verbatim
+  registryRef: z.string(),
+});
+
 const formSummarySchema = z.object({
   id: z.string().uuid(),
   formId: z.string(),
@@ -181,6 +189,43 @@ export function registerDefinitionRoutes(rawApp: ZodApp, deps: ApiDeps): void {
         engineVersion: row.engine_version,
         createdAt: String(row.created_at),
         diagram: row.diagram as unknown as Record<string, unknown>,
+      };
+    },
+  );
+
+  // ---- startable-definitions (AG-2.1 etapa 5 [GATE]) ----------------------
+  // Projeção {id,name,version} SEM diagrama/XML, escopada por `instances:start`
+  // PURO (não exige `definitions:read`): o business inicia processos sem ganhar
+  // acesso ao modelo. Fecha a lacuna de RBAC de pendencias §2.5. O cliente
+  // reconstrói o `definitionRef` = `name@version` a partir da projeção.
+  app.get(
+    '/v1/startable-definitions',
+    {
+      preHandler: [app.authenticate, app.requirePermission('instances:start')],
+      schema: {
+        tags: ['process-definitions'],
+        summary:
+          'Definições iniciáveis (projeção {id,name,version,registryRef}, SEM XML; só a versão ATIVA por nome) — escopo instances:start',
+        security: [{ bearerAuth: [] }],
+        querystring: pageQuerySchema,
+        response: {
+          200: z.object({
+            items: z.array(startableSummarySchema),
+            nextCursor: z.string().nullable(),
+          }),
+        },
+      },
+    },
+    async (req) => {
+      const page = await registry.listStartable(req.auth!.tenantId, req.query);
+      return {
+        items: page.items.map((d) => ({
+          id: d.id,
+          name: d.name,
+          version: d.version,
+          registryRef: d.registry_ref,
+        })),
+        nextCursor: page.nextCursor,
       };
     },
   );

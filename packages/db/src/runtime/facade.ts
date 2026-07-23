@@ -120,7 +120,7 @@ export interface PlatformRuntime {
     complete(
       tenantId: string,
       taskId: string,
-      input: { claimToken: string; submission: Record<string, unknown>; user: string },
+      input: { claimToken: string; submission: Record<string, unknown>; user: string; decision?: string },
     ): Promise<CompleteTaskOutcome>;
     assign(
       tenantId: string,

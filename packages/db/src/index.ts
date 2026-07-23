@@ -98,6 +98,7 @@ export {
   assignUserTask,
   claimUserTask,
   completeUserTask,
+  DECISION_MAX_LENGTH,
   getUserTask,
   listUserTasks,
   unclaimUserTask,
@@ -132,3 +133,19 @@ export {
   type JobOutcome,
   type PlatformRuntime,
 } from './runtime/facade.js';
+export {
+  recordTenantAuditEvent,
+  recordTenantAuditEventTx,
+  type ActorType,
+  type AuditActor,
+  type TenantAuditInput,
+} from './audit/tenantAudit.js';
+export {
+  getTenantAiConfig,
+  upsertTenantAiConfig,
+  setKillSwitch,
+  assertSecretRef,
+  type TenantAiConfig,
+  type AiConfigInput,
+} from './agent/tenantAiConfig.js';
+export { fixtureAiProvider, type AiProvider, type AiCompletion } from './agent/aiProvider.js';

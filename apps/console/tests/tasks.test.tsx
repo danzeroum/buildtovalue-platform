@@ -72,6 +72,31 @@ describe('TasksRoute — F3.4', () => {
     );
   });
 
+  it('etapa 6: decisão por ESCOLHA EXATA (opções derivadas) e enviada no corpo', async () => {
+    seedHappyPath({
+      'GET /v1/user-tasks/{id}': () => ok({ ...TASK, payload: {}, decisionVar: 'decisao', decisionOptions: ['aprovar', 'reprovar'] }),
+    });
+    render(<TasksRoute />);
+    await userEvent.click(await screen.findByRole('button', { name: /aprovar_reembolso/ }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Assumir tarefa' }));
+    const parecer = await screen.findByLabelText(/Parecer/);
+    await userEvent.type(parecer, 'ok');
+
+    // escolha exata (radios), não texto livre — impossível "Aprovar" ≠ "aprovar"
+    const aprovar = await screen.findByRole('radio', { name: 'aprovar' });
+    expect(screen.getByRole('radio', { name: 'reprovar' })).toBeInTheDocument();
+
+    // sem escolher: a conclusão é barrada no cliente (não deixa 422 à toa)
+    await userEvent.click(screen.getByRole('button', { name: 'Concluir tarefa' }));
+    expect(await screen.findByText(/exige uma decisão/i)).toBeInTheDocument();
+
+    await userEvent.click(aprovar);
+    await userEvent.click(screen.getByRole('button', { name: 'Concluir tarefa' }));
+    expect(await screen.findByText(/Tarefa concluída/)).toBeInTheDocument();
+    const call = (api.POST as unknown as Mock).mock.calls.find((c) => c[0] === '/v1/user-tasks/{id}/completion');
+    expect(call?.[1]?.body?.decision).toBe('aprovar');
+  });
+
   it('422 do servidor mapeia erro por campo no MESMO renderer', async () => {
     seedHappyPath({
       'POST /v1/user-tasks/{id}/completion': () => fail(422, { errors: { parecer: ['valor não atende à validação'] } }) as ReturnType<typeof ok>,
@@ -135,9 +160,11 @@ describe('TasksRoute — F3.4', () => {
 
   it('Iniciar processo: POST /v1/instances com Idempotency-Key (anti clique-duplo)', async () => {
     seedHappyPath();
-    // analista tem instances:start E definitions:read (persona que completa o fluxo)
+    // analista tem instances:start (persona que completa o fluxo)
     ctx.user = { id: 'an1', displayName: 'Nara', email: 'nara@acme.com', role: 'analyst' };
-    route('GET /v1/process-definitions', () => ok({ items: [{ id: 'p1', name: 'Reembolso de despesas', version: 8, registryRef: 'reembolso-de-despesas@8', engineVersion: '1.1.0', createdAt: TASK.createdAt }], nextCursor: null }));
+    // AG-2.1 etapa 5: o modal lista por /v1/startable-definitions; o ref
+    // CANÔNICO (registryRef) vem no corpo e é usado VERBATIM.
+    route('GET /v1/startable-definitions', () => ok({ items: [{ id: 'p1', name: 'Reembolso de despesas', version: 8, registryRef: 'reembolso-de-despesas@8' }], nextCursor: null }));
     route('POST /v1/instances', () => ok({ id: '44444444-4444-4444-4444-444444444444', definitionRef: 'reembolso-de-despesas@8', status: 'active', revision: 0, businessKey: null }, 201));
     render(<TasksRoute />);
 
@@ -148,14 +175,25 @@ describe('TasksRoute — F3.4', () => {
     await waitFor(() => expect(api.POST).toHaveBeenCalledWith('/v1/instances', expect.anything()));
     const call = (api.POST as unknown as Mock).mock.calls.find((c) => c[0] === '/v1/instances');
     expect(call?.[1]?.headers?.['idempotency-key']).toBeTruthy();
+    // o ref enviado é o registryRef VERBATIM (não reconstruído de name@version)
+    expect(call?.[1]?.body?.definitionRef).toBe('reembolso-de-despesas@8');
     expect(await screen.findByText(/criada/)).toBeInTheDocument();
   });
 
-  it('«Iniciar processo» exige instances:start E definitions:read (business não vê — evita beco)', async () => {
+  it('AG-2.1 etapa 5: o business VÊ «Iniciar processo» e lista por startable-definitions (sem beco)', async () => {
     seedHappyPath();
-    render(<TasksRoute />); // business: tem start, NÃO tem definitions:read
+    // business tem instances:start; NÃO tem definitions:read — e mesmo assim
+    // agora inicia, porque a rota iniciável é escopada só por instances:start.
+    route('GET /v1/startable-definitions', () => ok({ items: [{ id: 'p1', name: 'Reembolso de despesas', version: 8, registryRef: 'reembolso-de-despesas@8' }], nextCursor: null }));
+    render(<TasksRoute />); // role = business (beforeEach)
     await screen.findByRole('button', { name: /aprovar_reembolso/ });
-    expect(screen.queryByRole('button', { name: /Iniciar processo/ })).not.toBeInTheDocument();
+    const start = await screen.findByRole('button', { name: /Iniciar processo/ });
+    expect(start).toBeInTheDocument();
+    await userEvent.click(start);
+    // o modal abre e lista o que o business PODE iniciar — sem 403, sem beco
+    expect(await screen.findByRole('radio', { name: /Reembolso de despesas/ })).toBeInTheDocument();
+    // e NÃO tocou a rota rica (definitions:read), que lhe daria 403
+    expect((api.GET as unknown as Mock).mock.calls.some((c) => c[0] === '/v1/process-definitions')).toBe(false);
   });
 
   it('lista vazia (primeiro dia) oferece «ver tarefas do meu papel»', async () => {

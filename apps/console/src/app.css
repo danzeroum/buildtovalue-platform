@@ -98,6 +98,15 @@ body {
 .ui-tag[data-tone="personal"] { background: var(--ui-role-warning-bg); color: var(--ui-role-warning-fg); }
 .ui-tag[data-tone="sensitive"] { background: var(--ui-role-danger-bg); color: var(--ui-role-danger-fg); }
 .ui-tag[data-tone="success"] { background: var(--ui-role-success-bg); color: var(--ui-role-success-fg); }
+/* gold = write/gate (identidade dourado): decisão que roteia, candidata. */
+.ui-tag[data-tone="gold"] { background: var(--ui-role-warning-bg); color: var(--ui-role-warning-fg); }
+.task-decision { margin: 0.75rem 0; padding: 0.75rem 1rem; border: 1px solid var(--ui-role-warning-bg); border-radius: 8px; background: var(--ui-surface-raised, #fff); }
+.task-decision[data-locked] { opacity: 0.6; }
+.task-decision .field-label { display: inline-flex; gap: 0.4rem; align-items: center; font-weight: 600; margin-bottom: 0.5rem; }
+.decision-options { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.decision-option { padding: 0.35rem 0.8rem; border: 1px solid var(--ui-role-warning-bg); border-radius: 999px; background: var(--ui-surface-sunken); color: var(--ui-ink); font-weight: 600; cursor: pointer; }
+.decision-option[data-selected] { background: var(--ui-role-warning-bg); color: var(--ui-role-warning-fg); border-color: var(--ui-role-warning-fg); }
+.decision-option:disabled { cursor: not-allowed; opacity: 0.6; }
 .ui-pill[data-tone="success"] { background: var(--ui-role-success-bg); color: var(--ui-role-success-fg); }
 .ui-pill[data-tone="danger"] { background: var(--ui-role-danger-bg); color: var(--ui-role-danger-fg); }
 .ui-pill[data-tone="neutral"] { background: var(--ui-surface-sunken); color: var(--ui-ink-muted); }

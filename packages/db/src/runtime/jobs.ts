@@ -40,6 +40,12 @@ export async function lockJobs(
         WHERE (status = 'available'
            OR (status = 'locked' AND lock_until < now()))
           AND (${options.types ?? null}::text[] IS NULL OR type = ANY(${options.types ?? null}))
+          -- kill-switch (D29/5.2): com o agente pausado, novos jobs do tipo
+          -- agent NAO lockam; os demais tipos (e gates humanos) seguem. A RLS
+          -- de tenant_ai_config ja restringe ao tenant corrente.
+          AND NOT (type = 'agent' AND EXISTS (
+            SELECT 1 FROM tenant_ai_config c
+            WHERE c.tenant_id = ${tenantId} AND c.kill_switch = true))
         ORDER BY created_at
         FOR UPDATE SKIP LOCKED
         LIMIT ${options.limit ?? 5}
