@@ -61,6 +61,10 @@ export const role = {
   /** AGENTE (violeta) — a superfície de agente/squad (§2.12.2). Fixado com teste
    *  AA AGORA, antes da AG-3, para não nascer ad-hoc. */
   agent: { bg: '#ecebf6', fg: '#3c3883', solid: '#5b57b8' },
+  /** MASCARADO / classificação sensível (D20) — papel PRÓPRIO (ratificação AG-3.0,
+   *  correção 1 do designer): mascaramento é classificação de dado, NÃO o gate.
+   *  Mesmo dourado HOJE, divergível amanhã — "papel por intenção, não hex". */
+  masked: { bg: '#f6edd4', fg: '#6d5115', solid: '#8a6d1e' },
 } as const;
 
 /** Pisos de acessibilidade (D25.3). */
@@ -92,4 +96,5 @@ export const CONTRAST_PAIRS: ReadonlyArray<{ name: string; fg: string; bg: strin
   { name: 'info', fg: role.info.fg, bg: role.info.bg },
   { name: 'gate', fg: role.gate.fg, bg: role.gate.bg },
   { name: 'agent', fg: role.agent.fg, bg: role.agent.bg },
+  { name: 'masked', fg: role.masked.fg, bg: role.masked.bg },
 ];

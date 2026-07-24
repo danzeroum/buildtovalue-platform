@@ -57,6 +57,15 @@ describe('EvidenceSeal — só os estados REAIS (3)', () => {
     expect(screen.queryByText(/verificado/i)).not.toBeInTheDocument();
     expect(screen.getByText('self-recorded')).toBeInTheDocument();
   });
+
+  it('correções da ratificação: mascarado usa o papel PRÓPRIO masked (não gate); glyphs sem color-emoji', () => {
+    const { container } = render(<EvidenceSeal state="mascarado" />);
+    expect(container.querySelector('.ui-selo-evidence')).toHaveAttribute('data-tone', 'masked');
+    // sem os color-emoji antigos (🔒/⚓) — glyphs monocromáticos herdam currentColor.
+    expect(container.textContent).not.toMatch(/[🔒⚓]/u);
+    const { container: anc } = render(<EvidenceSeal state="ancoravel" />);
+    expect(anc.textContent).not.toMatch(/[🔒⚓]/u);
+  });
 });
 
 describe('GateSeal — âmbar, parada honesta (nunca vermelho)', () => {

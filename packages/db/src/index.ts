@@ -255,15 +255,19 @@ export {
 export {
   buildWorldDelta,
   deriveProcessConsequence,
+  maskWorldDelta,
   type ProcessConsequence,
   type WorldDelta,
+  type WorldDeltaView,
 } from './agent/worldDelta.js';
 export {
   buildGatePayloadTx,
   setGatePayloadTx,
   sealGatedEffectTx,
   executeGatedEffectTx,
+  revealGateParamsTx,
   type SealOutcome,
+  type RevealGateOutcome,
 } from './agent/gateFio.js';
 export {
   REPROPOSAL_CAP,

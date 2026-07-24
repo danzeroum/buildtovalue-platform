@@ -2,6 +2,8 @@ import type { BpmnDiagram } from '@buildtovalue/core';
 import type { TransactionSql } from '../client.js';
 import { getToolDefinitionByRefTx } from '../registry/toolStore.js';
 import type { AgentActor } from './agentTrail.js';
+import type { DataClassification } from '../runtime/definitions.js';
+import { insertAuditEvent } from '../runtime/audit.js';
 import { checkToolFresh, effectSelo, getGateApprovalTx, type EffectSelo } from './gate.js';
 import { buildWorldDelta, deriveProcessConsequence, type WorldDelta } from './worldDelta.js';
 
@@ -26,10 +28,18 @@ const SEAL_EFFECT_INDEX = 55_000;
  *     e o gate aprovado permanece na trilha (o humano aprovou de boa-fé).
  */
 
-/** Monta o world-delta do gate: contrato resolvido 1× + params + consequência. */
+/** Monta o world-delta do gate: contrato resolvido 1× + params + consequência.
+ * `paramsClassification` (AG-3.1) é herdada da variável `proposalVar` de onde os
+ * params vieram — `sensitive` faz o card mascarar por padrão. */
 export async function buildGatePayloadTx(
   tx: TransactionSql,
-  args: { toolRef: string; params: Record<string, unknown>; diagram: BpmnDiagram; gateElementId: string },
+  args: {
+    toolRef: string;
+    params: Record<string, unknown>;
+    diagram: BpmnDiagram;
+    gateElementId: string;
+    paramsClassification?: DataClassification;
+  },
 ): Promise<WorldDelta | null> {
   const tool = await getToolDefinitionByRefTx(tx, args.toolRef);
   if (!tool) return null; // tool inexistente: sem world-delta (o deploy garante que exista)
@@ -43,6 +53,7 @@ export async function buildGatePayloadTx(
     evidenceRequired: tool.contract.evidenceRequired,
     params: args.params,
     processConsequence,
+    paramsClassification: args.paramsClassification,
   });
 }
 
@@ -57,6 +68,48 @@ export async function setGatePayloadTx(
   await tx`UPDATE user_tasks SET payload = ${tx.json(payload as never)}
     WHERE tenant_id = ${tenantId} AND instance_id = ${instanceId}
       AND element_id = ${gateElementId} AND is_gate = true`;
+}
+
+export type RevealGateOutcome =
+  | { ok: true; params: Record<string, unknown> }
+  | { ok: false; reason: 'notGate' | 'notMasked'; message: string };
+
+/**
+ * REVELA os params sensíveis do world-delta do gate (AG-3.1) — ato AUDITADO com
+ * motivo obrigatório, a MESMA disciplina de `revealVariable`. O RBAC (quem pode
+ * revelar) é imposto na rota; aqui a regra é: só faz sentido para gate com params
+ * `sensitive` (os demais já saem em claro no card). Aprovar sem ver o que se aprova
+ * é o oposto da tese do produto — mas revelar é registrado.
+ */
+export async function revealGateParamsTx(
+  tx: TransactionSql,
+  tenantId: string,
+  instanceId: string,
+  gateElementId: string,
+  context: { actor: string; reason: string },
+): Promise<RevealGateOutcome> {
+  const [gate] = await tx<{ payload: WorldDelta | null }[]>`
+    SELECT payload FROM user_tasks
+    WHERE instance_id = ${instanceId} AND element_id = ${gateElementId} AND is_gate = true`;
+  const wd = gate?.payload ?? undefined;
+  if (!wd || !wd.tool) {
+    return { ok: false, reason: 'notGate', message: `'${gateElementId}' não é um gate com world-delta` };
+  }
+  if (wd.paramsClassification !== 'sensitive') {
+    return {
+      ok: false,
+      reason: 'notMasked',
+      message: `os params do gate '${gateElementId}' não são sensíveis — já saem em claro no card`,
+    };
+  }
+  // NOMES apenas no evento — nunca o conteúdo revelado (evidência ≠ conteúdo).
+  await insertAuditEvent(tx, tenantId, instanceId, 'gateWorldDeltaRevealed', {
+    gateId: gateElementId,
+    actor: context.actor,
+    reason: context.reason,
+    fields: Object.keys(wd.params ?? {}),
+  });
+  return { ok: true, params: wd.params };
 }
 
 export type SealOutcome =
