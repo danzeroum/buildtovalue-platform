@@ -133,6 +133,25 @@ operacional `0008`, trilha `agent:*` granular com ator, ciclo e2e verde).
 
 ---
 
+## Limitações declaradas da v1 (transparência — o cliente não descobre ao vivo)
+
+- **D37 — laço com espera não é suportado (engine/host v1).** O engine preserva a
+  identidade do token em movimento simples; o host ancora o exatamente-uma-vez em
+  `wait_key = ${elementId}:${tokenId}` (UNIQUE + `ON CONFLICT DO NOTHING`). Um laço
+  que re-entra num elemento de espera (userTask/serviceTask/agentTask/timer) repete o
+  `wait_key` → o efeito não é recriado e o engine trava (deadlock silencioso). **Mitigação
+  v1:** o lint de deploy **recusa** o laço com espera (`EXEC_LOOP_WAIT_UNSUPPORTED`) —
+  recusar o que o runtime não honra, nunca deixar o cliente cair no beco em produção.
+  **Consequência na AG-4 (agentes):** a **proposta expirada** (`agentProposalExpired`,
+  D28) **não tem reavaliação automática** na v1 — o gate roteia por reprovação (sem
+  executar) ou aguarda ação; a "reavaliação" (re-propor contra o estado novo) exige
+  re-entrada no `agentTask`, que o laço com espera não honra. A superfície do Operate
+  mostra o estado âmbar com a **saída honesta** (aprovar indisponível; reprovar roteia
+  sem executar). **Correção real:** identidade de token fresca por iteração,
+  determinística sob replay — lote de lib da **AG-3** (§2.16 de `pendencias.md`).
+
+---
+
 ## Coexistências transitórias sob gate (rastreabilidade)
 
 - **Avaliador de forms** (§2.7 de `pendencias.md`) — 3 implementações sob corpus
@@ -142,4 +161,5 @@ operacional `0008`, trilha `agent:*` granular com ator, ciclo e2e verde).
 ---
 
 *Atualização deste dossiê é obrigatória a cada fechamento de fase (circuito do
-designer). Última: fechamento da AG-2.1.*
+designer). Última: fechamento da AG-2.2 etapa 5 (gate de tool D31; limitação
+declarada D37 — laço com espera).*
