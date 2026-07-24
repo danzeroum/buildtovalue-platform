@@ -18,6 +18,12 @@ const taskSummarySchema = z.object({
   // D31: gate de tool (userTask btvGate). A Tasklist comum já o EXCLUI no
   // servidor; o campo serve ao Operate/superfície de gate (drill-down).
   isGate: z.boolean(),
+  // AG-3.1 (P1): marca de gate para a LISTA — o item mostra o PESO (efeito) e o
+  // tool proponente ANTES de abrir. Só campos NÃO sensíveis do world-delta; os
+  // params/dataScope (PII) só saem no detalhe mascarado. null = não é gate.
+  gate: z
+    .object({ effect: z.string().nullable(), tool: z.string().nullable() })
+    .nullable(),
 });
 
 function problem(
@@ -45,6 +51,8 @@ function summarize(row: {
   claimed_at: string | null;
   created_at: string;
   is_gate: boolean;
+  gate_effect?: string | null;
+  gate_tool?: string | null;
 }) {
   return {
     id: row.id,
@@ -57,6 +65,8 @@ function summarize(row: {
     claimedAt: row.claimed_at === null ? null : String(row.claimed_at),
     createdAt: String(row.created_at),
     isGate: row.is_gate,
+    // marca de gate SÓ com campos não sensíveis (efeito + tool); null se não-gate.
+    gate: row.is_gate ? { effect: row.gate_effect ?? null, tool: row.gate_tool ?? null } : null,
   };
 }
 

@@ -52,6 +52,20 @@ function seed(overrides: Record<string, () => ReturnType<typeof ok>> = {}) {
   for (const [k, v] of Object.entries(overrides)) route(k, v);
 }
 
+/** Render helper: canWork/canReveal true por padrão (aprovador pleno); os testes
+ *  de RBAC passam canReveal=false explicitamente. */
+function renderGate(task: GateTask, opts: { canWork?: boolean; canReveal?: boolean } = {}) {
+  return render(
+    <GateDetail
+      task={task}
+      me="u1"
+      canWork={opts.canWork ?? true}
+      canReveal={opts.canReveal ?? true}
+      onChanged={() => {}}
+    />,
+  );
+}
+
 beforeEach(() => {
   vi.restoreAllMocks();
   resetRoutes();
@@ -73,7 +87,7 @@ describe('GateDetail — P1 (AG-3.1)', () => {
 
   it('degrade honesto: processConsequence=null → legenda calma, sem "desconhecido"', () => {
     seed();
-    render(<GateDetail task={makeTask()} me="u1" canWork onChanged={() => {}} />);
+    renderGate(makeTask());
     expect(screen.getByText(/só as consequências desta ação/)).toBeInTheDocument();
     expect(screen.queryByText(/desconhecido/i)).not.toBeInTheDocument();
   });
@@ -86,14 +100,14 @@ describe('GateDetail — P1 (AG-3.1)', () => {
         processConsequence: { source: 'annotated', kind: 'branch', description: 'segue para conciliação' },
       },
     });
-    render(<GateDetail task={task} me="u1" canWork onChanged={() => {}} />);
+    renderGate(task);
     expect(screen.getByText(/segue para conciliação/)).toBeInTheDocument();
     expect(screen.queryByText(/só as consequências desta ação/)).not.toBeInTheDocument();
   });
 
   it('aprovar de efeito IRREVERSÍVEL exige confirmação de peso antes de enviar', async () => {
     seed();
-    render(<GateDetail task={makeTask()} me="u1" canWork onChanged={() => {}} />);
+    renderGate(makeTask());
     await userEvent.click(screen.getByRole('button', { name: 'Assumir este gate' }));
     await userEvent.click(await screen.findByRole('button', { name: 'Aprovar' }));
 
@@ -109,7 +123,7 @@ describe('GateDetail — P1 (AG-3.1)', () => {
   it('efeito reversível aprova direto (sem peso)', async () => {
     seed();
     const task = makeTask({ payload: { ...makeTask().payload, effect: 'write-reversible' }, paramsMasked: false });
-    render(<GateDetail task={task} me="u1" canWork onChanged={() => {}} />);
+    renderGate(task);
     await userEvent.click(screen.getByRole('button', { name: 'Assumir este gate' }));
     await userEvent.click(await screen.findByRole('button', { name: 'Aprovar' }));
     expect(await screen.findByText(/Gate aprovado/)).toBeInTheDocument();
@@ -118,7 +132,7 @@ describe('GateDetail — P1 (AG-3.1)', () => {
 
   it('D28: a decisão reenvia expectedInstanceRevision que o card renderizou', async () => {
     seed();
-    render(<GateDetail task={makeTask({ instanceRevision: 7 })} me="u1" canWork onChanged={() => {}} />);
+    renderGate(makeTask({ instanceRevision: 7 }));
     await userEvent.click(screen.getByRole('button', { name: 'Assumir este gate' }));
     await userEvent.click(await screen.findByRole('button', { name: 'Reprovar' }));
     await waitFor(() =>
@@ -134,7 +148,7 @@ describe('GateDetail — P1 (AG-3.1)', () => {
       'POST /v1/user-tasks/{id}/completion': () =>
         fail(409, { detail: 'revisão avançou' }) as ReturnType<typeof ok>,
     });
-    render(<GateDetail task={makeTask()} me="u1" canWork onChanged={() => {}} />);
+    renderGate(makeTask());
     await userEvent.click(screen.getByRole('button', { name: 'Assumir este gate' }));
     await userEvent.click(await screen.findByRole('button', { name: 'Reprovar' }));
     const banner = await screen.findByText(/revisão avançou/);
@@ -143,12 +157,22 @@ describe('GateDetail — P1 (AG-3.1)', () => {
     expect(await screen.findByRole('button', { name: 'Assumir este gate' })).toBeInTheDocument();
   });
 
-  it('revelar SEM permissão (403) → ESCALAR, nunca aprovar às cegas', async () => {
+  it('§5: aprovador SEM permissão de revelar (RBAC) — ação AUSENTE, escalar à vista SEM clique', () => {
+    seed();
+    renderGate(makeTask(), { canReveal: false });
+    // a ação de revelar NEM APARECE — o motivo já está à vista, ESCALAR disponível.
+    expect(screen.queryByRole('button', { name: /Revelar dados sensíveis/ })).not.toBeInTheDocument();
+    expect(screen.getByText(/não aprove às cegas/)).toBeInTheDocument();
+    expect(screen.getByText(/Escalar/)).toBeInTheDocument();
+  });
+
+  it('§5 (defesa em profundidade): 403 do servidor cai no MESMO estado de escalar', async () => {
     vi.spyOn(window, 'prompt').mockReturnValue('preciso conferir o valor');
     seed({
       'POST /v1/user-tasks/{id}/gate/reveal': () => fail(403, { title: 'sem escopo' }) as ReturnType<typeof ok>,
     });
-    render(<GateDetail task={makeTask()} me="u1" canWork onChanged={() => {}} />);
+    // espelho de UX diz que pode (canReveal), mas o guarda real recusa → escalar.
+    renderGate(makeTask());
     await userEvent.click(screen.getByRole('button', { name: /Revelar dados sensíveis/ }));
     expect(await screen.findByText(/não aprove às cegas/)).toBeInTheDocument();
     expect(screen.getByText(/Escalar/)).toBeInTheDocument();
@@ -157,7 +181,7 @@ describe('GateDetail — P1 (AG-3.1)', () => {
   it('revelar COM permissão mostra os campos (via rota auditada, com motivo)', async () => {
     vi.spyOn(window, 'prompt').mockReturnValue('conferência de teto');
     seed();
-    render(<GateDetail task={makeTask()} me="u1" canWork onChanged={() => {}} />);
+    renderGate(makeTask());
     await userEvent.click(screen.getByRole('button', { name: /Revelar dados sensíveis/ }));
     expect(await screen.findByText(/BR-9/)).toBeInTheDocument();
     const call = (api.POST as unknown as Mock).mock.calls.find((c) => c[0] === '/v1/user-tasks/{id}/gate/reveal');
@@ -166,7 +190,7 @@ describe('GateDetail — P1 (AG-3.1)', () => {
 
   it('mascarado: mostra a CONTAGEM de campos sensíveis sem os valores', () => {
     seed();
-    render(<GateDetail task={makeTask()} me="u1" canWork onChanged={() => {}} />);
+    renderGate(makeTask());
     expect(screen.getByText(/2 campo\(s\) sensível\(is\)/)).toBeInTheDocument();
     // nenhum valor sensível vaza antes de revelar
     expect(screen.queryByText(/BR-9/)).not.toBeInTheDocument();
@@ -174,13 +198,13 @@ describe('GateDetail — P1 (AG-3.1)', () => {
 
   it('sem tasks:work: «Assumir» desabilitado (somente leitura)', () => {
     seed();
-    render(<GateDetail task={makeTask()} me="u1" canWork={false} onChanged={() => {}} />);
+    renderGate(makeTask(), { canWork: false });
     expect(screen.getByRole('button', { name: 'Assumir este gate' })).toBeDisabled();
   });
 
   it('a11y: sem violações serious/critical (card + confirmação de peso)', async () => {
     seed();
-    const { container } = render(<GateDetail task={makeTask()} me="u1" canWork onChanged={() => {}} />);
+    const { container } = renderGate(makeTask());
     await userEvent.click(screen.getByRole('button', { name: 'Assumir este gate' }));
     await userEvent.click(await screen.findByRole('button', { name: 'Aprovar' }));
     await screen.findByRole('alertdialog');

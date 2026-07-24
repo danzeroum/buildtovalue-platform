@@ -28,6 +28,11 @@ export interface UserTaskListItem {
   /** D31: gate de tool (userTask btvGate). Marcador RESOLVIDO no despacho contra
    *  a definição pinada — a Tasklist comum o EXCLUI (não é tarefa de negócio). */
   is_gate: boolean;
+  /** AG-3.1 (P1): marca de gate para a LISTA — só os campos NÃO sensíveis do
+   *  world-delta (efeito + tool proponente), para o item mostrar o PESO da decisão
+   *  antes de abrir. `params`/`dataScope` (PII) NUNCA entram aqui. `null` = não-gate. */
+  gate_effect?: string | null;
+  gate_tool?: string | null;
 }
 
 export interface TaskViewer {
@@ -74,7 +79,11 @@ export async function listUserTasks(
     // sobre a página (+1) — v1 com poucos papéis por tenant.
     const rows = await tx`
       SELECT id, instance_id, element_id, form_ref, assignee, candidate_roles,
-             status, claimed_at, created_at, is_gate, created_at::text AS created_at_cursor
+             status, claimed_at, created_at, is_gate,
+             -- AG-3.1: só campos NÃO sensíveis do world-delta para a marca da lista.
+             CASE WHEN is_gate THEN payload->>'effect' END AS gate_effect,
+             CASE WHEN is_gate THEN payload->>'tool' END AS gate_tool,
+             created_at::text AS created_at_cursor
       FROM user_tasks
       WHERE (${options.status ?? null}::text IS NULL OR status = ${options.status ?? null})
         AND (${options.instanceId ?? null}::uuid IS NULL OR instance_id = ${options.instanceId ?? null})

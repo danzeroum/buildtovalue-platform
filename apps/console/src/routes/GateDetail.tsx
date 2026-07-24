@@ -35,6 +35,12 @@ export interface GateTask {
   instanceRevision: number;
 }
 
+/** "Aposta alta" (irreversível/compromisso externo) → aprovar exige confirmação
+ *  de peso. Fonte ÚNICA da classificação de efeito (lista e detalhe usam a mesma). */
+export function isHeavyEffect(effect: string | undefined): boolean {
+  return effect === 'write-irreversible' || effect === 'external-commitment';
+}
+
 /** Efeito → voz humana de reversibilidade + se é "aposta alta" (exige confirmação). */
 function effectVoice(effect: string | undefined): { text: string; heavy: boolean } {
   switch (effect) {
@@ -52,17 +58,41 @@ function effectVoice(effect: string | undefined): { text: string; heavy: boolean
   }
 }
 
+/** Efeito → chip curto para o ITEM da lista (peso visível ANTES de abrir). Cor da
+ *  identidade: irreversível/externo = vermelho; reversível = dourado; resto = neutro. */
+export function effectChip(effect: string | undefined | null): { label: string; tone: 'sensitive' | 'gold' | 'neutral' } {
+  switch (effect) {
+    case 'write-irreversible':
+      return { label: 'irreversível', tone: 'sensitive' };
+    case 'external-commitment':
+      return { label: 'compromisso externo', tone: 'sensitive' };
+    case 'write-reversible':
+      return { label: 'reversível', tone: 'gold' };
+    case 'notify':
+      return { label: 'notifica', tone: 'neutral' };
+    case 'propose':
+      return { label: 'só propõe', tone: 'neutral' };
+    default:
+      return { label: 'leitura', tone: 'neutral' };
+  }
+}
+
 const DECISION_LABEL: Record<string, string> = { aprovar: 'Aprovar', reprovar: 'Reprovar' };
 
 export function GateDetail({
   task,
   me,
   canWork,
+  canReveal,
   onChanged,
 }: {
   task: GateTask;
   me: string;
   canWork: boolean;
+  /** RBAC `variables:reveal-sensitive` (espelho de UX). SEM ela, a ação de revelar
+   *  NEM APARECE — o aprovador vê o motivo e ESCALA, nunca aprova às cegas (§5 da
+   *  marcação: é aceite, não extra). O servidor continua sendo o guarda real (403). */
+  canReveal: boolean;
   onChanged: () => void;
 }) {
   const wd = task.payload as WorldDelta;
@@ -202,12 +232,14 @@ export function GateDetail({
         </ul>
       </section>
 
-      {/* PII: revelar (auditado) ou ESCALAR se sem permissão */}
+      {/* PII: revelar (auditado) ou ESCALAR se sem permissão. §5: quando o aprovador
+          NÃO pode revelar (RBAC), a ação nem aparece — motivo à vista + Escalar. O
+          403 do servidor cai no MESMO estado (defesa em profundidade). */}
       {task.paramsMasked && (
         <section className="gate-pii" aria-label="Dados sensíveis">
           {revealed ? (
             <pre className="gate-revealed mono">{JSON.stringify(revealed, null, 2)}</pre>
-          ) : revealState === 'forbidden' ? (
+          ) : !canReveal || revealState === 'forbidden' ? (
             <p className="gate-escalate" role="status">
               Você não tem permissão para revelar estes dados — <strong>não aprove às cegas</strong>. Use{' '}
               <strong>Escalar</strong> para quem pode ver.

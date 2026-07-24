@@ -310,3 +310,10 @@ body {
 .gate-banner.tone-warn { background: var(--ui-role-warning-bg); color: var(--ui-role-warning-fg); }
 .gate-banner.tone-success { background: var(--ui-role-success-bg); color: var(--ui-role-success-fg); }
 .gate-selo-line { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
+/* ── item da LISTA marcado como gate (peso visível antes de abrir) ── */
+.task-item[data-gate] { border-left: 3px solid var(--ui-role-gate-solid); }
+.gate-badge { display: inline-flex; align-items: center; gap: 0.25rem; font-size: var(--ui-font-size-meta);
+  font-weight: 600; background: var(--ui-role-gate-bg); color: var(--ui-role-gate-fg);
+  border-radius: 999px; padding: 0.1rem 0.5rem; }
+/* piso de 44px nos controles do gate (alvo de toque — WCAG 2.5.5) */
+.gate-card .ui-btn, .gate-pii .ui-btn { min-height: 2.75rem; }
