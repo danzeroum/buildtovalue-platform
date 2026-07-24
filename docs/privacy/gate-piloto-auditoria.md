@@ -20,7 +20,7 @@
 | # | Critério | Classe | Evidência / o que falta |
 |---|---|---|---|
 | 1 | RLS+FORCE testada; API sem BYPASSRLS; papel de migração separado | **(a)** | `packages/db/tests/rls-isolation.test.ts` (17 tabelas FORCE; cross-tenant vazio) |
-| 2 | Redaction testada; TLS; secrets em secret manager; audit de deps verde | **(a)** redaction · **(c)** resto | redaction: `observability/tests/redaction.test.ts` + `apps/api/tests/log-leak.e2e.test.ts`. **Falta (c):** TLS (infra), secret manager (infra §A), `pnpm audit` no CI (não há step — **posso adicionar já**) |
+| 2 | Redaction testada; TLS; secrets em secret manager; audit de deps verde | **(a)** redaction + audit · **(c)** TLS/secret manager | redaction: `observability/tests/redaction.test.ts` + `apps/api/tests/log-leak.e2e.test.ts`. `pnpm audit` no CI **ATIVO** (#45), **verde COM 1 exceção documentada** (`GHSA-qwww-vcr4-c8h2`, react-router RSC-CSRF, **inaplicável** ao Console data-mode — ver `docs/security/audit-exceptions.md`, revisão 60 dias). **Falta (c):** TLS (infra), secret manager (infra §A) |
 | 3 | Backup automatizado + restore ensaiado e documentado | **(b)** restore · **(c)** automação | ensaio manual 2026-07-22 (`docs/runbooks/database.md`); **nenhum teste dirige** `backup.sh`/`pg_restore`; automação = infra |
 | 4 | Ledger sem PII (teste); cifra de `sensitive` com KeyProvider em KMS — chave estática REPROVA (D20) | **(a)** testes · **(c)** KMS | `lgpd-seam.test.ts` (ledger sem PII + cifra ativa); KeyProvider de **KMS = infra §B** (hoje env → reprova de propósito) |
 | 5 | Plano de incidentes escrito + simulação executada (G-LGPD-4) | **(c)** | não escrito, não simulado |

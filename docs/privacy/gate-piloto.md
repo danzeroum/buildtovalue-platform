@@ -11,7 +11,7 @@
 | # | Critério (plano §8.4) | Evidência / Estado |
 |---|---|---|
 | 1 | RLS com `SET LOCAL` testada; API sem BYPASSRLS; papel de migração separado | `packages/db/tests/rls-isolation.test.ts` (suíte permanente, 11 tabelas com FORCE RLS) — VERDE desde F1, ampliada na F2. |
-| 2 | Redaction testada; TLS; secrets em secret manager; audit de dependências verde | Redaction leak-fail verde (`packages/observability/tests/redaction.test.ts`). TLS/secret manager/audit: PENDENTES (infra de piloto). |
+| 2 | Redaction testada; TLS; secrets em secret manager; audit de dependências verde | Redaction leak-fail verde (`packages/observability/tests/redaction.test.ts`). `pnpm audit` no CI ATIVO (#45) — **verde COM 1 exceção documentada** (`GHSA-qwww-vcr4-c8h2`, inaplicável — ver `docs/security/audit-exceptions.md`). TLS/secret manager: PENDENTES (infra de piloto). |
 | 3 | Backup automatizado + restore ensaiado e documentado | Ensaio de 2026-07-22 em `docs/runbooks/database.md`. Automação do backup: PENDENTE (infra de piloto). |
 | 4 | Ledger sem dados pessoais (teste); criptografia ativa para `sensitive` com KeyProvider em secret manager/KMS — **chave estática REPROVA o gate** (D20) | Teste nomeado "ledger nunca contém conteúdo pessoal" VERDE (`packages/db/tests/lgpd-seam.test.ts`); cifra ativa (F2.6). KeyProvider de KMS: PENDENTE (hoje: provedor de ambiente dev/CI — reprova de propósito). |
 | 5 | Plano de incidentes escrito + simulação executada e documentada (G-LGPD-4) | PENDENTE. |
