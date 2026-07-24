@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#e9e6dd}
+a{color:#1a6a54;text-decoration:none}a:hover{color:#8a6d1e;text-decoration:underline}
+</style>
+</helmet>
+<div style="padding:48px 40px;font-family:'IBM Plex Sans',sans-serif;color:#262220;display:flex;flex-direction:column;gap:36px;align-items:center">
+
+<header style="width:1360px" data-screen-label="Cabeçalho">
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:2.5px;color:#8a6d1e;margin-bottom:6px">BUILDTOVALUE · PROTÓTIPOS DE ADMINISTRAÇÃO · CANDIDATO A ADENDO-04</div>
+  <h1 style="margin:0;font-family:'Source Serif 4',Georgia,serif;font-size:30px;font-weight:600;letter-spacing:-0.4px">As alavancas que faltavam — a 5ª rota do Console</h1>
+  <p style="margin:10px 0 0;font-size:13.5px;color:#6f675a;max-width:940px;line-height:1.65">A auditoria mostrou que três capacidades aprovadas como “v1 completa” não têm tela <strong>nem rota de API</strong> — são operadas por <span style="font-family:'IBM Plex Mono',monospace;font-size:12px">INSERT</span> no banco. Aqui estão todas as telas que faltam, na prioridade da triagem: <strong style="color:#9c2f28">crítico</strong> (kill-switch, Art. 14) · <strong style="color:#8a6d1e">alto</strong> (export de auditoria) · <strong>médio</strong> (higiene de SaaS: membros, senha, preferências).</p>
+  <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:14px">
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;background:#fff;border:1px solid #e2ddd3;border-radius:999px;padding:4px 11px;color:#44403a">chave nunca em claro — só <span style="color:#8a6d1e">secret://</span></span>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;background:#fff;border:1px solid #e2ddd3;border-radius:999px;padding:4px 11px;color:#44403a">todo ato sensível: motivo auditado</span>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;background:#fff;border:1px solid #e2ddd3;border-radius:999px;padding:4px 11px;color:#44403a">alvos ≥ 44px (varredura V1)</span>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;background:#fff;border:1px solid #e2ddd3;border-radius:999px;padding:4px 11px;color:#44403a">sinal nunca só por cor</span>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;background:#fff;border:1px solid #e2ddd3;border-radius:999px;padding:4px 11px;color:#44403a">selo de procedência no que foi auditado</span>
+  </div>
+  <div style="margin-top:14px;font-size:11.5px;color:#6f675a">↓ A1 identidade · A2 inteligência + <strong>kill-switch</strong> · A3 ferramentas · A4 membros &amp; papéis · A5 perfil &amp; senha · A6 recuperação · A7 export de auditoria</div>
+</header>
+
+<!-- ===================== A1 · IDENTIDADE DO TENANT ===================== -->
+<section style="width:1360px" data-screen-label="A1 Administração — Identidade do tenant">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6f675a"><strong style="color:#262220">A1 · Administração — Identidade</strong> — a 5ª rota e sua barra lateral; visível só para <span style="font-family:'IBM Plex Mono',monospace">admin</span></span>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1px;background:#fdfaf1;color:#8a6d1e;border:1px solid #f6edd4;border-radius:999px;padding:2px 8px">ESCOPO · ROTA NOVA</span>
+  </div>
+  <div style="background:#f3f1ea;border:1px solid #d8d3c6;border-radius:14px;overflow:hidden;box-shadow:0 2px 10px rgba(38,34,32,0.06)">
+    <div style="background:#ffffff;border-bottom:1px solid #e2ddd3;display:flex;align-items:center;gap:20px;padding:10px 20px">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:500;letter-spacing:1.5px">BUILDTOVALUE</div>
+      <nav style="display:flex;gap:4px;font-size:12.5px">
+        <span style="padding:8px 12px;border-radius:8px;color:#6f675a">Tarefas</span>
+        <span style="padding:8px 12px;border-radius:8px;color:#6f675a">Formulários</span>
+        <span style="padding:8px 12px;border-radius:8px;color:#6f675a">Operação</span>
+        <span style="padding:8px 12px;border-radius:8px;color:#6f675a">Estúdio</span>
+        <span style="padding:8px 12px;border-radius:8px;background:#1a6a54;color:#fff">Administração</span>
+      </nav>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:10px">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;background:#f3f1ea;border:1px solid #e2ddd3;border-radius:999px;padding:4px 12px;color:#44403a">acme-industria</span>
+        <span style="display:inline-flex;align-items:center;gap:6px;background:#f3f1ea;border:1px solid #e2ddd3;border-radius:999px;padding:3px 10px 3px 3px;min-height:32px"><span style="width:26px;height:26px;border-radius:50%;background:#1a6a54;color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600">AR</span><span style="font-size:11.5px;color:#44403a">Ana Ruiz</span><span style="font-family:'IBM Plex Mono',monospace;font-size:9px;background:#e7f2ec;color:#175c49;border:1px solid #cfe6da;border-radius:5px;padding:1px 6px">admin</span></span>
+      </div>
+    </div>
+    <div style="display:flex;min-height:560px">
+      <aside style="width:220px;flex-shrink:0;border-right:1px solid #e2ddd3;padding:16px 14px;background:#faf9f6;display:flex;flex-direction:column;gap:3px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1.5px;color:#6f675a;margin-bottom:8px;padding:0 8px">ADMINISTRAÇÃO</div>
+        <span style="font-size:12.5px;padding:11px 12px;border-radius:8px;background:#1a6a54;color:#fff;font-weight:500;min-height:44px;display:flex;align-items:center;box-sizing:border-box">Identidade</span>
+        <span style="font-size:12.5px;padding:11px 12px;border-radius:8px;color:#44403a;min-height:44px;display:flex;align-items:center;box-sizing:border-box;justify-content:space-between">Membros &amp; papéis <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6f675a">7</span></span>
+        <span style="font-size:12.5px;padding:11px 12px;border-radius:8px;color:#44403a;min-height:44px;display:flex;align-items:center;box-sizing:border-box;justify-content:space-between">Inteligência <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;background:#e7f2ec;color:#175c49;border:1px solid #cfe6da;border-radius:5px;padding:1px 6px">ativa</span></span>
+        <span style="font-size:12.5px;padding:11px 12px;border-radius:8px;color:#44403a;min-height:44px;display:flex;align-items:center;box-sizing:border-box;justify-content:space-between">Ferramentas <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6f675a">5/12</span></span>
+        <span style="font-size:12.5px;padding:11px 12px;border-radius:8px;color:#44403a;min-height:44px;display:flex;align-items:center;box-sizing:border-box">Auditoria</span>
+        <div style="margin-top:auto;padding:10px;border-radius:9px;background:#f4faf6;border:1px solid #dff0e6;font-size:10.5px;color:#25453a;line-height:1.5">Toda alteração aqui vira evento em <span style="font-family:'IBM Plex Mono',monospace;font-size:9.5px">tenant_audit_events</span> com ator e motivo.</div>
+      </aside>
+      <div style="flex:1;background:#ffffff;padding:24px 30px">
+        <div style="max-width:760px">
+          <h2 style="font-family:'Source Serif 4',Georgia,serif;font-size:20px;font-weight:600;margin:0 0 4px">Identidade da organização</h2>
+          <p style="font-size:12.5px;color:#6f675a;margin:0 0 22px;line-height:1.6">Dados da conta e os formatos que a plataforma usa para exibir valores. O <span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px">slug</span> é imutável — ele identifica o tenant no login e no isolamento (RLS).</p>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px 20px;margin-bottom:26px">
+            <label style="display:flex;flex-direction:column;gap:5px;font-size:12px;color:#44403a">Nome de exibição<input value="ACME Indústria" style="font-family:'IBM Plex Sans',sans-serif;font-size:13px;padding:11px;border:1px solid #e2ddd3;border-radius:8px;color:#262220;min-height:44px;box-sizing:border-box"></label>
+            <label style="display:flex;flex-direction:column;gap:5px;font-size:12px;color:#44403a">Identificador (slug) · imutável<div style="font-family:'IBM Plex Mono',monospace;font-size:13px;padding:11px;border:1px solid #e2ddd3;border-radius:8px;background:#f6f4ef;color:#6f675a;min-height:44px;box-sizing:border-box;display:flex;align-items:center;justify-content:space-between">acme-industria <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.5px">imutável</span></div></label>
+          </div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:1.5px;color:#8a6d1e;margin-bottom:12px">FORMATOS DA ORGANIZAÇÃO</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px 20px;margin-bottom:14px">
+            <label style="display:flex;flex-direction:column;gap:5px;font-size:12px;color:#44403a">Moeda de exibição<div style="font-size:13px;padding:11px;border:1px solid #e2ddd3;border-radius:8px;background:#fff;min-height:44px;box-sizing:border-box;display:flex;align-items:center;justify-content:space-between">Real (R$) <span style="color:#6f675a">▾</span></div></label>
+            <label style="display:flex;flex-direction:column;gap:5px;font-size:12px;color:#44403a">Câmbio USD→BRL <span style="color:#6f675a;font-size:11px">(custo de IA vem em USD)</span><div style="font-size:13px;padding:11px;border:1px solid #e2ddd3;border-radius:8px;background:#fff;min-height:44px;box-sizing:border-box;display:flex;align-items:center;justify-content:space-between"><span style="font-family:'IBM Plex Mono',monospace">5,42</span> <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#6f675a">atualizado hoje</span></div></label>
+          </div>
+          <div style="background:#fdfaf1;border:1px solid #f6edd4;border-radius:9px;padding:11px 14px;font-size:11.5px;color:#6d5115;line-height:1.55;margin-bottom:24px"><strong>Por que isto está aqui:</strong> hoje o câmbio é uma variável de ambiente fixa no worker (<span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px">FX_USD_BRL</span>) — o teto de orçamento em reais depende dela. Sendo configuração do cliente, precisa ser editável e auditada, não um valor congelado no deploy.</div>
+          <div style="display:flex;gap:10px;align-items:center;border-top:1px solid #e2ddd3;padding-top:18px">
+            <span style="font-size:13px;background:#1a6a54;color:#fff;border-radius:8px;padding:12px 20px;font-weight:500;min-height:44px;display:inline-flex;align-items:center;cursor:pointer">Salvar alterações</span>
+            <span style="font-size:13px;border:1px solid #e2ddd3;color:#44403a;border-radius:8px;padding:12px 18px;min-height:44px;display:inline-flex;align-items:center;cursor:pointer">Cancelar</span>
+            <span style="font-size:11.5px;color:#6f675a;margin-left:auto">Alterações pedem <strong>motivo</strong> e ficam na trilha.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== A2 · INTELIGÊNCIA + KILL-SWITCH ===================== -->
+<section style="width:1360px" data-screen-label="A2 Inteligência do tenant e kill-switch">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6f675a"><strong style="color:#262220">A2 · Inteligência do tenant (P4) + kill-switch</strong> — a alavanca que falta · Art. 14 do AI Act · item 8 do Gate de Piloto</span>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1px;background:#fdf7f6;color:#9c2f28;border:1px solid #f0d9d6;border-radius:999px;padding:2px 8px">CRÍTICO · CONFORMIDADE</span>
+  </div>
+  <div style="background:#f3f1ea;border:1px solid #d8d3c6;border-radius:14px;overflow:hidden;box-shadow:0 2px 10px rgba(38,34,32,0.06)">
+    <div style="background:#ffffff;border-bottom:1px solid #e2ddd3;display:flex;align-items:center;gap:20px;padding:10px 20px">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:500;letter-spacing:1.5px">BUILDTOVALUE</div>
+      <nav style="display:flex;gap:4px;font-size:12.5px">
+        <span style="padding:8px 12px;border-radius:8px;color:#6f675a">Tarefas</span>
+        <span style="padding:8px 12px;border-radius:8px;color:#6f675a">Operação</span>
+        <span style="padding:8px 12px;border-radius:8px;background:#1a6a54;color:#fff">Administração</span>
+      </nav>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:10px">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;background:#f3f1ea;border:1px solid #e2ddd3;border-radius:999px;padding:4px 12px;color:#44403a">acme-industria</span>
+        <span style="width:28px;height:28px;border-radius:50%;background:#1a6a54;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600">AR</span>
+      </div>
+    </div>
+    <div style="display:flex;min-height:720px">
+      <aside style="width:220px;flex-shrink:0;border-right:1px solid #e2ddd3;padding:16px 14px;background:#faf9f6;display:flex;flex-direction:column;gap:3px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1.5px;color:#6f675a;margin-bottom:8px;padding:0 8px">ADMINISTRAÇÃO</div>
+        <span style="font-size:12.5px;padding:11px 12px;border-radius:8px;color:#44403a;min-height:44px;display:flex;align-items:center;box-sizing:border-box">Identidade</span>
+        <span style="font-size:12.5px;padding:11px 12px;border-radius:8px;color:#44403a;min-height:44px;display:flex;align-items:center;box-sizing:border-box">Membros &amp; papéis</span>
+        <span style="font-size:12.5px;padding:11px 12px;border-radius:8px;background:#1a6a54;color:#fff;font-weight:500;min-height:44px;display:flex;align-items:center;box-sizing:border-box">Inteligência</span>
+        <span style="font-size:12.5px;padding:11px 12px;border-radius:8px;color:#44403a;min-height:44px;display:flex;align-items:center;box-sizing:border-box">Ferramentas</span>
+        <span style="font-size:12.5px;padding:11px 12px;border-radius:8px;color:#44403a;min-height:44px;display:flex;align-items:center;box-sizing:border-box">Auditoria</span>
+      </aside>
+      <div style="flex:1;background:#ffffff;padding:24px 30px;overflow-y:auto">
+        <div style="max-width:800px">
+          <h2 style="font-family:'Source Serif 4',Georgia,serif;font-size:20px;font-weight:600;margin:0 0 4px">Inteligência do tenant</h2>
+          <p style="font-size:12.5px;color:#6f675a;margin:0 0 22px;line-height:1.6">O provedor é sempre injetado pelo host — a plataforma é esse host. A chave vive no cofre; <strong>nenhum campo aqui aceita chave em claro</strong>.</p>
+
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:1.5px;color:#8a6d1e;margin-bottom:12px">PROVEDOR &amp; MODELO</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px 20px;margin-bottom:16px">
+            <label style="display:flex;flex-direction:column;gap:5px;font-size:12px;color:#44403a">Provedor<div style="font-size:13px;padding:11px;border:1px solid #e2ddd3;border-radius:8px;background:#fff;min-height:44px;box-sizing:border-box;display:flex;align-items:center;justify-content:space-between">openai-compatible <span style="color:#6f675a">▾</span></div></label>
+            <label style="display:flex;flex-direction:column;gap:5px;font-size:12px;color:#44403a">Endereço base <span style="color:#9c2f28">*</span> <span style="color:#6f675a;font-size:11px">https, validado na escrita</span><div style="font-family:'IBM Plex Mono',monospace;font-size:12.5px;padding:11px;border:1px solid #e2ddd3;border-radius:8px;background:#fff;min-height:44px;box-sizing:border-box;display:flex;align-items:center">https://api.deepseek.com</div></label>
+            <label style="display:flex;flex-direction:column;gap:5px;font-size:12px;color:#44403a">Modelo <span style="color:#6f675a;font-size:11px">precificado</span><div style="font-size:13px;padding:11px;border:1px solid #e2ddd3;border-radius:8px;background:#fff;min-height:44px;box-sizing:border-box;display:flex;align-items:center;justify-content:space-between">deepseek-chat <span style="color:#6f675a">▾</span></div></label>
+            <label style="display:flex;flex-direction:column;gap:5px;font-size:12px;color:#44403a">Modelo de reserva<div style="font-size:13px;padding:11px;border:1px solid #e2ddd3;border-radius:8px;background:#fff;min-height:44px;box-sizing:border-box;display:flex;align-items:center;justify-content:space-between">deepseek-reasoner <span style="color:#6f675a">▾</span></div></label>
+          </div>
+
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:1.5px;color:#8a6d1e;margin-bottom:12px">CHAVE DO PROVEDOR</div>
+          <div style="background:#262220;border-radius:12px;padding:16px 18px;margin-bottom:26px">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap">
+              <div>
+                <div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:1px;color:#c9a94a">REFERÊNCIA AO COFRE · NUNCA A CHAVE</div>
+                <div style="font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:#e9e6dd;margin-top:6px">secret://tenants/acme-industria/ai-key</div>
+                <div style="font-size:11px;color:#9a8f7e;margin-top:5px">Só o caminho é gravado. O banco tem uma restrição que <strong style="color:#c9a94a">recusa</strong> qualquer valor fora de <span style="font-family:'IBM Plex Mono',monospace">secret://</span>.</div>
+              </div>
+              <div style="display:flex;gap:8px;align-items:center">
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;background:rgba(26,106,84,.25);color:#8fd3b6;border:1px solid rgba(143,211,182,.3);border-radius:999px;padding:5px 11px">● conectada</span>
+                <span style="font-size:12px;border:1px solid #4a453d;color:#e9e6dd;border-radius:8px;padding:11px 14px;min-height:44px;display:inline-flex;align-items:center;cursor:pointer">Trocar referência</span>
+              </div>
+            </div>
+          </div>
+
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:1.5px;color:#8a6d1e;margin-bottom:12px">ORÇAMENTO PADRÃO DO TENANT</div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:26px">
+            <div style="border:1px solid #e2ddd3;border-radius:10px;padding:11px 13px;background:#faf9f6"><div style="font-size:10.5px;color:#6f675a">máx. tokens</div><div style="font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:500;margin-top:3px">120.000</div></div>
+            <div style="border:1px solid #e2ddd3;border-radius:10px;padding:11px 13px;background:#faf9f6"><div style="font-size:10.5px;color:#6f675a">máx. custo</div><div style="font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:500;margin-top:3px">R$ 4,00</div></div>
+            <div style="border:1px solid #e2ddd3;border-radius:10px;padding:11px 13px;background:#faf9f6"><div style="font-size:10.5px;color:#6f675a">máx. tempo</div><div style="font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:500;margin-top:3px">5 min</div></div>
+            <div style="border:1px solid #e2ddd3;border-radius:10px;padding:11px 13px;background:#faf9f6"><div style="font-size:10.5px;color:#6f675a">máx. passos</div><div style="font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:500;margin-top:3px">12</div></div>
+          </div>
+
+          <!-- KILL-SWITCH -->
+          <div style="border:1.5px solid #f0d9d6;background:#fdf7f6;border-radius:12px;padding:18px 20px">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:18px;flex-wrap:wrap">
+              <div style="flex:1;min-width:300px">
+                <div style="display:flex;align-items:center;gap:9px"><span style="font-size:16px">⏻</span><strong style="font-size:15px;color:#9c2f28">Kill-switch — pausar todos os agentes</strong></div>
+                <div style="font-size:12.5px;color:#7a4038;line-height:1.6;margin-top:8px">A alavanca de emergência do tenant. Interrompe a atividade de IA sem derrubar o trabalho humano — os processos e as tarefas de pessoas seguem normalmente.</div>
+                <div style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:#9c2f28;margin-top:10px">exigência do Art. 14 (EU AI Act) · acionamento e reativação auditados com motivo</div>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;background:#e7f2ec;color:#175c49;border:1px solid #cfe6da;border-radius:999px;padding:4px 10px">● agentes ativos</span>
+                <span style="font-size:13px;background:#fff;border:1.5px solid #b3372f;color:#9c2f28;border-radius:8px;padding:12px 18px;font-weight:600;min-height:44px;display:inline-flex;align-items:center;cursor:pointer">Pausar agentes…</span>
+              </div>
+            </div>
+          </div>
+          <p style="font-size:11.5px;color:#6f675a;line-height:1.55;margin:12px 0 0">O botão abre a confirmação ao lado → nunca pausa em um clique. Hoje isto só existe como <span style="font-family:'IBM Plex Mono',monospace;font-size:11px">UPDATE</span> no banco.</p>
+        </div>
+      </div>
+
+      <!-- confirmation + active state -->
+      <aside style="width:400px;flex-shrink:0;border-left:1px solid #e2ddd3;background:#faf9f6;padding:20px;display:flex;flex-direction:column;gap:18px">
+        <div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1.5px;color:#8a6d1e;margin-bottom:8px">CONFIRMAÇÃO — O QUE ACONTECE AO PAUSAR</div>
+          <div style="background:#fff;border:1px solid #e2ddd3;border-radius:12px;overflow:hidden;box-shadow:0 4px 16px rgba(38,34,32,.1)">
+            <div style="padding:15px 17px;border-bottom:1px solid #e2ddd3">
+              <div style="font-family:'Source Serif 4',Georgia,serif;font-size:16px;font-weight:600;color:#262220">Pausar todos os agentes deste tenant?</div>
+            </div>
+            <div style="padding:6px 17px">
+              <div style="display:flex;gap:10px;padding:10px 0;border-bottom:1px solid #f0ede4"><span style="color:#8a6d1e;flex-shrink:0">⏸</span><div style="font-size:12.5px;line-height:1.5">Agentes <strong>em execução</strong> fazem <strong>parada honesta</strong> no próximo ponto seguro — a trilha parcial é preservada.</div></div>
+              <div style="display:flex;gap:10px;padding:10px 0;border-bottom:1px solid #f0ede4"><span style="color:#9c2f28;flex-shrink:0">⃠</span><div style="font-size:12.5px;line-height:1.5"><strong>Nenhum novo agente inicia</strong> enquanto estiver pausado.</div></div>
+              <div style="display:flex;gap:10px;padding:10px 0;border-bottom:1px solid #f0ede4"><span style="color:#175c49;flex-shrink:0">✓</span><div style="font-size:12.5px;line-height:1.5">Tarefas humanas e <strong>gates de aprovação seguem funcionando</strong> — pessoas não são bloqueadas.</div></div>
+              <div style="display:flex;gap:10px;padding:10px 0"><span style="color:#175c49;flex-shrink:0">↩</span><div style="font-size:12.5px;line-height:1.5"><strong>Reversível.</strong> Ao reativar, os agentes pausados retomam de onde pararam.</div></div>
+            </div>
+            <div style="padding:14px 17px;border-top:1px solid #e2ddd3;background:#faf9f6">
+              <label style="display:flex;flex-direction:column;gap:6px;font-size:12px;color:#44403a">Motivo <span style="color:#9c2f28">*</span> <span style="color:#6f675a;font-size:11px">fica na trilha permanente</span>
+                <textarea rows="2" style="font-family:'IBM Plex Sans',sans-serif;font-size:12.5px;padding:10px;border:1px solid #d8d3c6;border-radius:8px;color:#262220;resize:none;box-sizing:border-box">Custo acima do previsto — investigar antes de retomar</textarea>
+              </label>
+              <div style="display:flex;gap:8px;margin-top:12px">
+                <span style="flex:1;text-align:center;font-size:13px;background:#b3372f;color:#fff;border-radius:8px;padding:12px;font-weight:600;min-height:44px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer">Pausar agentes</span>
+                <span style="font-size:13px;border:1px solid #e2ddd3;color:#44403a;border-radius:8px;padding:12px 16px;min-height:44px;display:inline-flex;align-items:center;cursor:pointer">Cancelar</span>
+              </div>
+              <div style="font-size:10.5px;color:#6f675a;line-height:1.5;margin-top:10px">Registrado como <span style="font-family:'IBM Plex Mono',monospace;font-size:10px">agent.killswitch.toggled</span> com seu nome, o momento e o motivo.</div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1.5px;color:#8a6d1e;margin-bottom:8px">DEPOIS DE ACIONADO — ESTADO ATIVO</div>
+          <div style="background:#fdfaf1;border:1.5px solid #ecd9a0;border-radius:12px;padding:14px 16px">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span style="font-size:14px">⏸</span><strong style="font-size:13.5px;color:#6d5115">Agentes pausados</strong></div>
+            <div style="display:flex;align-items:center;gap:8px;background:#fff;border:1px solid #f0e2b8;border-radius:8px;padding:9px 11px;margin-bottom:10px">
+              <span style="width:20px;height:20px;border-radius:50%;background:#1a6a54;color:#fff;font-size:8px;display:inline-flex;align-items:center;justify-content:center;font-weight:600">AR</span>
+              <span style="font-size:11.5px;color:#44403a"><strong>Ana Ruiz</strong> pausou · hoje 14:22</span>
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;background:#e7f2ec;border:1px solid #cfe6da;color:#175c49;border-radius:5px;padding:1px 6px;margin-left:auto">✎ auditado</span>
+            </div>
+            <div style="font-size:11.5px;color:#6d5115;line-height:1.55;margin-bottom:12px">Motivo: <em>“Custo acima do previsto — investigar antes de retomar”</em><br>3 agentes fizeram parada honesta · 0 iniciados desde então.</div>
+            <span style="display:inline-flex;align-items:center;justify-content:center;width:100%;box-sizing:border-box;font-size:13px;background:#1a6a54;color:#fff;border-radius:8px;padding:12px;font-weight:500;min-height:44px;cursor:pointer">Reativar agentes…</span>
+            <div style="font-size:10.5px;color:#6d5115;margin-top:8px;line-height:1.5">Reativar também pede motivo e é auditado. O banner fica visível em <strong>toda</strong> a Operação enquanto estiver pausado.</div>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== A3 · FERRAMENTAS ===================== -->
+<section style="width:1360px" data-screen-label="A3 Ferramentas do tenant">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6f675a"><strong style="color:#262220">A3 · Ferramentas (P5 mínima)</strong> — o cliente decide o que seus agentes podem fazer · hoje só por SQL</span>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1px;background:#fdf7f6;color:#9c2f28;border:1px solid #f0d9d6;border-radius:999px;padding:2px 8px">CRÍTICO · SEM ROTA</span>
+  </div>
+  <div style="background:#f3f1ea;border:1px solid #d8d3c6;border-radius:14px;overflow:hidden;box-shadow:0 2px 10px rgba(38,34,32,0.06)">
+    <div style="background:#ffffff;border-bottom:1px solid #e2ddd3;display:flex;align-items:center;gap:20px;padding:10px 20px">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:500;letter-spacing:1.5px">BUILDTOVALUE</div>
+      <nav style="display:flex;gap:4px;font-size:12.5px"><span style="padding:8px 12px;border-radius:8px;color:#6f675a">Operação</span><span style="padding:8px 12px;border-radius:8px;background:#1a6a54;color:#fff">Administração</span></nav>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:10px"><span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;background:#f3f1ea;border:1px solid #e2ddd3;border-radius:999px;padding:4px 12px;color:#44403a">acme-industria</span><span style="width:28px;height:28px;border-radius:50%;background:#1a6a54;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600">AR</span></div>
+    </div>
+    <div style="display:flex;min-height:620px">
+      <aside style="width:220px;flex-shrink:0;border-right:1px solid #e2ddd3;padding:16px 14px;background:#faf9f6;display:flex;flex-direction:column;gap:3px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1.5px;color:#6f675a;margin-bottom:8px;padding:0 8px">ADMINISTRAÇÃO</div>
+        <span style="font-size:12.5px;padding:11px 12px;border-radius:8px;color:#44403a;min-height:44px;display:flex;align-items:center;box-sizing:border-box">Identidade</span>
+        <span style="font-size:12.5px;padding:11px 12px;border-radius:8px;color:#44403a;min-height:44px;display:flex;align-items:center;box-sizing:border-box">Membros &amp; papéis</span>
+        <span style="font-size:12.5px;padding:11px 12px;border-radius:8px;color:#44403a;min-height:44px;display:flex;align-items:center;box-sizing:border-box">Inteligência</span>
+        <span style="font-size:12.5px;padding:11px 12px;border-radius:8px;background:#1a6a54;color:#fff;font-weight:500;min-height:44px;display:flex;align-items:center;box-sizing:border-box">Ferramentas</span>
+        <span style="font-size:12.5px;padding:11px 12px;border-radius:8px;color:#44403a;min-height:44px;display:flex;align-items:center;box-sizing:border-box">Auditoria</span>
+      </aside>
+      <div style="flex:1;background:#ffffff">
+        <div style="padding:22px 26px 16px">
+          <h2 style="font-family:'Source Serif 4',Georgia,serif;font-size:20px;font-weight:600;margin:0 0 4px">Ferramentas</h2>
+          <p style="font-size:12.5px;color:#6f675a;margin:0;line-height:1.6;max-width:640px">O que os agentes deste tenant podem usar. O <strong>efeito</strong> e a <strong>autorização</strong> vêm do contrato da ferramenta (não editáveis aqui) — você decide apenas <strong>habilitar ou não</strong>.</p>
+        </div>
+        <div style="display:grid;grid-template-columns:2fr 1.2fr 1.4fr 1fr;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1px;color:#6f675a;background:#f8f6f0;padding:10px 26px;border-top:1px solid #e2ddd3;border-bottom:1px solid #e2ddd3"><span>FERRAMENTA</span><span>EFEITO</span><span>AUTORIZAÇÃO</span><span style="text-align:right">NESTE TENANT</span></div>
+        <div style="display:grid;grid-template-columns:2fr 1.2fr 1.4fr 1fr;align-items:center;padding:13px 26px;border-bottom:1px solid #f0ede4;min-height:44px">
+          <div><div style="font-size:13px;font-weight:500">Buscar na web</div><div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:#6f675a;margin-top:2px">browser-search@1.2.0</div></div>
+          <span><span style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;background:#e7f2ec;color:#175c49;border:1px solid #cfe6da;border-radius:6px;padding:3px 8px">◉ leitura</span></span>
+          <span style="font-size:12px;color:#175c49">automática</span>
+          <span style="text-align:right;display:flex;justify-content:flex-end;align-items:center;gap:8px"><span style="font-size:11px;color:#175c49">ativa</span><span style="display:inline-block;width:44px;height:26px;border-radius:99px;background:#e7f2ec;border:1px solid #cfe6da;position:relative;cursor:pointer"><span style="position:absolute;top:2px;right:2px;width:20px;height:20px;border-radius:50%;background:#1a6a54"></span></span></span>
+        </div>
+        <div style="display:grid;grid-template-columns:2fr 1.2fr 1.4fr 1fr;align-items:center;padding:13px 26px;border-bottom:1px solid #f0ede4;background:#fefdfa;min-height:44px">
+          <div><div style="font-size:13px;font-weight:500">Enviar e-mail</div><div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:#6f675a;margin-top:2px">send-email@2.0.1</div></div>
+          <span><span style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;background:#fdf7f6;color:#9c2f28;border:1px solid #f0d9d6;border-radius:6px;padding:3px 8px">✉ compromisso externo</span></span>
+          <span style="font-size:12px;color:#8a6d1e;display:flex;align-items:center;gap:5px">⚑ exige gate humano</span>
+          <span style="text-align:right;display:flex;justify-content:flex-end;align-items:center;gap:8px"><span style="font-size:11px;color:#175c49">ativa</span><span style="display:inline-block;width:44px;height:26px;border-radius:99px;background:#e7f2ec;border:1px solid #cfe6da;position:relative;cursor:pointer"><span style="position:absolute;top:2px;right:2px;width:20px;height:20px;border-radius:50%;background:#1a6a54"></span></span></span>
+        </div>
+        <div style="display:grid;grid-template-columns:2fr 1.2fr 1.4fr 1fr;align-items:center;padding:13px 26px;border-bottom:1px solid #f0ede4;min-height:44px">
+          <div><div style="font-size:13px;font-weight:500">Lançar no ERP</div><div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:#6f675a;margin-top:2px">erp-commit@1.0.0</div></div>
+          <span><span style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;background:#fdf7f6;color:#9c2f28;border:1px solid #f0d9d6;border-radius:6px;padding:3px 8px">⛁ irreversível</span></span>
+          <span style="font-size:12px;color:#8a6d1e;display:flex;align-items:center;gap:5px">⚑ exige gate humano</span>
+          <span style="text-align:right;display:flex;justify-content:flex-end;align-items:center;gap:8px"><span style="font-size:11px;color:#6f675a">inativa</span><span style="display:inline-block;width:44px;height:26px;border-radius:99px;background:#eceae3;border:1px solid #e2ddd3;position:relative;cursor:pointer"><span style="position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:#c9c2b4"></span></span></span>
+        </div>
+        <div style="display:grid;grid-template-columns:2fr 1.2fr 1.4fr 1fr;align-items:center;padding:13px 26px;border-bottom:1px solid #f0ede4;min-height:44px;background:#fdfbfa">
+          <div><div style="font-size:13px;font-weight:500;color:#6f675a">Exportar dados pessoais</div><div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:#6f675a;margin-top:2px">pii-export@0.4.0</div></div>
+          <span><span style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;background:#fdf7f6;color:#9c2f28;border:1px solid #f0d9d6;border-radius:6px;padding:3px 8px">⛁ irreversível</span></span>
+          <span style="font-size:12px;color:#9c2f28;font-weight:600">⃠ proibida pela política</span>
+          <span style="text-align:right;font-family:'IBM Plex Mono',monospace;font-size:10px;color:#9c2f28">bloqueada</span>
+        </div>
+        <div style="padding:16px 26px;display:flex;gap:14px;align-items:flex-start">
+          <div style="flex:1;background:#f4faf6;border:1px solid #dff0e6;border-radius:10px;padding:12px 14px;font-size:11.5px;color:#25453a;line-height:1.55"><strong>Garantia que a tela expõe:</strong> ferramenta de efeito irreversível ou de compromisso externo <strong>nunca</strong> aparece como “automática” — o gate humano é obrigatório e o runtime recusa executá-la sem aprovação. Ligar/desligar não altera essa regra.</div>
+          <div style="flex:1;background:#faf9f6;border:1px solid #e2ddd3;border-radius:10px;padding:12px 14px;font-size:11.5px;color:#6f675a;line-height:1.55"><strong style="color:#44403a">Trilha:</strong> cada liga/desliga grava quem fez, quando e por quê. Ex.: <em>Ana Ruiz habilitou “Enviar e-mail” — há 3 dias</em> · <span style="font-family:'IBM Plex Mono',monospace;font-size:10px">tools.toggled</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== A4 · MEMBROS & PAPÉIS ===================== -->
+<section style="width:1360px" data-screen-label="A4 Membros e papéis">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6f675a"><strong style="color:#262220">A4 · Membros &amp; papéis</strong> — tela nova · hoje usuários só existem por script de seed</span>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1px;background:#fdfaf1;color:#8a6d1e;border:1px solid #f6edd4;border-radius:999px;padding:2px 8px">MÉDIO · HIGIENE DE SaaS</span>
+  </div>
+  <div style="background:#f3f1ea;border:1px solid #d8d3c6;border-radius:14px;overflow:hidden;box-shadow:0 2px 10px rgba(38,34,32,0.06)">
+    <div style="background:#ffffff;border-bottom:1px solid #e2ddd3;display:flex;align-items:center;gap:20px;padding:10px 20px">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:500;letter-spacing:1.5px">BUILDTOVALUE</div>
+      <nav style="display:flex;gap:4px;font-size:12.5px"><span style="padding:8px 12px;border-radius:8px;color:#6f675a">Operação</span><span style="padding:8px 12px;border-radius:8px;background:#1a6a54;color:#fff">Administração</span></nav>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:10px"><span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;background:#f3f1ea;border:1px solid #e2ddd3;border-radius:999px;padding:4px 12px;color:#44403a">acme-industria</span><span style="width:28px;height:28px;border-radius:50%;background:#1a6a54;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600">AR</span></div>
+    </div>
+    <div style="display:flex;min-height:660px">
+      <aside style="width:220px;flex-shrink:0;border-right:1px solid #e2ddd3;padding:16px 14px;background:#faf9f6;display:flex;flex-direction:column;gap:3px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1.5px;color:#6f675a;margin-bottom:8px;padding:0 8px">ADMINISTRAÇÃO</div>
+        <span style="font-size:12.5px;padding:11px 12px;border-radius:8px;color:#44403a;min-height:44px;display:flex;align-items:center;box-sizing:border-box">Identidade</span>
+        <span style="font-size:12.5px;padding:11px 12px;border-radius:8px;background:#1a6a54;color:#fff;font-weight:500;min-height:44px;display:flex;align-items:center;box-sizing:border-box">Membros &amp; papéis</span>
+        <span style="font-size:12.5px;padding:11px 12px;border-radius:8px;color:#44403a;min-height:44px;display:flex;align-items:center;box-sizing:border-box">Inteligência</span>
+        <span style="font-size:12.5px;padding:11px 12px;border-radius:8px;color:#44403a;min-height:44px;display:flex;align-items:center;box-sizing:border-box">Ferramentas</span>
+        <span style="font-size:12.5px;padding:11px 12px;border-radius:8px;color:#44403a;min-height:44px;display:flex;align-items:center;box-sizing:border-box">Auditoria</span>
+      </aside>
+      <div style="flex:1;background:#ffffff">
+        <div style="padding:22px 26px 14px;display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap">
+          <div>
+            <h2 style="font-family:'Source Serif 4',Georgia,serif;font-size:20px;font-weight:600;margin:0 0 4px">Membros &amp; papéis</h2>
+            <p style="font-size:12.5px;color:#6f675a;margin:0;line-height:1.6">7 pessoas nesta organização. O papel define o que cada uma vê e pode fazer.</p>
+          </div>
+          <span style="font-size:13px;background:#1a6a54;color:#fff;border-radius:8px;padding:12px 18px;font-weight:500;min-height:44px;display:inline-flex;align-items:center;cursor:pointer">+ Adicionar pessoa</span>
+        </div>
+        <div style="display:grid;grid-template-columns:2.2fr 1.3fr 1.2fr auto;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1px;color:#6f675a;background:#f8f6f0;padding:10px 26px;border-top:1px solid #e2ddd3;border-bottom:1px solid #e2ddd3"><span>PESSOA</span><span>PAPEL</span><span>ÚLTIMO ACESSO</span><span></span></div>
+        <div style="display:grid;grid-template-columns:2.2fr 1.3fr 1.2fr auto;align-items:center;padding:12px 26px;border-bottom:1px solid #f0ede4;min-height:44px">
+          <div style="display:flex;align-items:center;gap:10px"><span style="width:30px;height:30px;border-radius:50%;background:#1a6a54;color:#fff;font-size:11px;display:inline-flex;align-items:center;justify-content:center;font-weight:600">AR</span><div><div style="font-size:13px;font-weight:500">Ana Ruiz <span style="font-size:11px;color:#6f675a">(você)</span></div><div style="font-size:11px;color:#6f675a">ana.ruiz@acme.com.br</div></div></div>
+          <span><span style="font-size:12px;background:#e7f2ec;color:#175c49;border:1px solid #cfe6da;border-radius:999px;padding:4px 11px">Administradora</span></span>
+          <span style="font-size:11.5px;color:#6f675a">hoje, 14:02</span>
+          <span style="font-size:11.5px;color:#6f675a">—</span>
+        </div>
+        <div style="display:grid;grid-template-columns:2.2fr 1.3fr 1.2fr auto;align-items:center;padding:12px 26px;border-bottom:1px solid #f0ede4;min-height:44px">
+          <div style="display:flex;align-items:center;gap:10px"><span style="width:30px;height:30px;border-radius:50%;background:#6f675a;color:#fff;font-size:11px;display:inline-flex;align-items:center;justify-content:center;font-weight:600">MP</span><div><div style="font-size:13px;font-weight:500">Marcos Pinto</div><div style="font-size:11px;color:#6f675a">marcos.pinto@acme.com.br</div></div></div>
+          <span><span style="font-size:12px;background:#f3f1ea;color:#44403a;border:1px solid #e2ddd3;border-radius:999px;padding:4px 11px">Operador</span></span>
+          <span style="font-size:11.5px;color:#6f675a">hoje, 09:41</span>
+          <span style="font-size:12px;color:#1a6a54;cursor:pointer;min-height:44px;display:inline-flex;align-items:center">Gerenciar</span>
+        </div>
+        <div style="display:grid;grid-template-columns:2.2fr 1.3fr 1.2fr auto;align-items:center;padding:12px 26px;border-bottom:1px solid #f0ede4;min-height:44px">
+          <div style="display:flex;align-items:center;gap:10px"><span style="width:30px;height:30px;border-radius:50%;background:#6f675a;color:#fff;font-size:11px;display:inline-flex;align-items:center;justify-content:center;font-weight:600">JD</span><div><div style="font-size:13px;font-weight:500">Júlia Dias</div><div style="font-size:11px;color:#6f675a">julia.dias@acme.com.br</div></div></div>
+          <span><span style="font-size:12px;background:#f3f1ea;color:#44403a;border:1px solid #e2ddd3;border-radius:999px;padding:4px 11px">Analista</span></span>
+          <span style="font-size:11.5px;color:#6f675a">ontem, 17:30</span>
+          <span style="font-size:12px;color:#1a6a54;cursor:pointer;min-height:44px;display:inline-flex;align-items:center">Gerenciar</span>
+        </div>
+        <div style="display:grid;grid-template-columns:2.2fr 1.3fr 1.2fr auto;align-items:center;padding:12px 26px;border-bottom:1px solid #f0ede4;min-height:44px">
+          <div style="display:flex;align-items:center;gap:10px"><span style="width:30px;height:30px;border-radius:50%;background:#6f675a;color:#fff;font-size:11px;display:inline-flex;align-items:center;justify-content:center;font-weight:600">RS</span><div><div style="font-size:13px;font-weight:500">Rafael Souza</div><div style="font-size:11px;color:#6f675a">rafael.souza@acme.com.br</div></div></div>
+          <span><span style="font-size:12px;background:#f3f1ea;color:#44403a;border:1px solid #e2ddd3;border-radius:999px;padding:4px 11px">Negócio</span></span>
+          <span style="font-size:11.5px;color:#6f675a">3 dias</span>
+          <span style="font-size:12px;color:#1a6a54;cursor:pointer;min-height:44px;display:inline-flex;align-items:center">Gerenciar</span>
+        </div>
+        <div style="display:grid;grid-template-columns:2.2fr 1.3fr 1.2fr auto;align-items:center;padding:12px 26px;border-bottom:1px solid #f0ede4;min-height:44px;opacity:.68">
+          <div style="display:flex;align-items:center;gap:10px"><span style="width:30px;height:30px;border-radius:50%;background:#c9c2b4;color:#fff;font-size:11px;display:inline-flex;align-items:center;justify-content:center;font-weight:600">CL</span><div><div style="font-size:13px;font-weight:500">Carla Lima</div><div style="font-size:11px;color:#6f675a">carla.lima@acme.com.br</div></div></div>
+          <span style="display:flex;gap:6px;align-items:center"><span style="font-size:12px;background:#f3f1ea;color:#6f675a;border:1px solid #e2ddd3;border-radius:999px;padding:4px 11px">Negócio</span><span style="font-family:'IBM Plex Mono',monospace;font-size:9px;background:#fdf7f6;color:#9c2f28;border:1px solid #f0d9d6;border-radius:5px;padding:1px 6px">inativa</span></span>
+          <span style="font-size:11.5px;color:#6f675a">2 meses</span>
+          <span style="font-size:12px;color:#1a6a54;cursor:pointer;min-height:44px;display:inline-flex;align-items:center">Reativar</span>
+        </div>
+        <div style="padding:14px 26px;font-size:11.5px;color:#6f675a">Mostrando 5 de 7 · <a href="#">ver todas</a></div>
+      </div>
+      <!-- manage panel -->
+      <aside style="width:376px;flex-shrink:0;border-left:1px solid #e2ddd3;background:#faf9f6;padding:20px;display:flex;flex-direction:column;gap:18px">
+        <div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1.5px;color:#8a6d1e;margin-bottom:8px">GERENCIAR PESSOA</div>
+          <div style="background:#fff;border:1px solid #e2ddd3;border-radius:12px;padding:16px 17px">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px"><span style="width:34px;height:34px;border-radius:50%;background:#6f675a;color:#fff;font-size:12px;display:inline-flex;align-items:center;justify-content:center;font-weight:600">MP</span><div><div style="font-size:14px;font-weight:600">Marcos Pinto</div><div style="font-size:11px;color:#6f675a">marcos.pinto@acme.com.br</div></div></div>
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1.2px;color:#6f675a;margin-bottom:8px">PAPEL</div>
+            <div style="display:flex;flex-direction:column;gap:7px;margin-bottom:14px">
+              <span style="font-size:12.5px;border:1px solid #e2ddd3;border-radius:8px;padding:11px 13px;min-height:44px;display:flex;align-items:center;justify-content:space-between;cursor:pointer">Administradora <span style="font-size:10.5px;color:#6f675a">tudo + administração</span></span>
+              <span style="font-size:12.5px;border:1px solid #e2ddd3;border-radius:8px;padding:11px 13px;min-height:44px;display:flex;align-items:center;justify-content:space-between;cursor:pointer">Analista <span style="font-size:10.5px;color:#6f675a">modela e publica</span></span>
+              <span style="font-size:12.5px;border:1.5px solid #1a6a54;background:#e7f2ec;color:#175c49;border-radius:8px;padding:11px 13px;font-weight:600;min-height:44px;display:flex;align-items:center;justify-content:space-between;cursor:pointer">Operador ✓ <span style="font-size:10.5px;color:#175c49">opera e resolve incidentes</span></span>
+              <span style="font-size:12.5px;border:1px solid #e2ddd3;border-radius:8px;padding:11px 13px;min-height:44px;display:flex;align-items:center;justify-content:space-between;cursor:pointer">Negócio <span style="font-size:10.5px;color:#6f675a">tarefas e formulários</span></span>
+            </div>
+            <div style="background:#f4faf6;border:1px solid #dff0e6;border-radius:8px;padding:10px 12px;font-size:11px;color:#25453a;line-height:1.5;margin-bottom:14px"><strong>Operador pode:</strong> ver e resolver incidentes, cancelar instância, revelar campo sensível (auditado), reatribuir tarefa. <strong>Não pode:</strong> publicar processo nem administrar o tenant.</div>
+            <label style="display:flex;flex-direction:column;gap:6px;font-size:12px;color:#44403a">Motivo da mudança <span style="color:#9c2f28">*</span>
+              <textarea rows="2" placeholder="ex.: assumiu a operação do time de compras" style="font-family:'IBM Plex Sans',sans-serif;font-size:12.5px;padding:10px;border:1px solid #d8d3c6;border-radius:8px;color:#262220;resize:none;box-sizing:border-box"></textarea>
+            </label>
+            <div style="display:flex;gap:8px;margin-top:12px">
+              <span style="flex:1;text-align:center;font-size:13px;background:#1a6a54;color:#fff;border-radius:8px;padding:12px;font-weight:500;min-height:44px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer">Salvar papel</span>
+              <span style="font-size:13px;border:1px solid #e2ddd3;color:#44403a;border-radius:8px;padding:12px 14px;min-height:44px;display:inline-flex;align-items:center;cursor:pointer">Cancelar</span>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1.5px;color:#8a6d1e;margin-bottom:8px">OUTRAS AÇÕES</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <span style="font-size:12.5px;background:#fff;border:1px solid #e2ddd3;border-radius:8px;padding:12px 14px;color:#44403a;min-height:44px;display:flex;align-items:center;gap:8px;cursor:pointer">↻ Redefinir senha <span style="font-size:11px;color:#6f675a;margin-left:auto">gera senha temporária</span></span>
+            <span style="font-size:12.5px;background:#fff;border:1px solid #f0d9d6;border-radius:8px;padding:12px 14px;color:#9c2f28;min-height:44px;display:flex;align-items:center;gap:8px;cursor:pointer">⃠ Desativar acesso… <span style="font-size:11px;color:#6f675a;margin-left:auto">reversível</span></span>
+          </div>
+          <div style="font-size:11px;color:#6f675a;line-height:1.55;margin-top:10px"><strong style="color:#44403a">Desativar não apaga:</strong> a pessoa perde o acesso, mas tudo que ela fez continua na trilha de auditoria com o nome dela — histórico não se reescreve. Tarefas atribuídas a ela voltam para a fila do papel.</div>
+        </div>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== A5 · PERFIL & SENHA ===================== -->
+<section style="width:1360px" data-screen-label="A5 Meu perfil e senha">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6f675a"><strong style="color:#262220">A5 · Meu perfil, senha e preferências</strong> — para <em>todo</em> usuário (não é admin) · hoje <span style="font-family:'IBM Plex Mono',monospace">/v1/me</span> é só leitura</span>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1px;background:#fdf7f6;color:#9c2f28;border:1px solid #f0d9d6;border-radius:999px;padding:2px 8px">SENHA = SEGURANÇA</span>
+  </div>
+  <div style="background:#f3f1ea;border:1px solid #d8d3c6;border-radius:14px;overflow:hidden;box-shadow:0 2px 10px rgba(38,34,32,0.06)">
+    <div style="background:#ffffff;border-bottom:1px solid #e2ddd3;display:flex;align-items:center;gap:20px;padding:10px 20px">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:500;letter-spacing:1.5px">BUILDTOVALUE</div>
+      <nav style="display:flex;gap:4px;font-size:12.5px"><span style="padding:8px 12px;border-radius:8px;color:#6f675a">Tarefas</span><span style="padding:8px 12px;border-radius:8px;color:#6f675a">Operação</span></nav>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;background:#f3f1ea;border:1px solid #e2ddd3;border-radius:999px;padding:4px 12px;color:#44403a">acme-industria</span>
+        <span style="display:inline-flex;align-items:center;gap:6px;background:#e7f2ec;border:1px solid #cfe6da;border-radius:999px;padding:3px 10px 3px 3px"><span style="width:26px;height:26px;border-radius:50%;background:#6f675a;color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600">MP</span><span style="font-size:11.5px;color:#175c49">Meu perfil</span></span>
+      </div>
+    </div>
+    <div style="display:flex;min-height:600px;background:#ffffff">
+      <div style="flex:1;padding:26px 30px;border-right:1px solid #e2ddd3">
+        <div style="max-width:520px">
+          <h2 style="font-family:'Source Serif 4',Georgia,serif;font-size:20px;font-weight:600;margin:0 0 4px">Meu perfil</h2>
+          <p style="font-size:12.5px;color:#6f675a;margin:0 0 22px;line-height:1.6">Seus dados e como você prefere ver as informações. Acessível pelo seu nome no topo, em qualquer rota.</p>
+          <div style="display:flex;flex-direction:column;gap:14px;margin-bottom:26px">
+            <label style="display:flex;flex-direction:column;gap:5px;font-size:12px;color:#44403a">Nome de exibição<input value="Marcos Pinto" style="font-family:'IBM Plex Sans',sans-serif;font-size:13px;padding:11px;border:1px solid #e2ddd3;border-radius:8px;color:#262220;min-height:44px;box-sizing:border-box"></label>
+            <label style="display:flex;flex-direction:column;gap:5px;font-size:12px;color:#44403a">E-mail <span style="color:#6f675a;font-size:11px">é o seu login — mudança pede confirmação do administrador</span><div style="font-size:13px;padding:11px;border:1px solid #e2ddd3;border-radius:8px;background:#f6f4ef;color:#6f675a;min-height:44px;box-sizing:border-box;display:flex;align-items:center;justify-content:space-between">marcos.pinto@acme.com.br <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.5px">bloqueado</span></div></label>
+            <div style="display:flex;gap:10px;align-items:center;font-size:12px;color:#44403a">Papel: <span style="font-size:12px;background:#f3f1ea;color:#44403a;border:1px solid #e2ddd3;border-radius:999px;padding:4px 11px">Operador</span> <span style="font-size:11px;color:#6f675a">definido pelo administrador</span></div>
+          </div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:1.5px;color:#8a6d1e;margin-bottom:12px">PREFERÊNCIAS DE EXIBIÇÃO</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:12px">
+            <label style="display:flex;flex-direction:column;gap:5px;font-size:12px;color:#44403a">Fuso horário<div style="font-size:13px;padding:11px;border:1px solid #e2ddd3;border-radius:8px;background:#fff;min-height:44px;box-sizing:border-box;display:flex;align-items:center;justify-content:space-between">São Paulo (GMT-3) <span style="color:#6f675a">▾</span></div></label>
+            <label style="display:flex;flex-direction:column;gap:5px;font-size:12px;color:#44403a">Formato de data<div style="font-size:13px;padding:11px;border:1px solid #e2ddd3;border-radius:8px;background:#fff;min-height:44px;box-sizing:border-box;display:flex;align-items:center;justify-content:space-between">31/12/2026 14:30 <span style="color:#6f675a">▾</span></div></label>
+          </div>
+          <div style="background:#f4faf6;border:1px solid #dff0e6;border-radius:9px;padding:11px 13px;font-size:11.5px;color:#25453a;line-height:1.55;margin-bottom:22px"><strong>Por que o fuso importa:</strong> a Operação e as trilhas mostram horários de eventos. Sem fuso do usuário, todos leem em UTC ou no fuso do servidor — e um operador em outro estado interpreta errado a hora de um incidente.</div>
+          <div style="display:flex;gap:10px;border-top:1px solid #e2ddd3;padding-top:18px">
+            <span style="font-size:13px;background:#1a6a54;color:#fff;border-radius:8px;padding:12px 20px;font-weight:500;min-height:44px;display:inline-flex;align-items:center;cursor:pointer">Salvar preferências</span>
+          </div>
+        </div>
+      </div>
+      <!-- password -->
+      <div style="width:440px;flex-shrink:0;padding:26px;background:#faf9f6">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:1.5px;color:#9c2f28;margin-bottom:8px">TROCAR SENHA</div>
+        <div style="background:#fff;border:1px solid #e2ddd3;border-radius:12px;padding:18px 19px">
+          <p style="font-size:12px;color:#6f675a;line-height:1.55;margin:0 0 16px">Sua senha atual foi criada na configuração da conta. <strong style="color:#9c2f28">Troque-a no primeiro acesso.</strong></p>
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <label style="display:flex;flex-direction:column;gap:5px;font-size:12px;color:#44403a">Senha atual<input type="password" value="········" style="font-family:'IBM Plex Sans',sans-serif;font-size:13px;padding:11px;border:1px solid #e2ddd3;border-radius:8px;min-height:44px;box-sizing:border-box"></label>
+            <label style="display:flex;flex-direction:column;gap:5px;font-size:12px;color:#44403a">Nova senha<input type="password" value="············" style="font-family:'IBM Plex Sans',sans-serif;font-size:13px;padding:11px;border:1.5px solid #1a6a54;border-radius:8px;min-height:44px;box-sizing:border-box"></label>
+            <div style="display:flex;gap:5px;align-items:center">
+              <span style="height:5px;flex:1;border-radius:99px;background:#1a6a54"></span><span style="height:5px;flex:1;border-radius:99px;background:#1a6a54"></span><span style="height:5px;flex:1;border-radius:99px;background:#1a6a54"></span><span style="height:5px;flex:1;border-radius:99px;background:#eceae3"></span>
+              <span style="font-size:11px;color:#175c49;margin-left:6px">forte</span>
+            </div>
+            <ul style="margin:2px 0 0;padding-left:16px;font-size:11px;color:#6f675a;line-height:1.6">
+              <li style="color:#175c49">✓ pelo menos 12 caracteres</li>
+              <li style="color:#175c49">✓ não é uma senha conhecida por vazamentos</li>
+              <li>evite reutilizar de outros serviços</li>
+            </ul>
+            <label style="display:flex;flex-direction:column;gap:5px;font-size:12px;color:#44403a">Repita a nova senha<input type="password" value="············" style="font-family:'IBM Plex Sans',sans-serif;font-size:13px;padding:11px;border:1px solid #e2ddd3;border-radius:8px;min-height:44px;box-sizing:border-box"></label>
+          </div>
+          <span style="display:inline-flex;align-items:center;justify-content:center;width:100%;box-sizing:border-box;font-size:13px;background:#1a6a54;color:#fff;border-radius:8px;padding:12px;font-weight:500;min-height:44px;margin-top:16px;cursor:pointer">Trocar senha</span>
+          <div style="font-size:11px;color:#6f675a;line-height:1.55;margin-top:12px;padding-top:12px;border-top:1px solid #f0ede4">Ao trocar, <strong>as outras sessões são encerradas</strong> — você continua conectado só aqui. A troca é auditada (sem a senha, obviamente).</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== A6 · RECUPERAÇÃO DE SENHA ===================== -->
+<section style="width:1360px" data-screen-label="A6 Recuperação de senha">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6f675a"><strong style="color:#262220">A6 · Recuperação de senha</strong> — hoje toda recuperação passa por nós; duas variantes conforme o recorte</span>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1px;background:#fdfaf1;color:#8a6d1e;border:1px solid #f6edd4;border-radius:999px;padding:2px 8px">DECISÃO DE RECORTE</span>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+    <!-- variant A: admin reset (v1 mínima) -->
+    <div style="background:#f3f1ea;border:1px solid #d8d3c6;border-radius:14px;padding:20px;box-shadow:0 2px 10px rgba(38,34,32,0.06)">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px"><span style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1px;background:#e7f2ec;color:#175c49;border:1px solid #cfe6da;border-radius:999px;padding:2px 8px">VARIANTE A · v1 MÍNIMA</span><span style="font-size:11.5px;color:#6f675a">sem e-mail transacional</span></div>
+      <div style="font-size:13px;color:#44403a;margin-bottom:14px;line-height:1.55">O administrador redefine e entrega uma <strong>senha temporária</strong>; o usuário é obrigado a trocá-la no primeiro acesso. Não precisa de serviço de e-mail.</div>
+      <div style="background:#fff;border:1px solid #e2ddd3;border-radius:12px;padding:16px 17px">
+        <div style="font-family:'Source Serif 4',Georgia,serif;font-size:15px;font-weight:600;margin-bottom:10px">Redefinir senha de Júlia Dias</div>
+        <div style="background:#fdfaf1;border:1px solid #f6edd4;border-radius:8px;padding:12px 14px;margin-bottom:12px">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1px;color:#8a6d1e;margin-bottom:6px">SENHA TEMPORÁRIA GERADA</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:16px;color:#262220;letter-spacing:1px">bt-7fk2-nqa9</div>
+          <div style="font-size:11px;color:#6d5115;margin-top:6px">Válida por 24h · uso único · troca obrigatória no acesso</div>
+        </div>
+        <label style="display:flex;flex-direction:column;gap:6px;font-size:12px;color:#44403a">Motivo <span style="color:#9c2f28">*</span>
+          <input value="Solicitou por telefone — perdeu o acesso" style="font-family:'IBM Plex Sans',sans-serif;font-size:12.5px;padding:10px;border:1px solid #d8d3c6;border-radius:8px;min-height:44px;box-sizing:border-box">
+        </label>
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <span style="flex:1;text-align:center;font-size:12.5px;background:#1a6a54;color:#fff;border-radius:8px;padding:12px;font-weight:500;min-height:44px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer">Copiar e confirmar</span>
+          <span style="font-size:12.5px;border:1px solid #e2ddd3;color:#44403a;border-radius:8px;padding:12px 14px;min-height:44px;display:inline-flex;align-items:center;cursor:pointer">Cancelar</span>
+        </div>
+        <div style="font-size:10.5px;color:#6f675a;margin-top:10px;line-height:1.5">A senha aparece <strong>uma única vez</strong> nesta tela e não é recuperável depois — é entregue pessoalmente. O ato fica na trilha; a senha, não.</div>
+      </div>
+    </div>
+    <!-- variant B: self-service (F4) -->
+    <div style="background:#f3f1ea;border:1px solid #d8d3c6;border-radius:14px;padding:20px;box-shadow:0 2px 10px rgba(38,34,32,0.06)">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px"><span style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1px;background:#fdfaf1;color:#8a6d1e;border:1px solid #f6edd4;border-radius:999px;padding:2px 8px">VARIANTE B · F4</span><span style="font-size:11.5px;color:#6f675a">exige e-mail transacional</span></div>
+      <div style="font-size:13px;color:#44403a;margin-bottom:14px;line-height:1.55">Autoatendimento pelo login. Precisa de infraestrutura de e-mail — por isso proponho como F4, não v1.</div>
+      <div style="background:#e9e6dd;border-radius:12px;padding:22px;display:flex;justify-content:center">
+        <div style="background:#fff;border:1px solid #e2ddd3;border-radius:12px;padding:22px;width:300px;box-shadow:0 2px 8px rgba(38,34,32,.06)">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;letter-spacing:1.5px;text-align:center;margin-bottom:16px">BUILDTOVALUE</div>
+          <div style="font-family:'Source Serif 4',Georgia,serif;font-size:16px;font-weight:600;margin-bottom:6px">Esqueceu a senha?</div>
+          <p style="font-size:11.5px;color:#6f675a;line-height:1.5;margin:0 0 14px">Informe sua organização e e-mail. Se houver conta, enviaremos um link de redefinição.</p>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <label style="display:flex;flex-direction:column;gap:4px;font-size:11.5px;color:#44403a">Organização<input value="acme-industria" style="font-family:'IBM Plex Sans',sans-serif;font-size:12.5px;padding:10px;border:1px solid #e2ddd3;border-radius:8px;min-height:44px;box-sizing:border-box"></label>
+            <label style="display:flex;flex-direction:column;gap:4px;font-size:11.5px;color:#44403a">E-mail<input value="julia.dias@acme.com.br" style="font-family:'IBM Plex Sans',sans-serif;font-size:12.5px;padding:10px;border:1px solid #e2ddd3;border-radius:8px;min-height:44px;box-sizing:border-box"></label>
+          </div>
+          <span style="display:inline-flex;align-items:center;justify-content:center;width:100%;box-sizing:border-box;font-size:12.5px;background:#1a6a54;color:#fff;border-radius:8px;padding:12px;font-weight:500;min-height:44px;margin-top:14px;cursor:pointer">Enviar link</span>
+          <div style="font-size:10.5px;color:#6f675a;line-height:1.5;margin-top:12px;text-align:center">A resposta é <strong>sempre a mesma</strong>, exista a conta ou não — para não revelar quem tem cadastro.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== A7 · EXPORT DE AUDITORIA ===================== -->
+<section style="width:1360px" data-screen-label="A7 Export de auditoria e recibo">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6f675a"><strong style="color:#262220">A7 · Export de auditoria + recibo</strong> — a API existe e é boa; falta a alavanca e a permissão no espelho do console</span>
+    <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1px;background:#fdfaf1;color:#8a6d1e;border:1px solid #f6edd4;border-radius:999px;padding:2px 8px">ALTO · MÍNIMO, NÃO O CONSOLE E3</span>
+  </div>
+  <div style="background:#f3f1ea;border:1px solid #d8d3c6;border-radius:14px;overflow:hidden;box-shadow:0 2px 10px rgba(38,34,32,0.06)">
+    <div style="background:#ffffff;border-bottom:1px solid #e2ddd3;display:flex;align-items:center;gap:20px;padding:10px 20px">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:500;letter-spacing:1.5px">BUILDTOVALUE</div>
+      <nav style="display:flex;gap:4px;font-size:12.5px"><span style="padding:8px 12px;border-radius:8px;color:#6f675a">Operação</span><span style="padding:8px 12px;border-radius:8px;background:#1a6a54;color:#fff">Administração</span></nav>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:10px"><span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;background:#e7f2ec;border:1px solid #cfe6da;border-radius:999px;padding:4px 12px;color:#175c49">⚖ auditoria · DPO</span><span style="width:28px;height:28px;border-radius:50%;background:#6f675a;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600">DP</span></div>
+    </div>
+    <div style="display:flex;min-height:520px">
+      <aside style="width:220px;flex-shrink:0;border-right:1px solid #e2ddd3;padding:16px 14px;background:#faf9f6;display:flex;flex-direction:column;gap:3px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1.5px;color:#6f675a;margin-bottom:8px;padding:0 8px">ADMINISTRAÇÃO</div>
+        <span style="font-size:12.5px;padding:11px 12px;border-radius:8px;color:#44403a;min-height:44px;display:flex;align-items:center;box-sizing:border-box">Identidade</span>
+        <span style="font-size:12.5px;padding:11px 12px;border-radius:8px;color:#44403a;min-height:44px;display:flex;align-items:center;box-sizing:border-box">Membros &amp; papéis</span>
+        <span style="font-size:12.5px;padding:11px 12px;border-radius:8px;color:#44403a;min-height:44px;display:flex;align-items:center;box-sizing:border-box">Inteligência</span>
+        <span style="font-size:12.5px;padding:11px 12px;border-radius:8px;color:#44403a;min-height:44px;display:flex;align-items:center;box-sizing:border-box">Ferramentas</span>
+        <span style="font-size:12.5px;padding:11px 12px;border-radius:8px;background:#1a6a54;color:#fff;font-weight:500;min-height:44px;display:flex;align-items:center;box-sizing:border-box">Auditoria</span>
+      </aside>
+      <div style="flex:1;background:#ffffff;padding:24px 28px">
+        <div style="max-width:560px">
+          <h2 style="font-family:'Source Serif 4',Georgia,serif;font-size:20px;font-weight:600;margin:0 0 4px">Auditoria</h2>
+          <p style="font-size:12.5px;color:#6f675a;margin:0 0 20px;line-height:1.6">Exporte a trilha completa para análise externa, ou verifique se um arquivo exportado continua íntegro. <strong>Não é o Console de Auditoria</strong> (a tela de consulta é F4) — é a alavanca mínima para o auditor e o DPO trabalharem.</p>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:1.5px;color:#8a6d1e;margin-bottom:12px">EXPORTAR TRILHA</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+            <label style="display:flex;flex-direction:column;gap:5px;font-size:12px;color:#44403a">Período<div style="font-size:13px;padding:11px;border:1px solid #e2ddd3;border-radius:8px;background:#fff;min-height:44px;box-sizing:border-box;display:flex;align-items:center;justify-content:space-between">últimos 30 dias <span style="color:#6f675a">▾</span></div></label>
+            <label style="display:flex;flex-direction:column;gap:5px;font-size:12px;color:#44403a">Formato<div style="font-size:13px;padding:11px;border:1px solid #e2ddd3;border-radius:8px;background:#fff;min-height:44px;box-sizing:border-box;display:flex;align-items:center;justify-content:space-between">JSON · canônico <span style="color:#6f675a">▾</span></div></label>
+            <label style="display:flex;flex-direction:column;gap:5px;font-size:12px;color:#44403a">Ator<div style="font-size:13px;padding:11px;border:1px solid #e2ddd3;border-radius:8px;background:#fff;min-height:44px;box-sizing:border-box;display:flex;align-items:center;justify-content:space-between">todos <span style="color:#6f675a">▾</span></div></label>
+            <label style="display:flex;flex-direction:column;gap:5px;font-size:12px;color:#44403a">Tipo de evento<div style="font-size:13px;padding:11px;border:1px solid #e2ddd3;border-radius:8px;background:#fff;min-height:44px;box-sizing:border-box;display:flex;align-items:center;justify-content:space-between">todos <span style="color:#6f675a">▾</span></div></label>
+          </div>
+          <div style="display:flex;gap:10px;align-items:center;margin-bottom:22px">
+            <span style="font-size:13px;background:#262220;color:#fff;border-radius:8px;padding:12px 20px;font-weight:500;min-height:44px;display:inline-flex;align-items:center;cursor:pointer">Exportar com recibo</span>
+            <span style="font-size:12px;color:#6f675a;line-height:1.5">A própria exportação é <strong>auditada</strong> — quem, quando, com quais filtros.</span>
+          </div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:1.5px;color:#8a6d1e;margin-bottom:12px">VERIFICAR INTEGRIDADE</div>
+          <div style="border:1px dashed #d8d3c6;border-radius:10px;padding:16px;text-align:center;background:#faf9f6">
+            <div style="font-size:12.5px;color:#44403a;margin-bottom:8px">Arraste um arquivo exportado, ou informe o <span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px">export_id</span></div>
+            <span style="font-size:12.5px;border:1px solid #1a6a54;color:#175c49;border-radius:8px;padding:11px 16px;min-height:44px;display:inline-flex;align-items:center;cursor:pointer">Selecionar arquivo…</span>
+            <div style="font-size:11px;color:#6f675a;margin-top:10px;line-height:1.5">Recalculamos o resumo e comparamos com o registro ancorado. A verificação também é auditada.</div>
+          </div>
+        </div>
+      </div>
+      <!-- receipt -->
+      <aside style="width:420px;flex-shrink:0;border-left:1px solid #e2ddd3;background:#faf9f6;padding:20px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1.5px;color:#8a6d1e;margin-bottom:8px">RECIBO DA EXPORTAÇÃO</div>
+        <div style="background:#262220;border-radius:12px;overflow:hidden;box-shadow:0 4px 16px rgba(38,34,32,.16)">
+          <div style="padding:14px 17px;border-bottom:1px solid #3a352f">
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:8.5px;letter-spacing:1.5px;color:#c9a94a">RECIBO DE EXPORTAÇÃO DE AUDITORIA</div>
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:#f3f0e8;margin-top:5px">audit-export · acme-industria</div>
+          </div>
+          <div style="padding:5px 17px;font-family:'IBM Plex Mono',monospace;font-size:10.5px">
+            <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #332e29"><span style="color:#9a8f7e">export_id</span><span style="color:#e9e6dd">exp_2026-07-24_a91f</span></div>
+            <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #332e29"><span style="color:#9a8f7e">período</span><span style="color:#e9e6dd">24/06 – 24/07</span></div>
+            <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #332e29"><span style="color:#9a8f7e">eventos</span><span style="color:#e9e6dd">3.412</span></div>
+            <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #332e29"><span style="color:#9a8f7e">resumo (sha256)</span><span style="color:#8fd3b6">7c1e…b420</span></div>
+            <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #332e29"><span style="color:#9a8f7e">ancorado · bloco</span><span style="color:#e9e6dd">#4903 · 14:22:10</span></div>
+            <div style="display:flex;justify-content:space-between;padding:7px 0"><span style="color:#9a8f7e">solicitado por</span><span style="color:#e9e6dd">DPO · audit:export</span></div>
+          </div>
+          <div style="padding:13px 17px;border-top:1px solid #3a352f;display:flex;gap:8px">
+            <span style="flex:1;text-align:center;font-size:12px;border:1px solid #4a453d;color:#e9e6dd;border-radius:8px;padding:11px;min-height:44px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer">Baixar arquivo</span>
+            <span style="flex:1;text-align:center;font-size:12px;border:1px solid #4a453d;color:#e9e6dd;border-radius:8px;padding:11px;min-height:44px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer">Copiar recibo</span>
+          </div>
+        </div>
+        <div style="background:#fff;border:1px solid #e2ddd3;border-radius:11px;padding:14px 16px;margin-top:16px">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1.2px;color:#6f675a;margin-bottom:8px">O QUE O AUDITOR CONFERE</div>
+          <ol style="margin:0;padding-left:16px;font-size:11.5px;line-height:1.6;color:#44403a">
+            <li style="margin:3px 0">O resumo do arquivo baixado bate com o ancorado.</li>
+            <li style="margin:3px 0">O bloco existe e encadeia com o anterior.</li>
+            <li style="margin:3px 0">Os filtros do recibo correspondem ao conteúdo.</li>
+            <li style="margin:3px 0">A solicitação virou evento auditado.</li>
+          </ol>
+        </div>
+        <div style="background:#fdf7f6;border:1px solid #f0d9d6;border-radius:11px;padding:12px 14px;margin-top:14px;font-size:11px;color:#7a4038;line-height:1.55"><strong>Bloqueio atual:</strong> a permissão <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px">audit:export</span> existe no servidor mas <strong>não está no espelho de permissões do console</strong> — sem ela, nem este botão pode ser renderizado. É a primeira linha a corrigir.</div>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== FECHO ===================== -->
+<section style="width:1360px" data-screen-label="O que cada tela precisa de backend">
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6f675a;margin-bottom:8px">Fecho · <strong style="color:#262220">o que falta de backend</strong> — nenhuma destas telas existe sem rota; é o pedido para o adendo</div>
+  <div style="background:#262220;border-radius:14px;padding:26px 30px;color:#e9e6dd">
+    <h2 style="font-family:'Source Serif 4',Georgia,serif;font-size:21px;font-weight:600;margin:0 0 6px;color:#f3f0e8">Cada tela precisa de rota + permissão</h2>
+    <p style="font-size:12.5px;color:#b7b0a2;margin:0 0 20px;max-width:800px;line-height:1.6">Desenhei tudo, mas nada disso funciona só com desenho: a lacuna é de contrato. Estas são as rotas e permissões que o ADENDO-04 precisa autorizar — os nomes exatos são do desenvolvedor, a necessidade é de produto.</p>
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px">
+      <div style="background:#2f2a25;border:1px solid #4a3f31;border-radius:11px;padding:14px 16px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1px;color:#e0a89c;margin-bottom:6px">CRÍTICO · CONFORMIDADE (Art. 14)</div>
+        <div style="font-size:13px;color:#f3f0e8;line-height:1.5">Kill-switch: acionar/reativar com motivo · ler estado atual (para o banner em toda a Operação).</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#9a8f7e;margin-top:7px">A2 · permissão de admin do tenant</div>
+      </div>
+      <div style="background:#2f2a25;border:1px solid #4a3f31;border-radius:11px;padding:14px 16px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1px;color:#e0a89c;margin-bottom:6px">CRÍTICO · MULTI-TENANT</div>
+        <div style="font-size:13px;color:#f3f0e8;line-height:1.5">Config de inteligência: ler/gravar provedor, modelo, <span style="font-family:'IBM Plex Mono',monospace;font-size:11px">base_url</span>, referência do cofre e orçamento. Tools: ler catálogo + ligar/desligar.</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#9a8f7e;margin-top:7px">A2 · A3</div>
+      </div>
+      <div style="background:#2f2a25;border:1px solid #3f3931;border-radius:11px;padding:14px 16px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1px;color:#e6c766;margin-bottom:6px">ALTO</div>
+        <div style="font-size:13px;color:#f3f0e8;line-height:1.5">Só falta expor: <span style="font-family:'IBM Plex Mono',monospace;font-size:11px">audit:export</span> no espelho de permissões do console + o botão. A API já existe.</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#9a8f7e;margin-top:7px">A7 · correção de 1 linha + tela</div>
+      </div>
+      <div style="background:#2f2a25;border:1px solid #3f3931;border-radius:11px;padding:14px 16px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1px;color:#8fd3b6;margin-bottom:6px">MÉDIO · HIGIENE</div>
+        <div style="font-size:13px;color:#f3f0e8;line-height:1.5">Usuários: listar/criar/mudar papel/desativar/redefinir senha. Perfil: gravar nome e preferências. <strong>Trocar a própria senha</strong> (hoje impossível).</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#9a8f7e;margin-top:7px">A4 · A5 · A6-A</div>
+      </div>
+    </div>
+    <div style="margin-top:18px;padding-top:16px;border-top:1px solid #3f3931;font-size:12.5px;color:#b7b0a2;line-height:1.6">Decisão de recorte que ainda é sua: <strong style="color:#c9a94a">A6 variante A</strong> (senha temporária pelo admin — sem e-mail, cabe na v1) <strong>ou</strong> <strong style="color:#c9a94a">variante B</strong> (autoatendimento, exige e-mail transacional → F4). Desenhei as duas para a decisão ser sobre coisa concreta. Tudo aqui é <strong style="color:#c9a94a">ESCOPO</strong> — vai para o adendo, não direto ao desenvolvedor, e não interrompe a AG-3.1.</div>
+  </div>
+</section>
+
+</div>
+</x-dc>
+</body>
+</html>
