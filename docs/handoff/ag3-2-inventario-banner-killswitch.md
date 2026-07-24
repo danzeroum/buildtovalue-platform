@@ -109,9 +109,12 @@ agentes ainda estão de fato rodando.
 
 ## Perguntas que a MARCAÇÃO do designer decide (não decididas aqui)
 
-1. **Componente**: estado novo em `GateSeal`, ou um `KillSwitchBanner` próprio? (Given
-   que kill-switch é por-TENANT, não por-gate, a segunda opção parece mais honesta ao
-   contrato — mas é sua chamada de linguagem visual.)
+1. **Componente**: estado novo em `GateSeal`, ou um `KillSwitchBanner` próprio?
+   **Orientação do designer** (chamada dele, registrada aqui para o dev não reabrir a
+   discussão): inclinação para componente **próprio** — o kill-switch é estado de
+   **emergência do tenant** (todos os agentes), conceito diferente do `GateSeal`
+   (estado de **uma tarefa**, `aguardando`/`expirado`). Dada essa distinção, estender
+   o `GateSeal` misturaria os dois contratos — mas a decisão final é do designer.
 2. **Voz exata** dos dois estados — `active` (nada aparece? ou uma confirmação
    discreta "agentes operando normalmente"?) e `paused` (frase exata com ator+hora —
    ex.: *"Agentes pausados por {ator} desde {hora}"*, ou outra).
@@ -123,9 +126,19 @@ agentes ainda estão de fato rodando.
    que um `business` vê ao clicar, dado que ele não tem `ai:configure`)?
 5. **Degrade de erro**: se a leitura do fato falhar (rede/sessão), qual voz — silêncio
    honesto (como o `processConsequence = null` do P1) ou um estado de "não verificado"?
-6. **Acessibilidade do fato**: `role="status"` com `aria-live`? Cor + ícone + rótulo
-   (nunca só cor, regra já vinculante em todo o produto) — só confirmando que se aplica
-   aqui como em todo lugar.
+
+## Requisito (não é pergunta — já fechado)
+
+**Acessibilidade do fato como ALERTA, não como status passivo.** Quando o estado vira
+`paused`, o leitor de tela precisa **anunciar** a mudança — não basta o texto estar
+correto visualmente. `role="alert"` (ou `aria-live="assertive"`) no elemento do
+banner, para que a troca de estado interrompa e seja lida, do jeito que um alerta de
+emergência deveria. **Não** `role="status"`/`aria-live="polite"` — isso enfileira
+atrás de outras leituras e pode nunca chegar a ser lido pelo usuário de leitor de
+tela num momento crítico. Cor + ícone + rótulo (nunca só cor) continua valendo, como
+em todo o produto — mas aqui a exigência vai além do visual: é o mesmo padrão de
+"parada honesta" que já rege o resto do F-AG, só que a criticidade justifica o
+`role="alert"` em vez do `"status"` mais comum.
 
 ## Nota de sequência para o dev (depois da marcação)
 
