@@ -189,12 +189,14 @@ export {
 } from './audit/export.js';
 export {
   getTenantAiConfig,
+  getKillSwitchState,
   upsertTenantAiConfig,
   setKillSwitch,
   assertSecretRef,
   normalizeProviderBaseUrl,
   OPENAI_COMPATIBLE,
   type TenantAiConfig,
+  type KillSwitchState,
   type AiConfigInput,
 } from './agent/tenantAiConfig.js';
 export { fixtureAiProvider, type AiProvider, type AiCompletion } from './agent/aiProvider.js';

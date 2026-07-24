@@ -3,6 +3,15 @@ import { createFieldCipher, type KeyProvider } from '../crypto/fieldCipher.js';
 import { resumeAgentJobs as resumeAgentJobsRow, type PauseKind, type ResumeResult } from '../agent/resume.js';
 import { reproposeGate as reproposeGateRow, type ReproposeResult } from '../agent/repropose.js';
 import { revealGateForTask, type RevealGateOutcome } from '../agent/gateFio.js';
+import {
+  getKillSwitchState,
+  getTenantAiConfig,
+  setKillSwitch,
+  upsertTenantAiConfig,
+  type AiConfigInput,
+  type KillSwitchState,
+  type TenantAiConfig,
+} from '../agent/tenantAiConfig.js';
 import type { AuditActor } from '../audit/tenantAudit.js';
 import {
   exportAudit as exportAuditRow,
@@ -187,6 +196,19 @@ export interface PlatformRuntime {
       context: { actor: string },
     ): Promise<PatchOutcome>;
   };
+  /** AG-3.2 (P4): inteligência do tenant + kill-switch. Leitura em DOIS níveis:
+   *  `killSwitchState` = FATO amplo (sem razão); `config` = completa (razão só a
+   *  rota projeta a quem tem `ai:configure`). A chave NUNCA sai — `keyRef` é ponteiro. */
+  ai: {
+    /** FATO do kill-switch p/ o banner amplo — nunca carrega a razão. */
+    killSwitchState(tenantId: string): Promise<KillSwitchState>;
+    /** Config completa (inclui razão) — a rota decide o que projetar. */
+    config(tenantId: string): Promise<TenantAiConfig | null>;
+    /** Aciona/retoma; motivo obrigatório; auditado; retoma jobs ao reativar. */
+    setKillSwitch(tenantId: string, paused: boolean, actor: AuditActor, motivo: string): Promise<void>;
+    /** Cria/atualiza config; motivo/auditado no ator; não toca o estado do kill-switch. */
+    configure(tenantId: string, input: AiConfigInput, actor: AuditActor): Promise<void>;
+  };
   /** Motivo OBRIGATÓRIO (ADENDO-01 §2.3) — vai para history_events. */
   cancel(tenantId: string, instanceId: string, reason: string): Promise<AdvanceOutcome>;
   completeJob(
@@ -303,6 +325,12 @@ export function createRuntime(
       },
       patch: (tenantId, instanceId, set, context) =>
         patchVariables(sql, tenantId, instanceId, set, { ...context, cipher }),
+    },
+    ai: {
+      killSwitchState: (tenantId) => getKillSwitchState(sql, tenantId),
+      config: (tenantId) => getTenantAiConfig(sql, tenantId),
+      setKillSwitch: (tenantId, paused, actor, motivo) => setKillSwitch(sql, tenantId, paused, actor, motivo),
+      configure: (tenantId, input, actor) => upsertTenantAiConfig(sql, tenantId, input, actor),
     },
     cancel(tenantId, instanceId, reason) {
       // O engine emite CancelJob/CancelTimer/CloseUserTask para TODAS as

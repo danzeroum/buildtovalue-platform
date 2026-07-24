@@ -4,6 +4,7 @@ import { withTenant } from '../src/tenancy.js';
 import { lockJobs } from '../src/runtime/jobs.js';
 import {
   assertSecretRef,
+  getKillSwitchState,
   getTenantAiConfig,
   setKillSwitch,
   upsertTenantAiConfig,
@@ -91,5 +92,40 @@ describe('kill-switch de agente (D29 / §5.2)', () => {
     expect(audit[0].payload).toMatchObject({ killed: true });
     expect(audit[1]).toMatchObject({ motivo: 'custo verificado, liberado' });
     expect(audit[1].payload).toMatchObject({ killed: false });
+  });
+
+  it('AG-3.2: getKillSwitchState devolve o FATO (estado/ator/quando) e NUNCA a razão', async () => {
+    const actor = { type: 'user' as const, id: 'admin-2', requestId: 'r2' };
+    await setKillSwitch(api, tenant, true, actor, 'suspeita de vazamento no fornecedor X');
+
+    const state = await getKillSwitchState(api, tenant);
+    expect(state.state).toBe('paused');
+    expect(state.by).toEqual({ type: 'user', id: 'admin-2' });
+    expect(state.since).toBeTruthy();
+    // a RAZÃO (nível 2) NUNCA entra no fato — nem como valor, nem como chave.
+    expect(JSON.stringify(state)).not.toContain('vazamento');
+    expect('reason' in state).toBe(false);
+
+    // já a config COMPLETA (rota admin) carrega a razão + ator + quando.
+    const full = await getTenantAiConfig(api, tenant);
+    expect(full?.killSwitchReason).toBe('suspeita de vazamento no fornecedor X');
+    expect(full?.killSwitchBy).toBe('admin-2');
+    expect(full?.killSwitchAt).toBeTruthy();
+
+    // reativa → o fato vira active/sem ator (o banner não mostra nada).
+    await setKillSwitch(api, tenant, false, actor, 'ok');
+    expect(await getKillSwitchState(api, tenant)).toEqual({ state: 'active', by: null, since: null });
+  });
+
+  it('AG-3.2: câmbio por tenant — upsert grava e lê; ausente = null (default do sistema)', async () => {
+    const actor = { type: 'user' as const, id: 'admin', requestId: 'r3' };
+    const base = { provider: 'anthropic', model: 'claude', keyRef: 'secret://kms/acme/anthropic' };
+    await upsertTenantAiConfig(api, tenant, { ...base, fxUsdBrl: 5.25 }, actor);
+    expect((await getTenantAiConfig(api, tenant))?.fxUsdBrl).toBe(5.25);
+    // upsert sem fx → null (cai no default do sistema; NÃO reescreve custo já gravado)
+    await upsertTenantAiConfig(api, tenant, base, actor);
+    expect((await getTenantAiConfig(api, tenant))?.fxUsdBrl).toBeNull();
+    // e o upsert NÃO tocou o estado do kill-switch (configurar ≠ acionar)
+    expect((await getKillSwitchState(api, tenant)).state).toBe('active');
   });
 });

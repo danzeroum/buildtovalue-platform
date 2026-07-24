@@ -20,7 +20,12 @@ export type Permission =
   | 'tasks:work'
   | 'operate:read'
   | 'operate:act'
-  | 'variables:reveal-sensitive';
+  | 'variables:reveal-sensitive'
+  // AG-3.2 (P4): ler-estado amplo · ler-config admin+auditor · acionar/configurar admin.
+  | 'ai:read-state'
+  | 'ai:read-config'
+  | 'ai:operate'
+  | 'ai:configure';
 
 const ALL: Permission[] = [
   'me:read',
@@ -34,12 +39,26 @@ const ALL: Permission[] = [
   'operate:read',
   'operate:act',
   'variables:reveal-sensitive',
+  'ai:read-state',
+  'ai:read-config',
+  'ai:operate',
+  'ai:configure',
 ];
 
 const GRANTS: Record<Role, readonly Permission[]> = {
   admin: ALL,
-  analyst: ['me:read', 'definitions:read', 'definitions:deploy', 'instances:read', 'instances:start', 'tasks:read'],
-  business: ['me:read', 'instances:read', 'instances:start', 'tasks:read', 'tasks:work'],
+  // `ai:read-state` é amplo: quem opera precisa VER o banner de kill-switch numa
+  // emergência (vive fora da Admin). Acionar/configurar continuam só no admin.
+  analyst: [
+    'me:read',
+    'definitions:read',
+    'definitions:deploy',
+    'instances:read',
+    'instances:start',
+    'tasks:read',
+    'ai:read-state',
+  ],
+  business: ['me:read', 'instances:read', 'instances:start', 'tasks:read', 'tasks:work', 'ai:read-state'],
   operator: [
     'me:read',
     'definitions:read',
@@ -49,6 +68,7 @@ const GRANTS: Record<Role, readonly Permission[]> = {
     'operate:read',
     'operate:act',
     'variables:reveal-sensitive',
+    'ai:read-state',
   ],
 };
 
