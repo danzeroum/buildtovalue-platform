@@ -12,7 +12,7 @@
 | **RLS testada** | Suíte permanente `packages/db/tests/rls-isolation.test.ts` (9 casos, papel real `app_api` sem BYPASSRLS) + RLS forçada nas 3 tabelas do runtime (0002). |
 | **SDK compila no console** | Pipeline `sdk:generate` (openapi-typescript + openapi-fetch) roda no typecheck/build do console em CI; client tipado consumido no shell. |
 | **Backup + restore ensaiado** | `docs/runbooks/database.md`: ensaio de 2026-07-22 — dump + sha256 OK + restore em banco limpo com `schema_migrations` íntegra e **RLS sobrevivendo ao restore**. |
-| **Compose sobe api+worker** | `infra/docker/compose.dev.yml` + Dockerfiles multi-stage entregues; api+worker validados como PROCESSOS contra Postgres 16 real (toda a suíte). **Ressalva honesta:** a subida CONTAINERIZADA não foi executada neste ambiente (sem daemon Docker) — item registrado em `pendencias.md` §3 para smoke em máquina com Docker. |
+| **Compose sobe api+worker** | `infra/docker/compose.dev.yml` + Dockerfiles multi-stage entregues; api+worker validados como PROCESSOS contra Postgres 16 real (toda a suíte). **Ressalva honesta:** a subida CONTAINERIZADA não foi executada neste ambiente (sem daemon Docker) — item registrado em `docs/pendencias.md` §3 para smoke em máquina com Docker. |
 
 ## Entregáveis (histórico das PRs)
 

@@ -33,7 +33,7 @@
 | **Integração do ledger real (`@buildtovalue/audit`) + salt-por-registro (ADR-0002 item 3)** | Dono = fluxo de publish/promoção do registry (F3.2), que já existe (deploy imutável + lint). A costura da CADEIA real de auditoria com hash+salt-por-registro NÃO entrou nesta fase — é **migração** (coluna/estrutura nova) = **GATE**, movida para a proposta da AG-2. O teste "ledger nunca contém conteúdo pessoal" segue verde nas tabelas do host; varrer TAMBÉM a cadeia real entra com a migração. | ◑ → AG-2 |
 | **p95 do avanço** | `docs/reports/p95-advance.md`: p50 5.96ms · **p95 7.89ms** · p99 11.44ms (Postgres real, N=500). Harness reproduzível (`bench:p95`). | ✅ |
 
-## Pendências e decisões do dono (de `pendencias.md §2.5`)
+## Pendências e decisões do dono (de `docs/pendencias.md §2.5`)
 
 1. **Aprovar/Reprovar de 1ª classe** — a conclusão valida a submissão e rejeita
    chave desconhecida; a decisão é modelada como CAMPO do form (o seed já traz

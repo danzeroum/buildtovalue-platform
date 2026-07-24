@@ -167,7 +167,7 @@ como LOG estruturado (o 403 já existe e é testado; falta o evento de log).
   re-entrada no `agentTask`, que o laço com espera não honra. A superfície do Operate
   mostra o estado âmbar com a **saída honesta** (aprovar indisponível; reprovar roteia
   sem executar). **Correção real:** identidade de token fresca por iteração,
-  determinística sob replay — lote de lib da **AG-3** (§2.16 de `pendencias.md`).
+  determinística sob replay — lote de lib da **AG-3** (§2.16 de `docs/pendencias.md`).
 
 - **D38 — provider REAL é peça do host; o `agentflow` não executa (AG-2.5).** O
   `agentflow` ship NÃO tem execução real: `AgentRunner.run?` é **opcional e ABSENTE**
@@ -220,7 +220,7 @@ como LOG estruturado (o 403 já existe e é testado; falta o evento de log).
 
 ## Coexistências transitórias sob gate (rastreabilidade)
 
-- **Avaliador de forms** (§2.7 de `pendencias.md`) — 3 implementações sob corpus
+- **Avaliador de forms** (§2.7 de `docs/pendencias.md`) — 3 implementações sob corpus
   compartilhado até o colapso pós-`forms@1.1`; ponto de colapso nomeado.
 - Precedente metodológico: Anexo C item 2 (`simulation × engine`).
 
