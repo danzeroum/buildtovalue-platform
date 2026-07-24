@@ -44,7 +44,8 @@ export type LintCode =
   | 'EXEC_DECISION_VAR_RESERVED'
   | 'EXEC_DECISION_VAR_SENSITIVE'
   | 'EXEC_AGENT_GATE_MISSING'
-  | 'EXEC_TOOL_EFFECT_UNGATED';
+  | 'EXEC_TOOL_EFFECT_UNGATED'
+  | 'EXEC_LOOP_WAIT_UNSUPPORTED';
 
 /** Subconjunto executável v1 (espelha o engine publicado — D19). */
 const SUPPORTED_TYPES = new Set([
@@ -213,6 +214,50 @@ export function lintDiagram(diagram: BpmnDiagram): LintIssue[] {
   issues.push(...reachability(diagram));
   issues.push(...decisionVarGatewayWarnings(diagram));
   issues.push(...lintAgentGates(diagram));
+  issues.push(...loopWithWaitViolations(diagram));
+  return issues;
+}
+
+/**
+ * LAÇO COM ESPERA não suportado (limitação declarada engine/host v1). O engine
+ * PRESERVA a identidade do token em movimento simples (leaveAlong: aresta única →
+ * mesmo `token.id`); o host ancora o exatamente-uma-vez em `jobs.wait_key`/
+ * `user_tasks.wait_key` UNIQUE + `ON CONFLICT DO NOTHING`, com `waitKey =
+ * ${elementId}:${tokenId}`. Um laço que RE-ENTRA num elemento de espera repete o
+ * mesmo waitKey → o job/task não é recriado e o engine trava esperando um efeito
+ * que nunca volta (deadlock SILENCIOSO). Recusa no deploy o que o runtime não honra
+ * (mesmo princípio de EXEC_TOOL_EFFECT_UNGATED). A correção real (identidade de
+ * token fresca por iteração, determinística sob replay) é lote de lib da AG-3.
+ */
+export function loopWithWaitViolations(diagram: BpmnDiagram): LintIssue[] {
+  // Esperas do engine v1: userTask, serviceTask (job), agentTask (job) e o
+  // intermediateCatchEvent de timer (o boundary é anexo, não re-entra por aresta).
+  const WAIT = new Set(['userTask', 'serviceTask', 'agentTask', 'intermediateCatchEvent']);
+  const edges = Object.values(diagram.edges);
+  const outgoing = (id: string): string[] => edges.filter((e) => e.sourceId === id).map((e) => e.targetId);
+  const issues: LintIssue[] = [];
+  for (const node of Object.values(diagram.nodes) as BpmnNode[]) {
+    if (!WAIT.has(node.type)) continue;
+    // o nó de espera está num laço sse consegue alcançar a SI MESMO por >=1 aresta.
+    const seen = new Set<string>();
+    const stack = [...outgoing(node.id)];
+    let inLoop = false;
+    while (stack.length > 0) {
+      const id = stack.pop()!;
+      if (id === node.id) { inLoop = true; break; }
+      if (seen.has(id)) continue;
+      seen.add(id);
+      stack.push(...outgoing(id));
+    }
+    if (inLoop) {
+      issues.push({
+        code: 'EXEC_LOOP_WAIT_UNSUPPORTED',
+        severity: 'error',
+        elementId: node.id,
+        message: `elemento de espera '${node.id}' está num laço — o runtime v1 não suporta re-entrada em espera (o waitKey colide → deadlock silencioso); remova o laço ou aguarde suporte de re-entrada`,
+      });
+    }
+  }
   return issues;
 }
 

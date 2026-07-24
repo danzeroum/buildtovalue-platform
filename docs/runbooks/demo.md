@@ -138,3 +138,20 @@ pnpm --filter @platform/console dev    # console :5173
 psql "$PGADMIN" -c "DROP DATABASE IF EXISTS buildtovalue WITH (FORCE)"
 # repita §2 e §4
 ```
+
+## 10. Limitações declaradas — NÃO demonstrar ao vivo (D37)
+
+Transparência com o cliente: o runtime v1 tem limites conhecidos. Não os transforme em
+surpresa numa demo ao vivo.
+
+- **Laço com espera é recusado no deploy.** Um processo cujo diagrama volta para uma
+  atividade de espera (userTask/serviceTask/agentTask/timer) **não publica** — o lint responde
+  `EXEC_LOOP_WAIT_UNSUPPORTED` ("o runtime v1 não suporta re-entrada em espera"). É proposital
+  (evita deadlock silencioso), mas **não modele um laço com espera na frente do cliente**
+  esperando que rode.
+- **Proposta de agente expirada não tem reavaliação (AG-4).** Se a instância avançar entre a
+  proposta do agente e a aprovação do gate, a proposta **expira** (D28) e o Operate mostra o
+  estado âmbar "proposta expirada". Na v1 **não há botão de reavaliar** — a saída é **reprovar**
+  (roteia pela rota de reprovação, sem executar o efeito). A reavaliação automática entra na
+  AG-3. **Ao demonstrar o gate de agente, aprove antes de mexer na instância** para não cair no
+  estado expirado sem querer.

@@ -449,6 +449,36 @@ Levantados no fechamento do backend; descritos com CUSTO no inventário de super
 
 Decisão final (etapa 5 × AG-3) é sua com o designer, após a revisão G-UX-3.
 
+## 2.17 AG-2.2 etapa 5 — LIMITAÇÃO DECLARADA v1: laço com espera (D37) + item nomeado AG-3
+
+Achado no desenho da reavaliação de proposta (Q4), **generalizado**: não é de agente, é do
+par **engine/host**. O engine preserva a identidade do token em movimento simples
+(`leaveAlong`: aresta única → mesmo `token.id`); o host ancora o exatamente-uma-vez em
+`wait_key = ${elementId}:${tokenId}` (UNIQUE + `ON CONFLICT DO NOTHING`, §2.3). Um laço que
+re-entra num elemento de **espera** (userTask/serviceTask/agentTask/timer) repete o `wait_key`
+→ o job/task não é recriado e o engine trava esperando um efeito que nunca volta — **deadlock
+silencioso**. Foi o que derrubou a proposta de "reavaliar = decisão de gate que roteia de volta
+ao agentTask": elegante, mas o runtime v1 não a honra.
+
+**Decisão do dono (24/07):** proposta expirada na v1 **não tem reavaliação** — a UI shipa só o
+estado âmbar com a saída honesta (aprovar indisponível; reprovar roteia sem executar); a ação
+de reavaliar inteira vai para a AG-3. A rota `/v1/agents/reproposta` (#36) fica como **fundação
+dormente** (cap + auditoria + fato prontos); NÃO é surfaçada na v1.
+
+Duas ações registradas:
+1. **Lint de deploy `EXEC_LOOP_WAIT_UNSUPPORTED`** (FEITO nesta PR): recusa laço que contenha
+   elemento de espera, com mensagem explícita — recusar o que o runtime não honra (mesmo
+   princípio do `EXEC_TOOL_EFFECT_UNGATED`). Teste `loop-wait-lint` cobre os quatro tipos de
+   espera + os falsos-positivos (linear, laço só-gateway). Fecha o beco ANTES da AG-4.
+2. **[ITEM NOMEADO AG-3 — lote de lib bpmn] Identidade de token fresca por iteração**,
+   determinística sob replay (D6), com **fixtures de replay próprias** provando re-entrada em
+   espera byte-idêntica. É a correção real que destrava laços (e, com ela, a reavaliação de
+   proposta como decisão de gate roteando de volta ao agentTask). Sem isso, laços com espera
+   permanecem recusados no deploy.
+
+Documentado como **D37** no dossiê (`docs/compliance/dossie.md`, "Limitações declaradas") e no
+runbook da demo (`docs/runbooks/demo.md`) — o cliente não pode descobrir o limite ao vivo.
+
 ## 3. Registro de fluxo (sem ação sua)
 
 - **~~Follow-up bpmn~~ RESOLVIDO (PR bpmn#169, mergeada 22/07):**
