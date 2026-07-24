@@ -16,3 +16,26 @@ export function relativeTime(iso: string, now: number = Date.now()): string {
 export function shortId(id: string): string {
   return id.length > 8 ? id.slice(0, 8) : id;
 }
+
+/**
+ * Voz de data/hora do banner de kill-switch (AG-3.2 marcação §2): "hoje às
+ * HH:MM" / "ontem às HH:MM" / data completa — sempre no fuso do NAVEGADOR
+ * (Intl usa o fuso local; a preferência explícita de fuso é A5, ainda não
+ * construída — este é o melhor default disponível até lá). `absolute` vai
+ * para o `title` (hover/foco); nunca some por corte.
+ */
+export function whenVoice(iso: string, now: number = Date.now()): { relative: string; absolute: string } {
+  const then = new Date(iso);
+  const time = then.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  const nowDate = new Date(now);
+  const yesterday = new Date(nowDate);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const relative =
+    then.toDateString() === nowDate.toDateString()
+      ? `hoje às ${time}`
+      : then.toDateString() === yesterday.toDateString()
+        ? `ontem às ${time}`
+        : `em ${then.toLocaleDateString('pt-BR')} às ${time}`;
+  const absolute = then.toLocaleString('pt-BR', { dateStyle: 'full', timeStyle: 'short' });
+  return { relative, absolute };
+}

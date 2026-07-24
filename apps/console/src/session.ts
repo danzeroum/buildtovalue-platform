@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import type { components } from './api/generated/schema.js';
 
 /**
@@ -46,6 +47,16 @@ export function currentToken(): string | null {
 }
 export function currentUser(): SessionUser | null {
   return user;
+}
+
+/** Hook de sessão — vive aqui (não em `shell.tsx`) para que peças fora do
+ *  shell (ex.: o banner de kill-switch, montado ANTES do header no DOM —
+ *  G-UX-3) possam importar sem criar ciclo com `shell.tsx`. `shell.tsx`
+ *  reexporta para não quebrar os imports existentes. */
+export function useSession(): SessionUser | null {
+  const [u, setU] = useState<SessionUser | null>(currentUser());
+  useEffect(() => onSessionChange(() => setU(currentUser())), []);
+  return u;
 }
 export function storedRefreshToken(): string | null {
   try {

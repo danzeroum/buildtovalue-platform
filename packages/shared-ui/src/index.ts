@@ -10,3 +10,9 @@ export {
   type EvidenceState,
   type GateState,
 } from './selo.js';
+export {
+  KillSwitchBanner,
+  type KillSwitchActor,
+  type KillSwitchActorKind,
+  type KillSwitchBannerProps,
+} from './killSwitchBanner.js';

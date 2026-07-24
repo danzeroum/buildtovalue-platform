@@ -1,15 +1,12 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
+import { KillSwitchBannerContainer } from './killSwitchBanner.js';
 import { Button } from './ui/ui.js';
-import {
-  clearSession,
-  currentUser,
-  login,
-  onSessionChange,
-  refresh,
-  storedRefreshToken,
-  type SessionUser,
-} from './session.js';
+import { clearSession, currentUser, login, refresh, storedRefreshToken, useSession } from './session.js';
+
+// reexportado por compatibilidade — quem já importava `useSession` daqui segue
+// funcionando; a implementação vive em `session.ts` (evita ciclo com o banner).
+export { useSession } from './session.js';
 
 /**
  * Navegação D23: RÓTULO HUMANO primário, na ordem da persona de negócio
@@ -22,12 +19,6 @@ const NAV = [
   { to: '/operate', label: 'Operação', route: '/operate' },
   { to: '/studio', label: 'Estúdio', route: '/studio' },
 ] as const;
-
-export function useSession(): SessionUser | null {
-  const [user, setUser] = useState<SessionUser | null>(currentUser());
-  useEffect(() => onSessionChange(() => setUser(currentUser())), []);
-  return user;
-}
 
 /** Porta de sessão: sem usuário → login. Tenta refresh silencioso ao montar. */
 export function AppShell() {
@@ -56,6 +47,12 @@ export function AppShell() {
 
   return (
     <div className="shell">
+      {/* G-UX-3 (marcação do banner §6): PRIMEIRO no DOM — antes da navegação —
+          para que quem chega no meio da emergência (leitor de tela) seja
+          informado antes de tudo. Visualmente fica ABAIXO do header via
+          `order` (CSS) — o header também usa `order`, então a ordem de leitura
+          (DOM) e a ordem visual divergem de propósito, só aqui. */}
+      <KillSwitchBannerContainer />
       <header className="shell-header">
         <span className="brand">BUILDTOVALUE</span>
         <nav aria-label="Navegação principal">

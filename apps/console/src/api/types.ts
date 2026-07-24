@@ -37,3 +37,8 @@ export type Incident = Get200<'/v1/incidents'>['items'][number];
 export type Job = Get200<'/v1/jobs'>['items'][number];
 export type Timer = Get200<'/v1/timers'>['items'][number];
 export type ProcessDetail = Get200<'/v1/process-definitions/{idOrRef}'>;
+
+// AG-3.2 (P4 — kill-switch). GET e POST de /v1/ai/kill-switch devolvem o MESMO
+// shape (o FATO, nível 1 — nunca a razão); a config (nível 2) é rota separada.
+export type KillSwitchState = Get200<'/v1/ai/kill-switch'>;
+export type AiConfig = Get200<'/v1/ai/config'>;
