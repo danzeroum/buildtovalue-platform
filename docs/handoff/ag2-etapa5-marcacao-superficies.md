@@ -87,6 +87,29 @@ consulta direta — é o que permite a nota "Aguardando gate humano" e, na AG-3,
 Tasklist. **O literal do kind/coluna é seu (contrato);** do lado de design, só preciso que
 "gate" seja um estado consultável, não inferido.
 
+## 6 · Proposta expirada + ação de reproposta (agora na etapa 5, marcação detalhada)
+
+Com os dois `[ESCOPO]` entrando na etapa 5, o estado é persistido e a reproposta tem rota —
+então marco a **ação**, não só o estado (senão seria aviso com botão inexistente, "nunca fingir").
+
+**Estado `agentProposalExpired`** — nota de estado **âmbar** no detalhe da instância (não card
+vermelho): título **"Proposta expirada — reavaliar"**, corpo *"A instância avançou desde a
+proposta do agente; a proposta não vale mais."* + a ação abaixo. Ícone ↻.
+
+**Ação "Reavaliar proposta"** (o `requestReproposal`, exposto):
+- **Rótulo:** `Reavaliar proposta`. Vive **dentro da nota âmbar** (é retomada honesta, não incidente).
+- **Confirmação que nomeia o custo** (antes de disparar): *"Reavaliar gera uma nova proposta do
+  agente e **consome novo orçamento**. Reavaliada `N×` de `M`."* — o custo nunca é surpresa.
+- **Contagem visível:** "reavaliada `N×`" na nota; **cada reproposta é um fato na trilha**
+  (envelope de ator + momento + "reproposta #N") — auditável, não silenciosa.
+- **Cap duro atingido:** o botão fica **desabilitado com o motivo à vista** — *"Limite de
+  repropostas (`M`) atingido — resolva manualmente ou escale."* Nunca some, nunca clica sem efeito.
+- **Permissão:** ação gated (o literal da capability é do dev); sem permissão, não aparece o botão
+  (a nota do estado permanece legível).
+
+Isto fecha a Q4 ("ação explícita + cap duro") de forma real: a ação existe, tem rota, tem custo
+visível e teto honesto. Tudo no detalhe da instância que já existe — sem superfície nova (AG-3).
+
 ## Aceite do slice 3 (lado de design)
 
 Quando eu revisar antes do merge (G-UX-3): os `blocked`/kinds emitidos batem com §1/§2 e cada
