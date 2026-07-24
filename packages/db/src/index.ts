@@ -175,6 +175,11 @@ export {
   type ResumeResult,
 } from './agent/resume.js';
 export {
+  reproposeGate,
+  reproposeGateTx,
+  type ReproposeResult,
+} from './agent/repropose.js';
+export {
   buildWorldDelta,
   deriveProcessConsequence,
   type ProcessConsequence,
