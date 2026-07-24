@@ -2,6 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom';
 import '@platform/shared-ui/tokens.css';
+import '@platform/shared-ui/selo.css';
 import './app.css';
 import { AppShell } from './shell.js';
 import { FormsRoute } from './routes/forms.js';

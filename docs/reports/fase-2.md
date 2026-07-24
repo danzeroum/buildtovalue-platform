@@ -71,6 +71,6 @@
 
 ## Decisões de autonomia desta fase
 
-Registradas em `pendencias.md` §2 itens 6–9 (avaliador de condição v1,
+Registradas em `docs/pendencias.md` §2 itens 6–9 (avaliador de condição v1,
 `example@1` embutido, relógio da varredura, fórmula do seq) — validáveis a
 qualquer momento; nada bloqueia.

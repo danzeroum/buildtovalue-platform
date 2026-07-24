@@ -119,7 +119,7 @@ pnpm --filter @platform/console dev    # console :5173
 - `business` tem `instances:start` mas **não** `definitions:read` → o console
   **não** mostra «Iniciar processo» para ela (o modal não conseguiria listar as
   definições). Use `admin`/`analyst` para iniciar. (Registrado em
-  `pendencias.md §2.5` — decisão de RBAC do dono.)
+  `docs/pendencias.md §2.5` — decisão de RBAC do dono.)
 - `operator` não inicia nem trabalha tarefas, mas é dono da Operação.
 
 ## 8. Provas automatizadas (sem navegador)

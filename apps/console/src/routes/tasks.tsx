@@ -9,6 +9,7 @@ import { can } from '../capabilities.js';
 import { relativeTime, shortId } from '../format.js';
 import { useSession } from '../shell.js';
 import { Button, NonIdeal, StatusPill, Tag } from '../ui/ui.js';
+import { GateDetail, effectChip, isHeavyEffect, type GateTask } from './GateDetail.js';
 
 type Filter = 'mine' | 'role' | 'unassigned';
 const FILTERS: { key: Filter; label: string }[] = [
@@ -46,6 +47,12 @@ export function TasksRoute() {
       (t) => t.elementId.toLowerCase().includes(q) || t.formRef.toLowerCase().includes(q) || t.instanceId.includes(q),
     );
   }, [items, search]);
+  // AG-3.1 (P1): gates de efeito irreversível/externo SOBEM ao topo (maior aposta
+  // primeiro); estável quanto ao resto (a ordem de chegada da página é preservada).
+  const ordered = useMemo(() => {
+    const weight = (t: TaskItem) => (t.gate && isHeavyEffect(t.gate.effect ?? undefined) ? 0 : 1);
+    return filtered.map((t, i) => [t, i] as const).sort((a, b) => weight(a[0]) - weight(b[0]) || a[1] - b[1]).map(([t]) => t);
+  }, [filtered]);
 
   if (!user) return null;
   // Só `instances:start` (AG-2.1 etapa 5): o modal agora lista por
@@ -125,28 +132,46 @@ export function TasksRoute() {
           />
         )}
         {list.value.state === 'ready' &&
-          filtered.map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              className="task-item"
-              data-selected={t.id === selected || undefined}
-              aria-current={t.id === selected || undefined}
-              onClick={() => setSelected(t.id)}
-            >
-              <div className="task-item-top">
-                <strong>{t.elementId}</strong>
-                <span className="task-age mono">{relativeTime(t.createdAt)}</span>
-              </div>
-              <div className="task-item-meta mono">
-                {t.formRef} · inst {shortId(t.instanceId)}
-              </div>
-              <div className="task-tags">
-                {t.assignee && t.assignee === user.id && <Tag tone="success">minha</Tag>}
-                {!t.assignee && <Tag tone="neutral">não atribuída</Tag>}
-              </div>
-            </button>
-          ))}
+          ordered.map((t) => {
+            const chip = t.gate ? effectChip(t.gate.effect) : null;
+            return (
+              <button
+                key={t.id}
+                type="button"
+                className="task-item"
+                data-gate={t.gate ? true : undefined}
+                data-selected={t.id === selected || undefined}
+                aria-current={t.id === selected || undefined}
+                onClick={() => setSelected(t.id)}
+              >
+                <div className="task-item-top">
+                  <strong>{t.elementId}</strong>
+                  <span className="task-age mono">{relativeTime(t.createdAt)}</span>
+                </div>
+                <div className="task-item-meta mono">
+                  {/* gate: nomeia a TOOL proponente (o world-delta carrega o tool,
+                      não o id do agente — honesto ao schema congelado). */}
+                  {t.gate && t.gate.tool ? `via ${t.gate.tool}` : t.formRef} · inst {shortId(t.instanceId)}
+                </div>
+                <div className="task-tags">
+                  {t.gate ? (
+                    <>
+                      {/* badge ◆ decisão de agente (papel gate dourado; glyph sem cor própria) */}
+                      <span className="gate-badge">
+                        <span aria-hidden="true">◆</span> decisão de agente
+                      </span>
+                      {chip && <Tag tone={chip.tone}>{chip.label}</Tag>}
+                    </>
+                  ) : (
+                    <>
+                      {t.assignee && t.assignee === user.id && <Tag tone="success">minha</Tag>}
+                      {!t.assignee && <Tag tone="neutral">não atribuída</Tag>}
+                    </>
+                  )}
+                </div>
+              </button>
+            );
+          })}
       </div>
 
       <div className="task-detail-wrap">
@@ -184,6 +209,19 @@ function TaskDetailPane({ taskId, onChanged }: { taskId: string; onChanged: () =
     );
 
   const task = detail.value.data;
+  // AG-3.1 (P1): o gate é MODO do detalhe — world-delta + aprovar/reprovar, não
+  // formulário. O backend já entrega o payload MASCARADO + is_gate.
+  if (task.isGate) {
+    return (
+      <GateDetail
+        task={task as unknown as GateTask}
+        me={user!.id}
+        canWork={can(user!.role, 'tasks:work')}
+        canReveal={can(user!.role, 'variables:reveal-sensitive')}
+        onChanged={onChanged}
+      />
+    );
+  }
   return (
     <TaskForm
       task={task}

@@ -136,7 +136,7 @@ terceira cobrança de rename com clientes reais no ar.
 > `problem+json`** apontando `/resolution` (mensagem explícita, sem falso
 > sucesso). O re-enfileiramento fiel exige **coluna `payload` em `incidents`
 > (migração nova = GATE)** e entra na **migração da AG-2** (registrado em
-> `pendencias.md` §2.4). O 409 e a limitação estão documentados no OpenAPI da
+> `docs/pendencias.md` §2.4). O 409 e a limitação estão documentados no OpenAPI da
 > rota (`apps/api/src/routes/operate.ts`).
 
 ## 8. Matriz RBAC (rota → permissão; papéis existentes de `@platform/auth`)

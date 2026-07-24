@@ -27,6 +27,7 @@ import {
 import { createLogger, createRuntimeMetrics } from '@platform/observability';
 import { createHandlerRegistry, type JobContext } from './handlers.js';
 import { createWaker, IDLE_BASE_MS, nextDelayMs } from './loop.js';
+import { buildRealWalker, realProviderEnv } from './realProvider.js';
 
 /**
  * Worker F2 (plano §F2 itens 2–4): dispatcher com LISTEN em conexão
@@ -56,6 +57,10 @@ const registry = createHandlerRegistry({
 // resolvido no start da instância) e o grafo GOVERNADO vem do registry, verbatim
 // (validateGraph passou no deploy). O caminho de grafo-em-payload foi DELETADO
 // (colapso §2.10) — não há mais grafo não-governado em produção nem em teste.
+// AG-2.5: liga o PROVIDER REAL só em produção + backend de arquivo (o CI/test cai no
+// simulateWalker por construção — realProviderEnv devolve null). NUNCA chama LLM real no CI.
+const realEnv = realProviderEnv();
+
 registry.register('agent', async (job) => {
   const input: AgentJobInput = {
     elementId: typeof job.payload.elementId === 'string' ? job.payload.elementId : undefined,
@@ -64,12 +69,16 @@ registry.register('agent', async (job) => {
     agentRef: typeof job.payload.effectiveRef === 'string' ? job.payload.effectiveRef : undefined,
     fixtures: job.payload.fixtures as AgentJobInput['fixtures'],
   };
+  // provider REAL (DeepSeek via openai-compatible) quando configurado; senão o padrão
+  // (simulateWalker). Falha de config → walker de parada honesta (não erro opaco).
+  const walker = realEnv ? await buildRealWalker(sql, job.tenantId, realEnv) : null;
   const outcome = await runAgentJob(sql, job.tenantId, input, {
     resolveGraph: async (i) => {
       if (!i.agentRef) return null;
       const def = await getAgentDefinitionByRef(sql, job.tenantId, i.agentRef);
       return def ? { graph: def.graph } : null;
     },
+    ...(walker ? { walker } : {}),
   });
   // Trilha MASCARADA (etapa 3 §2): grava o I/O do agente em history_events.agent_io,
   // CONSERVADOR por padrão (nunca em claro). A parada honesta também vira fato. As
@@ -140,7 +149,19 @@ await listenSql.listen(OUTBOX_CHANNEL, (tenantId) => {
   logger.debug({ tenantId }, 'notify da outbox — acordando o loop');
   waker.wake();
 });
-logger.info({ workerId, apiBase, channel: OUTBOX_CHANNEL }, 'worker F2 de pé (LISTEN + poll dinâmico)');
+logger.info(
+  {
+    workerId,
+    apiBase,
+    channel: OUTBOX_CHANNEL,
+    // AG-2.5: config do ensaio visível no boot (NUNCA a chave — só presença/valores
+    // não-secretos). Confirma que o worker leu SECRET_BACKEND/DIR e FX_USD_BRL.
+    secretBackend: process.env.SECRET_BACKEND ?? 'env',
+    secretDir: process.env.SECRET_DIR ?? '(default)',
+    fxUsdBrl: process.env.FX_USD_BRL ?? '(ausente)',
+  },
+  'worker F2 de pé (LISTEN + poll dinâmico)',
+);
 
 async function machineToken(tenantId: string): Promise<string> {
   // Token de máquina restrito a jobs (plano §6): papel operator via RBAC.

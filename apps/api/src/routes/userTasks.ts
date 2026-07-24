@@ -1,5 +1,5 @@
 import { PROBLEM_TYPES, problemSchema } from '@platform/api-contracts';
-import { DECISION_MAX_LENGTH } from '@platform/db';
+import { DECISION_MAX_LENGTH, maskWorldDelta, type WorldDelta } from '@platform/db';
 import type { FastifyReply } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { z } from 'zod';
@@ -18,6 +18,12 @@ const taskSummarySchema = z.object({
   // D31: gate de tool (userTask btvGate). A Tasklist comum já o EXCLUI no
   // servidor; o campo serve ao Operate/superfície de gate (drill-down).
   isGate: z.boolean(),
+  // AG-3.1 (P1): marca de gate para a LISTA — o item mostra o PESO (efeito) e o
+  // tool proponente ANTES de abrir. Só campos NÃO sensíveis do world-delta; os
+  // params/dataScope (PII) só saem no detalhe mascarado. null = não é gate.
+  gate: z
+    .object({ effect: z.string().nullable(), tool: z.string().nullable() })
+    .nullable(),
 });
 
 function problem(
@@ -45,6 +51,8 @@ function summarize(row: {
   claimed_at: string | null;
   created_at: string;
   is_gate: boolean;
+  gate_effect?: string | null;
+  gate_tool?: string | null;
 }) {
   return {
     id: row.id,
@@ -57,6 +65,8 @@ function summarize(row: {
     claimedAt: row.claimed_at === null ? null : String(row.claimed_at),
     createdAt: String(row.created_at),
     isGate: row.is_gate,
+    // marca de gate SÓ com campos não sensíveis (efeito + tool); null se não-gate.
+    gate: row.is_gate ? { effect: row.gate_effect ?? null, tool: row.gate_tool ?? null } : null,
   };
 }
 
@@ -93,8 +103,8 @@ export function registerUserTaskRoutes(rawApp: ZodApp, deps: ApiDeps): void {
           status: z.enum(['open', 'completed', 'cancelled']).optional(),
           instanceId: z.string().uuid().optional(),
           filter: z.enum(['mine', 'role', 'unassigned']).optional(),
-          // D31: por padrão a Tasklist EXCLUI gates de tool (não são tarefa de
-          // negócio); o Operate passa includeGates=true para ver "aguardando gate".
+          // AG-3.1: a Tasklist INCLUI gates por padrão (marcados por isGate; o
+          // tratamento distinto é da UI). includeGates=false volta à visão só-negócio.
           includeGates: z.coerce.boolean().optional(),
         }),
         response: {
@@ -119,13 +129,22 @@ export function registerUserTaskRoutes(rawApp: ZodApp, deps: ApiDeps): void {
         params: z.object({ id: z.string().uuid() }),
         response: {
           200: taskSummarySchema.extend({
+            // AG-3.1: num gate, `payload` é o world-delta MASCARADO — os VALORES de
+            // params sensíveis NÃO saem do servidor (só nomes+contagem via campos
+            // abaixo); revelar exige a rota /gate/reveal (auditada + RBAC).
             payload: z.record(z.string(), z.unknown()),
+            // gate com params sensíveis: true → a UI mostra "N campos" + revelar.
+            paramsMasked: z.boolean(),
+            paramsFields: z.array(z.string()),
             // etapa 6: se não-null, a conclusão EXIGE `decision` (roteamento
             // comparado por igualdade no gateway a jusante).
             decisionVar: z.string().nullable(),
             // valores EXATOS que roteiam (do gateway a jusante); o cliente
             // oferece escolha exata. null = texto livre (gateway não-derivável).
             decisionOptions: z.array(z.string()).nullable(),
+            // AG-3.1 (P1): a revisão que o cliente vê — a aprovação a reenvia
+            // como expectedInstanceRevision (D28: proposta expira se a inst. avançou).
+            instanceRevision: z.number().int().nonnegative(),
           }),
           403: problemSchema,
           404: problemSchema,
@@ -144,12 +163,67 @@ export function registerUserTaskRoutes(rawApp: ZodApp, deps: ApiDeps): void {
           detail: `esta task é dos papéis [${task.candidate_roles.join(', ')}]`,
         });
       }
+      // AG-3.1: gate com world-delta → mascara os params sensíveis ANTES de sair
+      // do servidor (o valor cru nunca vai ao cliente sem reveal auditado).
+      const isWorldDelta = task.is_gate && typeof (task.payload as { tool?: unknown }).tool === 'string';
+      if (isWorldDelta) {
+        const view = maskWorldDelta(task.payload as unknown as WorldDelta);
+        return {
+          ...summarize(task),
+          payload: view.delta as unknown as Record<string, unknown>,
+          paramsMasked: view.paramsMasked,
+          paramsFields: view.paramsFields,
+          decisionVar: task.decision_var,
+          decisionOptions: task.decision_options,
+          instanceRevision: task.instance_revision,
+        };
+      }
       return {
         ...summarize(task),
         payload: task.payload,
+        paramsMasked: false,
+        paramsFields: [],
         decisionVar: task.decision_var,
         decisionOptions: task.decision_options,
+        instanceRevision: task.instance_revision,
       };
+    },
+  );
+
+  app.post(
+    '/v1/user-tasks/:id/gate/reveal',
+    {
+      // MESMO escopo do reveal de variável sensível (D20). Sem ele → 403; a UI do
+      // gate mostra "revelar indisponível" + ESCALAR (não aprovar às cegas).
+      preHandler: [app.authenticate, app.requirePermission('variables:reveal-sensitive')],
+      schema: {
+        tags: ['user-tasks'],
+        summary: 'Revela os params sensíveis do world-delta do gate (auditado, motivo obrigatório)',
+        security: [{ bearerAuth: [] }],
+        params: z.object({ id: z.string().uuid() }),
+        body: z.object({ reason: z.string().min(1).max(500) }),
+        response: {
+          200: z.object({ params: z.record(z.string(), z.unknown()) }),
+          404: problemSchema,
+          422: problemSchema,
+        },
+      },
+    },
+    async (req, reply) => {
+      const outcome = await runtime.userTasks.revealGate(req.auth!.tenantId, req.params.id, {
+        actor: req.auth!.sub,
+        reason: req.body.reason,
+      });
+      if (!outcome.ok) {
+        if (outcome.reason === 'notFound') {
+          return problem(reply, 404, PROBLEM_TYPES.notFound, 'Gate não encontrado', String(req.id));
+        }
+        // notMasked/notGate: nada a revelar (params não sensíveis já saem em claro).
+        return problem(reply, 422, PROBLEM_TYPES.validation, 'Reveal não aplicável', String(req.id), {
+          detail: outcome.message,
+        });
+      }
+      return { params: outcome.params };
     },
   );
 

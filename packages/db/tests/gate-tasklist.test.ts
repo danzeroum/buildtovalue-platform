@@ -12,8 +12,9 @@ import { createTestDatabase, type TestDatabase } from './helpers.js';
  *
  *  1. o marcador is_gate é RESOLVIDO no despacho do OpenUserTask contra a
  *     DEFINIÇÃO PINADA da instância (btvGate do nó) — não se infere no query;
- *  2. o gate de tool NÃO aparece como tarefa comum na Tasklist de negócio
- *     (o modo-agente da fila é AG-3); só volta com includeGates=true (Operate).
+ *  2. AG-3.1 (inversão deliberada): o gate ENTRA na Tasklist por padrão, MARCADO
+ *     (is_gate=true), sem se confundir com tarefa comum (is_gate=false);
+ *     includeGates=false volta à visão só-negócio.
  */
 
 /** processo com um GATE (btvGate) e uma userTask COMUM (triagem). */
@@ -81,17 +82,18 @@ describe('marcador de gate + filtro da Tasklist (D31, item 1)', () => {
     expect(byId).toEqual({ gate: true, triagem: false }); // btvGate → true; comum → false
   });
 
-  it('a Tasklist de negócio EXCLUI o gate; includeGates=true traz de volta (Operate)', async () => {
-    // padrão: gate some da fila comum — só a triagem aparece.
-    const common = await listUserTasks(api, tenant, operator, {});
-    expect(common.items.map((i) => i.element_id).sort()).toEqual(['triagem']);
-    expect(common.items.every((i) => i.is_gate === false)).toBe(true);
+  it('AG-3.1: a Tasklist INCLUI o gate por padrão, MARCADO — sem se confundir com tarefa comum', async () => {
+    // padrão (invertido): o gate APARECE na fila, junto da triagem.
+    const list = await listUserTasks(api, tenant, operator, {});
+    expect(list.items.map((i) => i.element_id).sort()).toEqual(['gate', 'triagem']);
+    // e vem MARCADO — o item de gate é distinguível do comum pelo is_gate.
+    const byId = Object.fromEntries(list.items.map((i) => [i.element_id, i.is_gate]));
+    expect(byId).toEqual({ gate: true, triagem: false });
 
-    // Operate/superfície de gate: includeGates=true traz o gate também.
-    const withGates = await listUserTasks(api, tenant, operator, { includeGates: true });
-    expect(withGates.items.map((i) => i.element_id).sort()).toEqual(['gate', 'triagem']);
-    const gateItem = withGates.items.find((i) => i.element_id === 'gate');
-    expect(gateItem?.is_gate).toBe(true);
+    // opt-out: includeGates=false volta à visão SÓ-NEGÓCIO (o gate some).
+    const businessOnly = await listUserTasks(api, tenant, operator, { includeGates: false });
+    expect(businessOnly.items.map((i) => i.element_id).sort()).toEqual(['triagem']);
+    expect(businessOnly.items.every((i) => i.is_gate === false)).toBe(true);
   });
 
   it('degrade honesto: definição embutida (sem registry) → is_gate false (sem gate ali)', async () => {

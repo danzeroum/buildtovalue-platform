@@ -49,4 +49,9 @@ export const REDACT_PATHS: string[] = [
   // `payload` — esta rede garante que um log do reveal saia `[REDACTED]`.
   'params',
   '*.params',
+  // AG-2.5 (provider real): a CHAVE resolvida do `secret://` no runtime. O código
+  // nunca a loga (o doctor imprime só len+prefixo), mas a rede garante que, se um
+  // call-site a puser num campo de log, saia `[REDACTED]`. (`key_ref` é ponteiro, não a chave.)
+  'apiKey',
+  '*.apiKey',
 ];

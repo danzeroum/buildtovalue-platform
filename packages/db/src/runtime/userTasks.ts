@@ -28,6 +28,11 @@ export interface UserTaskListItem {
   /** D31: gate de tool (userTask btvGate). Marcador RESOLVIDO no despacho contra
    *  a definição pinada — a Tasklist comum o EXCLUI (não é tarefa de negócio). */
   is_gate: boolean;
+  /** AG-3.1 (P1): marca de gate para a LISTA — só os campos NÃO sensíveis do
+   *  world-delta (efeito + tool proponente), para o item mostrar o PESO da decisão
+   *  antes de abrir. `params`/`dataScope` (PII) NUNCA entram aqui. `null` = não-gate. */
+  gate_effect?: string | null;
+  gate_tool?: string | null;
 }
 
 export interface TaskViewer {
@@ -55,9 +60,9 @@ export async function listUserTasks(
     status?: string;
     instanceId?: string;
     filter?: 'mine' | 'role' | 'unassigned';
-    /** D31: por padrão a Tasklist NÃO mostra gates de tool (não são tarefa de
-     *  negócio; o modo-agente da fila é AG-3). Operate/superfície de gate passam
-     *  true para consultá-los explicitamente. */
+    /** AG-3.1: o modo-agente da fila EXISTE agora — o gate ENTRA na Tasklist por
+     *  padrão (marcado por is_gate; o tratamento distinto é da UI). Antes (etapa 5)
+     *  ficava fora "até a AG-3". `includeGates:false` volta à visão só-negócio. */
     includeGates?: boolean;
   } = {},
 ): Promise<{ items: UserTaskListItem[]; nextCursor: string | null }> {
@@ -74,13 +79,17 @@ export async function listUserTasks(
     // sobre a página (+1) — v1 com poucos papéis por tenant.
     const rows = await tx`
       SELECT id, instance_id, element_id, form_ref, assignee, candidate_roles,
-             status, claimed_at, created_at, is_gate, created_at::text AS created_at_cursor
+             status, claimed_at, created_at, is_gate,
+             -- AG-3.1: só campos NÃO sensíveis do world-delta para a marca da lista.
+             CASE WHEN is_gate THEN payload->>'effect' END AS gate_effect,
+             CASE WHEN is_gate THEN payload->>'tool' END AS gate_tool,
+             created_at::text AS created_at_cursor
       FROM user_tasks
       WHERE (${options.status ?? null}::text IS NULL OR status = ${options.status ?? null})
         AND (${options.instanceId ?? null}::uuid IS NULL OR instance_id = ${options.instanceId ?? null})
-        -- D31: gate de tool NÃO é tarefa comum — some da Tasklist de negócio por
-        -- padrão (o modo-agente da fila é AG-3). includeGates=true traz de volta.
-        AND (${options.includeGates ?? false} = true OR is_gate = false)
+        -- AG-3.1: o gate ENTRA na Tasklist por padrão (marcado is_gate); só sai
+        -- quando o cliente pede a visão só-negócio (includeGates=false).
+        AND (${options.includeGates ?? true} = true OR is_gate = false)
         AND (${options.filter === 'mine'} = false OR assignee = ${viewer.sub})
         AND (${options.filter === 'unassigned'} = false OR assignee IS NULL)
         AND (${options.filter === 'role'} = false OR ${viewer.role} = ANY(candidate_roles))
@@ -110,6 +119,10 @@ export interface UserTaskDetail extends UserTaskListItem {
   decision_var: string | null;
   /** etapa 6: valores EXATOS que roteiam (do gateway a jusante); null = texto livre. */
   decision_options: string[] | null;
+  /** AG-3.1 (P1): a revisão da instância que o cliente VÊ ao carregar o gate. A
+   * aprovação a reenvia como `expectedInstanceRevision` — D28 (a proposta expira
+   * se a instância avançou desde que o gate abriu). */
+  instance_revision: number;
 }
 
 export async function getUserTask(
@@ -122,7 +135,7 @@ export async function getUserTask(
     const [row] = await tx`
       SELECT ut.id, ut.instance_id, ut.element_id, ut.form_ref, ut.assignee,
              ut.candidate_roles, ut.status, ut.claimed_at, ut.created_at, ut.payload,
-             ut.is_gate, i.definition_ref
+             ut.is_gate, i.definition_ref, i.revision
       FROM user_tasks ut JOIN instances i ON i.id = ut.instance_id
       WHERE ut.id = ${taskId}`;
     if (!row) return undefined;
@@ -143,6 +156,7 @@ export async function getUserTask(
       ),
       decision_var: decision.decisionVar,
       decision_options: decision.decisionOptions,
+      instance_revision: Number(row.revision),
     };
   });
 }

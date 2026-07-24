@@ -24,7 +24,7 @@ Sem data de revisão, "temporária" vira permanente por inércia.
      reavaliar a linha 7.x inteira** (pode não haver mais "última 7.x limpa" e a v8
      deixar de ser adiável).
 
-## Pendência nomeada (para `pendencias.md` do dono)
+## Pendência nomeada (para `docs/pendencias.md` do dono)
 - **[ITEM] Migração do Console para `react-router` v8** — o único caminho que remove
   esta exceção (v7.x não tem patch; `react-router-dom` não tem 8.x). É **leva própria**
   (v8 mudou API), fora da fase de superfícies. **Gatilho: reavaliar na revisão de 60 dias

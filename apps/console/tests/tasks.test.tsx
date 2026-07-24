@@ -202,6 +202,45 @@ describe('TasksRoute — F3.4', () => {
     expect(await screen.findByText(/Nenhuma tarefa para você/)).toBeInTheDocument();
   });
 
+  it('AG-3.1: o gate ENTRA na lista MARCADO (badge + chip de efeito), distinto da tarefa comum, e sobe ao topo', async () => {
+    const GATE_ITEM = {
+      id: '99999999-9999-9999-9999-999999999999',
+      instanceId: '22222222-2222-2222-2222-222222222222',
+      elementId: 'gate_pagamento',
+      formRef: '',
+      assignee: null as string | null,
+      candidateRoles: ['business'],
+      status: 'open',
+      claimedAt: null as string | null,
+      // criado DEPOIS da tarefa comum — mas o efeito irreversível o leva ao topo.
+      createdAt: new Date('2026-07-22T00:00:00Z').toISOString(),
+      isGate: true,
+      gate: { effect: 'write-irreversible', tool: 'erp.pagar@1.2' },
+    };
+    route('GET /v1/user-tasks', () =>
+      ok({ items: [{ ...TASK, isGate: false, gate: null }, GATE_ITEM], nextCursor: null }),
+    );
+    const { container } = render(<TasksRoute />);
+
+    // o item de gate se lê DIFERENTE: badge de decisão de agente + chip de efeito
+    expect(await screen.findByText('decisão de agente')).toBeInTheDocument();
+    expect(screen.getByText('irreversível')).toBeInTheDocument();
+    // nomeia a TOOL proponente (honesto ao schema congelado do world-delta)
+    expect(screen.getByText(/via erp\.pagar@1\.2/)).toBeInTheDocument();
+
+    // a tarefa comum NÃO ganhou o badge (não se confunde com gate)
+    const items = [...container.querySelectorAll('.task-item')];
+    const common = items.find((el) => el.textContent?.includes('aprovar_reembolso'))!;
+    expect(common.textContent).not.toContain('decisão de agente');
+
+    // ordem: o gate irreversível está no TOPO, mesmo criado depois
+    expect(items[0].getAttribute('data-gate')).toBe('true');
+    expect(items[0].textContent).toContain('gate_pagamento');
+
+    // axe serious=0 também no item MARCADO da lista
+    await expectNoSeriousAxe(container);
+  });
+
   it('a11y: sem violações serious/critical (lista + detalhe assumido)', async () => {
     seedHappyPath();
     const { container } = render(<TasksRoute />);

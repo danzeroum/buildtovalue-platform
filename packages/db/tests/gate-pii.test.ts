@@ -3,6 +3,7 @@ import { createDiagram, createEdge, createNode, type BpmnDiagram } from '@buildt
 import postgres from 'postgres';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { buildGatePayloadTx, revealGateParamsTx, setGatePayloadTx } from '../src/agent/gateFio.js';
+import { listUserTasks } from '../src/runtime/userTasks.js';
 import { maskWorldDelta } from '../src/agent/worldDelta.js';
 import { deployToolDefinition } from '../src/registry/toolStore.js';
 import { withTenant } from '../src/tenancy.js';
@@ -126,6 +127,19 @@ describe('PII do world-delta (AG-3.1) — herança + máscara + reveal auditado'
     expect(ev.kind).toBe('gateWorldDeltaRevealed');
     expect(ev.payload).toMatchObject({ gateId: 'gate', actor: 'aprovador@acme', reason: 'preciso ver os destinatários', fields: ['to', 'corpo'] });
     expect(JSON.stringify(ev.payload)).not.toContain('ana@x.com'); // evidência ≠ conteúdo
+  });
+
+  it('LISTA (P1): a marca de gate carrega SÓ o não sensível (efeito+tool); PII fora da projeção', async () => {
+    // o gate 'gate' (sensível) foi gravado no teste REVEAL acima — a lista o marca.
+    const page = await listUserTasks(api, tenant, { sub: 'op', role: 'operator', seesAll: true }, { instanceId });
+    const gate = page.items.find((i) => i.element_id === 'gate')!;
+    expect(gate.is_gate).toBe(true);
+    // campos NÃO sensíveis do world-delta ficam disponíveis para o item da lista
+    expect(gate.gate_effect).toBe('external-commitment');
+    expect(gate.gate_tool).toBe('tool:send-email@2.0.1');
+    // o PII (destinatários/corpo) NUNCA entra na projeção da lista — só no detalhe mascarado.
+    expect(JSON.stringify(page.items)).not.toContain('ana@x.com');
+    expect(JSON.stringify(page.items)).not.toContain('dados do cliente');
   });
 
   it('REVEAL recusa gate com params NÃO sensíveis (já saem em claro)', async () => {

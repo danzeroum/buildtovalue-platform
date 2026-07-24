@@ -105,6 +105,11 @@ services:
       # Taxa USD→BRL (config, NÃO cotação de rede) — a tabela de preço da DeepSeek
       # é em USD; sem taxa, um modelo USD faz parada honesta (fx-missing).
       FX_USD_BRL: ${FX_USD_BRL:-5.40}
+    volumes:
+      # A chave real vive no HOST (SECRET_HOST_DIR), montada READ-ONLY no SECRET_DIR
+      # do container. NUNCA no repo nem no banco. Sem este mount, o backend `file`
+      # não enxerga o arquivo. Mantenha SECRET_DIR = alvo do mount.
+      - ${SECRET_HOST_DIR:-./secrets}:${SECRET_DIR:-/run/secrets/btv}:ro
     depends_on:
       postgres: { condition: service_healthy }
       migrate: { condition: service_completed_successfully }
