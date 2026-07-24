@@ -108,10 +108,9 @@ Estes itens são do **ambiente de nuvem do piloto** — decisão de infra em abe
 Passo a passo copiável. A chave DeepSeek entra **só** no passo 8.2 (arquivo no host);
 **nunca** vai ao repo nem ao banco. Assume que você está em `deploy/`.
 
-> ⚠️ **Ponto honesto:** hoje o worker resolve e VERIFICA o secret:// (8.4), mas o
-> `agentTask` ainda roda com o walker de simulação — a **injeção do provider REAL no
-> job** (a chamada de fato à DeepSeek) é a última peça de fiação, em curso. Este
-> bootstrap deixa o ambiente de pé e **prova o segredo**; a chamada real destrava com essa fiação.
+> ✅ **Fiação pronta:** em produção com `SECRET_BACKEND=file`, o worker injeta o provider
+> REAL (DeepSeek) no job `agent` — resolve a chave do `secret://` e chama de verdade. O
+> bootstrap abaixo deixa o ambiente de pé, **prova o segredo** (8.4) e destrava o ensaio real.
 
 ### 8.1 · Subir + migrar + semear (do zero)
 ```bash

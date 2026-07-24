@@ -88,14 +88,11 @@ docker compose up -d worker
 # inicie a instância que dispara o agentTask (pelo Console ou via API /v1).
 ```
 
-> ⚠️ **Estado honesto:** o worker já resolve/verifica o `secret://` (doctor §8.4), mas o
-> job `agent` ainda roda com o **walker de simulação** — a **injeção do provider REAL no
-> job** (`createRealWalker` + `createOpenAiCompatProvider`, a chamada de fato à DeepSeek) é
-> a **última peça de fiação**, em curso. Até ela entrar, o ensaio prova o segredo e o
-> ambiente, não a chamada real. Quando entrar, o resto abaixo vale como descrito.
-
-Com a fiação, o worker locka o job `agent`, injeta o provider real e caminha o grafo. No
-**Operate**, o drill-down mostra a timeline unificada
+O worker locka o job `agent` e, **em produção com `SECRET_BACKEND=file`**, injeta o
+provider REAL (DeepSeek via openai-compatible) — resolve a chave do `secret://`, monta o
+`realWalker` e caminha o grafo com chamadas de verdade. (CI/test cai no walker de
+simulação por construção — `realProviderEnv → null` fora de produção; o CI nunca chama LLM
+real.) No **Operate**, o drill-down mostra a timeline unificada
 (humano + agente), o **custo real** por chamada e a **versão da tabela** que o
 calculou. Numa parada honesta, o card fica **âmbar** com a saída honesta — nunca
 vermelho (§5).
