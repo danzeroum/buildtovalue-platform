@@ -140,7 +140,19 @@ await listenSql.listen(OUTBOX_CHANNEL, (tenantId) => {
   logger.debug({ tenantId }, 'notify da outbox — acordando o loop');
   waker.wake();
 });
-logger.info({ workerId, apiBase, channel: OUTBOX_CHANNEL }, 'worker F2 de pé (LISTEN + poll dinâmico)');
+logger.info(
+  {
+    workerId,
+    apiBase,
+    channel: OUTBOX_CHANNEL,
+    // AG-2.5: config do ensaio visível no boot (NUNCA a chave — só presença/valores
+    // não-secretos). Confirma que o worker leu SECRET_BACKEND/DIR e FX_USD_BRL.
+    secretBackend: process.env.SECRET_BACKEND ?? 'env',
+    secretDir: process.env.SECRET_DIR ?? '(default)',
+    fxUsdBrl: process.env.FX_USD_BRL ?? '(ausente)',
+  },
+  'worker F2 de pé (LISTEN + poll dinâmico)',
+);
 
 async function machineToken(tenantId: string): Promise<string> {
   // Token de máquina restrito a jobs (plano §6): papel operator via RBAC.

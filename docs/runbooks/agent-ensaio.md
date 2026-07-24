@@ -79,18 +79,23 @@ chmod 600 /run/secrets/btv/tenants/acme/ai-key
 
 ## 3. Rodar o ensaio
 
-Pré: ambiente da VPS de pé (`deploy-vps.md`), tenant semeado, agente publicado no
-registry, segredo posto (§2), `tenant_ai_config` apontando o `key_ref`/`model`.
+Pré: **bootstrap de `deploy-vps.md §8`** (compose up, migrar, semear, criar o arquivo
+da chave, inserir o `tenant_ai_config`, FX) e o **doctor OK** (§8.4 — o secret:// resolve
+sem vazar). Só então:
 
 ```bash
-# worker sobe com o backend de arquivo:
-#   SECRET_BACKEND=file  SECRET_DIR=/run/secrets/btv   (já no docker-compose.yml)
 docker compose up -d worker
 # inicie a instância que dispara o agentTask (pelo Console ou via API /v1).
 ```
 
-O worker locka o job `agent`, injeta `createRealWalker({ provider: createRealAiProvider(...) })`
-e caminha o grafo. No **Operate**, o drill-down mostra a timeline unificada
+> ⚠️ **Estado honesto:** o worker já resolve/verifica o `secret://` (doctor §8.4), mas o
+> job `agent` ainda roda com o **walker de simulação** — a **injeção do provider REAL no
+> job** (`createRealWalker` + `createOpenAiCompatProvider`, a chamada de fato à DeepSeek) é
+> a **última peça de fiação**, em curso. Até ela entrar, o ensaio prova o segredo e o
+> ambiente, não a chamada real. Quando entrar, o resto abaixo vale como descrito.
+
+Com a fiação, o worker locka o job `agent`, injeta o provider real e caminha o grafo. No
+**Operate**, o drill-down mostra a timeline unificada
 (humano + agente), o **custo real** por chamada e a **versão da tabela** que o
 calculou. Numa parada honesta, o card fica **âmbar** com a saída honesta — nunca
 vermelho (§5).

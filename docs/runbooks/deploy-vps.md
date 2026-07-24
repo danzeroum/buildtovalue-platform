@@ -102,3 +102,74 @@ Ambiente de **teste ≠ ambiente de piloto**. Aqui **faltam**, de propósito:
 
 Estes itens são do **ambiente de nuvem do piloto** — decisão de infra em aberto
 (ver `docs/privacy/gate-piloto-auditoria.md` §A/§B/§C).
+
+## 8. BOOTSTRAP do ensaio AG-2.5 (DeepSeek) — máquina limpa só com Docker
+
+Passo a passo copiável. A chave DeepSeek entra **só** no passo 8.2 (arquivo no host);
+**nunca** vai ao repo nem ao banco. Assume que você está em `deploy/`.
+
+> ⚠️ **Ponto honesto:** hoje o worker resolve e VERIFICA o secret:// (8.4), mas o
+> `agentTask` ainda roda com o walker de simulação — a **injeção do provider REAL no
+> job** (a chamada de fato à DeepSeek) é a última peça de fiação, em curso. Este
+> bootstrap deixa o ambiente de pé e **prova o segredo**; a chamada real destrava com essa fiação.
+
+### 8.1 · Subir + migrar + semear (do zero)
+```bash
+cd deploy
+# .env: além de MIGRATOR_PASSWORD/JWT_SECRET/FIELD_KEY_SECRET, defina:
+#   SECRET_BACKEND=file
+#   SECRET_HOST_DIR=./secrets        # dir do HOST montado read-only no worker
+#   SECRET_DIR=/run/secrets/btv      # alvo do mount (default; mantenha)
+#   FX_USD_BRL=5.40                  # taxa USD→BRL (tabela DeepSeek é em USD)
+docker compose up -d --build                 # postgres → migrate(one-shot) → api+worker
+docker compose --profile seed run --rm seed  # tenant 'acme'
+TENANT=$(docker compose exec -T postgres psql -U app_migrator -d buildtovalue -tAc \
+  "SELECT id FROM tenants WHERE slug='acme'")
+echo "tenant acme = $TENANT"
+```
+
+### 8.2 · Criar o arquivo da chave (chmod 600, no HOST)
+`SECRET_DIR` real do container = `/run/secrets/btv` (montado de `SECRET_HOST_DIR`, default
+`deploy/secrets`). `key_ref` = `secret://tenants/acme/ai-key` → arquivo `tenants/acme/ai-key`.
+```bash
+umask 077
+mkdir -p secrets/tenants/acme
+printf '%s' 'sk-SUA-CHAVE-DEEPSEEK-REAL' > secrets/tenants/acme/ai-key
+chmod 600 secrets/tenants/acme/ai-key
+# o container roda como uid 1000 (node); o resolver RECUSA perm frouxa (640/644).
+# se o uid do host ≠ 1000, dê a posse ao node: sudo chown 1000:1000 secrets/tenants/acme/ai-key
+```
+
+### 8.3 · Inserir o `tenant_ai_config` (SQL direto — não há rota; papel de migração)
+```bash
+docker compose exec -T postgres psql -U app_migrator -d buildtovalue -c "
+  INSERT INTO tenant_ai_config (tenant_id, provider, base_url, model, key_ref, budget_cents)
+  SELECT id, 'openai-compatible', 'https://api.deepseek.com', 'deepseek-chat',
+         'secret://tenants/acme/ai-key', NULL
+  FROM tenants WHERE slug='acme'
+  ON CONFLICT (tenant_id) DO UPDATE SET
+    provider=EXCLUDED.provider, base_url=EXCLUDED.base_url,
+    model=EXCLUDED.model, key_ref=EXCLUDED.key_ref;"
+```
+Campos DeepSeek já preenchidos. `base_url` valida https no uso; `key_ref` tem CHECK
+`LIKE 'secret://%'` no banco (a chave em claro é recusada pelo próprio schema).
+
+### 8.4 · VERIFICAR antes do ensaio (o resolver acha a chave, sem vazá-la)
+Dois sinais:
+```bash
+# (a) o worker leu SECRET_BACKEND/SECRET_DIR/FX_USD_BRL (log de boot, não-secreto):
+docker compose logs worker | grep 'worker F2 de pé'
+#   → {"secretBackend":"file","secretDir":"/run/secrets/btv","fxUsdBrl":"5.40", ...}
+
+# (b) DOCTOR: resolve o key_ref do tenant e passa a guarda fail-closed — SEM o valor:
+docker compose run --rm --entrypoint node worker dist/secret-doctor.js "$TENANT"
+#   → {"result":"OK","message":"chave resolvida ... pronta para o ensaio",
+#      "keyLength":51,"keyStartsWithSk":true}
+```
+Se o arquivo tiver permissão frouxa, sumiço, ou for placeholder, o doctor **falha com o
+motivo** (fail-closed) — e não imprime a chave. FX ausente aparece como aviso.
+
+### 8.5 · Rodar o ensaio
+Depois do doctor OK: iniciar a instância que dispara o `agentTask` (Console/API) e
+acompanhar no Operate (custo real por chamada + versão da tabela). *(Destrava com a
+injeção do provider real no job — a peça em curso citada acima.)*
