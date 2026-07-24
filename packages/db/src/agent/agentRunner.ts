@@ -56,6 +56,18 @@ export interface AgentWalkResult {
   /** nós de DECISÃO que dispararam (do trail) — alimenta o elo `decisao` da cadeia D1. */
   decisions?: string[];
   output?: Record<string, unknown>;
+  /** custo REAL do walk (AG-2.5) — presente só no `realWalker`; o `simulateWalker`
+   * não gasta (fixtures, custo zero). Some `totalCents`; cada chamada grava a
+   * versão da tabela de preço que a calculou (decisão (ii) do dono). */
+  cost?: {
+    totalCents: number;
+    calls: Array<{
+      nodeId: string;
+      costCents: number;
+      priceTableVersion?: string;
+      usage?: { inputTokens: number; outputTokens: number };
+    }>;
+  };
 }
 
 /**
@@ -73,6 +85,9 @@ export type AgentBlock =
   | 'kill-switch'
   | 'no-graph'
   | 'budget'
+  // AG-2.5 — paradas honestas do provider REAL (decisão-correção 1 do dono):
+  | 'provider-unavailable' // erro/timeout/rate-limit → âmbar, SEM retry, retomável
+  | 'price-missing' // modelo sem tabela de preço → âmbar, retomável após corrigir a tabela
   | 'walk-error';
 
 /**
@@ -82,7 +97,14 @@ export type AgentBlock =
  * `walk-error` são falhas (vermelho, incidente). Converter parada honesta em
  * card vermelho contradiz o §5 — daí a separação dos dois caminhos de conclusão.
  */
-const HONEST_STOP_BLOCKS: ReadonlySet<AgentBlock> = new Set<AgentBlock>(['budget', 'kill-switch']);
+const HONEST_STOP_BLOCKS: ReadonlySet<AgentBlock> = new Set<AgentBlock>([
+  'budget',
+  'kill-switch',
+  // AG-2.5: falha de provider e modelo-sem-preço são PARADAS HONESTAS (âmbar,
+  // retomáveis), não incidentes vermelhos — o operador retoma pelo resume (§5.2).
+  'provider-unavailable',
+  'price-missing',
+]);
 
 export function isHonestStop(block: AgentBlock): boolean {
   return HONEST_STOP_BLOCKS.has(block);
@@ -188,7 +210,18 @@ export async function runAgentJob(
     };
   }
   if (walk.blocked) {
-    const kind = walk.blocked.cell === 'budget' ? ('budget' as const) : ('walk-error' as const);
+    // O walker nomeia a `cell`; aqui ela vira o AgentBlock (âmbar vs vermelho).
+    // 'budget'/'provider-unavailable'/'price-missing' são paradas honestas; o
+    // resto (rota não-casada, deadlock da lib) é falha (incidente).
+    const cell = walk.blocked.cell;
+    const kind: AgentBlock =
+      cell === 'budget'
+        ? 'budget'
+        : cell === 'provider-unavailable'
+          ? 'provider-unavailable'
+          : cell === 'price-missing'
+            ? 'price-missing'
+            : 'walk-error';
     return {
       ok: false,
       blocked: kind,

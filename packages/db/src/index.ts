@@ -197,6 +197,29 @@ export {
 } from './agent/tenantAiConfig.js';
 export { fixtureAiProvider, type AiProvider, type AiCompletion } from './agent/aiProvider.js';
 export {
+  ANTHROPIC_PRICE_TABLE,
+  costOf,
+  isPriced,
+  PriceMissingError,
+  type PriceTable,
+  type ModelPricing,
+  type Usage,
+  type CostBreakdown,
+} from './agent/priceTable.js';
+export {
+  createRealAiProvider,
+  assertRealKey,
+  ProviderUnavailableError,
+  PlaceholderKeyError,
+  type RealAiProviderOptions,
+} from './agent/anthropicProvider.js';
+export {
+  createRealWalker,
+  type RealWalkerDeps,
+  type PromptResolver,
+  type OutputParser,
+} from './agent/realWalker.js';
+export {
   createLocalSecretResolver,
   secretEnvName,
   type SecretResolver,
