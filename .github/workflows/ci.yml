@@ -30,6 +30,9 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # Gate de Piloto 8.4 item 2: audit de dependências. Falha em high/critical
+      # (o js-yaml <4.3.0 transitivo do openapi-typescript está pinado via override).
+      - run: pnpm audit --audit-level high
       - run: pnpm lint
       - run: pnpm -r run build
       - run: pnpm typecheck
