@@ -53,6 +53,31 @@ describe('FormsRoute — F3.3', () => {
     expect(await screen.findByText(/form:reembolso@1/)).toBeInTheDocument();
   });
 
+  it('AG-3.0: rejeição do registry (lint) renderiza a lista de issues — não some em silêncio', async () => {
+    post.mockResolvedValue({
+      data: undefined,
+      error: { issues: [{ code: 'EXEC_FORM_REF_MISSING', message: 'userTask sem formRef.' }] },
+      response: { status: 422 },
+    });
+    render(<FormsRoute />);
+    await userEvent.click(screen.getByRole('button', { name: /Publicar formulário no registry/ }));
+
+    const alert = await screen.findByRole('alert');
+    expect(within(alert).getByText('EXEC_FORM_REF_MISSING')).toBeInTheDocument();
+    expect(within(alert).getByText(/userTask sem formRef/)).toBeInTheDocument();
+    // não anunciou sucesso
+    expect(screen.queryByText(/Publicado como/)).not.toBeInTheDocument();
+  });
+
+  it('AG-3.0: falha HTTP sem issues cai no fallback HTTP_<status> (nunca sucesso silencioso)', async () => {
+    post.mockResolvedValue({ data: undefined, error: { detail: 'indisponível' }, response: { status: 503 } });
+    render(<FormsRoute />);
+    await userEvent.click(screen.getByRole('button', { name: /Publicar formulário no registry/ }));
+
+    const alert = await screen.findByRole('alert');
+    expect(within(alert).getByText('HTTP_503')).toBeInTheDocument();
+  });
+
   it('a11y: sem violações serious/critical (incl. estado sensível aberto)', async () => {
     const { container } = render(<FormsRoute />);
     await userEvent.click(screen.getByRole('radio', { name: 'sensível' }));

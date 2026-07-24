@@ -88,6 +88,35 @@ describe('PublishModal — DELTA de publicação (F3.2)', () => {
     expect(post).toHaveBeenCalledWith('/v1/process-definitions', expect.anything());
   });
 
+  it('AG-3.0: FALHA do lint não vira "0 rejeições" — estado de erro honesto BLOQUEIA o publish', async () => {
+    // o lint da API falha; antes isso virava `[]` (passava por "pode publicar").
+    post.mockImplementation((path: string) =>
+      path === '/v1/process-definitions/lint'
+        ? Promise.resolve({ data: undefined, error: { detail: 'lint fora do ar' } })
+        : Promise.resolve({ data: { registryRef: 'x' }, error: undefined, response: { status: 201 } }),
+    );
+    render(<PublishModal diagram={diagram} onClose={() => {}} />);
+
+    expect(await screen.findByText(/Não foi possível rodar o lint D19/)).toBeInTheDocument();
+    // NÃO afirma "0 rejeições" (o estado desonesto antigo)
+    expect(screen.queryByText(/0 rejeições/)).not.toBeInTheDocument();
+    // publish bloqueado; deploy nunca tentado
+    expect(screen.getByRole('button', { name: 'Publicar' })).toBeDisabled();
+    await userEvent.click(screen.getByRole('button', { name: 'Publicar' }));
+    expect(post).not.toHaveBeenCalledWith('/v1/process-definitions', expect.anything());
+  });
+
+  it('AG-3.0: erro no DEPLOY (após lint limpo) mostra a falha, não um sucesso silencioso', async () => {
+    wireApi({ issues: [], deploy: { error: { detail: 'registry recusou' }, status: 500 } });
+    render(<PublishModal diagram={diagram} onClose={() => {}} />);
+
+    const publish = await screen.findByRole('button', { name: 'Publicar' });
+    await userEvent.click(publish);
+    expect(await screen.findByText(/registry recusou/)).toBeInTheDocument();
+    // não anunciou publicação
+    expect(screen.queryByText(/Publicado como/)).not.toBeInTheDocument();
+  });
+
   it('a11y: sem violações serious/critical no modal', async () => {
     wireApi({ issues: [] });
     const { container } = render(<PublishModal diagram={diagram} onClose={() => {}} />);

@@ -202,6 +202,20 @@ como LOG estruturado (o 403 já existe e é testado; falta o evento de log).
     princípio de `EXEC_LOOP_WAIT_UNSUPPORTED`. O motor passo-a-passo com estado costurado
     é a **AG-4**; o seam `AgentWalker` já o recebe sem tocar o `runAgentJob`.
 
+- **AG-3.0 — selo de procedência realiza a assinatura no `shared-ui` (D30 na UI).** A
+  assinatura de governança (ator D33 + estado de evidência) vira componente: `ActorBadge`
+  (4 casos — `user|system|agent` **+ `null`=Motor**, ato determinístico sem ator, nunca
+  "desconhecido"), `EvidenceSeal`, `GateSeal`, `AutonomyDial`. **Só narra o que o runtime
+  produz** (D30): renderiza `auditado` + `mascarado` + `ancorável` (com nota `self-recorded`,
+  nunca "verificado"); **não** oferece `negado` (E5 não construído) nem afirma garantia
+  externa (espera WAL imutável). Sinal nunca só por cor (ícone+rótulo); teste AA + axe. O
+  `shared-ui` deixa de ser só-tokens e passa a hospedar componentes. Inventário aprovado:
+  `docs/handoff/ag3-0-inventario-fundacao.md`.
+- **AG-3.0 — estado honesto no /studio.** Falha do lint D19 no publish deixava de virar
+  `[]` (que se passava por "0 rejeições, pode publicar" — estado desonesto): agora é estado
+  de erro explícito que **bloqueia** a publicação (sem o lint não se afirma o escopo v1).
+  Teste de máquina cobre a falha do lint e a falha do deploy.
+
 ---
 
 ## Coexistências transitórias sob gate (rastreabilidade)
