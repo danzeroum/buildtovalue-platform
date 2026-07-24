@@ -2,6 +2,7 @@ import type { Sql } from '../client.js';
 import { createFieldCipher, type KeyProvider } from '../crypto/fieldCipher.js';
 import { resumeAgentJobs as resumeAgentJobsRow, type PauseKind, type ResumeResult } from '../agent/resume.js';
 import { reproposeGate as reproposeGateRow, type ReproposeResult } from '../agent/repropose.js';
+import { revealGateForTask, type RevealGateOutcome } from '../agent/gateFio.js';
 import type { AuditActor } from '../audit/tenantAudit.js';
 import {
   exportAudit as exportAuditRow,
@@ -153,6 +154,12 @@ export interface PlatformRuntime {
       taskId: string,
       input: { assignee: string; reason: string; actor: string },
     ): Promise<AssignOutcome>;
+    /** AG-3.1: revela os params sensíveis do world-delta do gate (auditado). */
+    revealGate(
+      tenantId: string,
+      taskId: string,
+      context: { actor: string; reason: string },
+    ): Promise<RevealGateOutcome | { ok: false; reason: 'notFound'; message: string }>;
   };
   jobs: {
     lock(
@@ -280,6 +287,7 @@ export function createRuntime(
       complete: (tenantId, taskId, input) =>
         completeUserTask(sql, tenantId, taskId, { ...input, now: clock() }, cipher),
       assign: (tenantId, taskId, input) => assignUserTask(sql, tenantId, taskId, input),
+      revealGate: (tenantId, taskId, context) => revealGateForTask(sql, tenantId, taskId, context),
     },
     jobs: {
       lock: (tenantId, workerId, options) => lockJobs(sql, tenantId, workerId, options),

@@ -1,5 +1,5 @@
 import { PROBLEM_TYPES, problemSchema } from '@platform/api-contracts';
-import { DECISION_MAX_LENGTH } from '@platform/db';
+import { DECISION_MAX_LENGTH, maskWorldDelta, type WorldDelta } from '@platform/db';
 import type { FastifyReply } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { z } from 'zod';
@@ -119,7 +119,13 @@ export function registerUserTaskRoutes(rawApp: ZodApp, deps: ApiDeps): void {
         params: z.object({ id: z.string().uuid() }),
         response: {
           200: taskSummarySchema.extend({
+            // AG-3.1: num gate, `payload` é o world-delta MASCARADO — os VALORES de
+            // params sensíveis NÃO saem do servidor (só nomes+contagem via campos
+            // abaixo); revelar exige a rota /gate/reveal (auditada + RBAC).
             payload: z.record(z.string(), z.unknown()),
+            // gate com params sensíveis: true → a UI mostra "N campos" + revelar.
+            paramsMasked: z.boolean(),
+            paramsFields: z.array(z.string()),
             // etapa 6: se não-null, a conclusão EXIGE `decision` (roteamento
             // comparado por igualdade no gateway a jusante).
             decisionVar: z.string().nullable(),
@@ -144,12 +150,65 @@ export function registerUserTaskRoutes(rawApp: ZodApp, deps: ApiDeps): void {
           detail: `esta task é dos papéis [${task.candidate_roles.join(', ')}]`,
         });
       }
+      // AG-3.1: gate com world-delta → mascara os params sensíveis ANTES de sair
+      // do servidor (o valor cru nunca vai ao cliente sem reveal auditado).
+      const isWorldDelta = task.is_gate && typeof (task.payload as { tool?: unknown }).tool === 'string';
+      if (isWorldDelta) {
+        const view = maskWorldDelta(task.payload as unknown as WorldDelta);
+        return {
+          ...summarize(task),
+          payload: view.delta as unknown as Record<string, unknown>,
+          paramsMasked: view.paramsMasked,
+          paramsFields: view.paramsFields,
+          decisionVar: task.decision_var,
+          decisionOptions: task.decision_options,
+        };
+      }
       return {
         ...summarize(task),
         payload: task.payload,
+        paramsMasked: false,
+        paramsFields: [],
         decisionVar: task.decision_var,
         decisionOptions: task.decision_options,
       };
+    },
+  );
+
+  app.post(
+    '/v1/user-tasks/:id/gate/reveal',
+    {
+      // MESMO escopo do reveal de variável sensível (D20). Sem ele → 403; a UI do
+      // gate mostra "revelar indisponível" + ESCALAR (não aprovar às cegas).
+      preHandler: [app.authenticate, app.requirePermission('variables:reveal-sensitive')],
+      schema: {
+        tags: ['user-tasks'],
+        summary: 'Revela os params sensíveis do world-delta do gate (auditado, motivo obrigatório)',
+        security: [{ bearerAuth: [] }],
+        params: z.object({ id: z.string().uuid() }),
+        body: z.object({ reason: z.string().min(1).max(500) }),
+        response: {
+          200: z.object({ params: z.record(z.string(), z.unknown()) }),
+          404: problemSchema,
+          422: problemSchema,
+        },
+      },
+    },
+    async (req, reply) => {
+      const outcome = await runtime.userTasks.revealGate(req.auth!.tenantId, req.params.id, {
+        actor: req.auth!.sub,
+        reason: req.body.reason,
+      });
+      if (!outcome.ok) {
+        if (outcome.reason === 'notFound') {
+          return problem(reply, 404, PROBLEM_TYPES.notFound, 'Gate não encontrado', String(req.id));
+        }
+        // notMasked/notGate: nada a revelar (params não sensíveis já saem em claro).
+        return problem(reply, 422, PROBLEM_TYPES.validation, 'Reveal não aplicável', String(req.id), {
+          detail: outcome.message,
+        });
+      }
+      return { params: outcome.params };
     },
   );
 

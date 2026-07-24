@@ -1,5 +1,6 @@
 import type { BpmnDiagram } from '@buildtovalue/core';
-import type { TransactionSql } from '../client.js';
+import type { Sql, TransactionSql } from '../client.js';
+import { withTenant } from '../tenancy.js';
 import { getToolDefinitionByRefTx } from '../registry/toolStore.js';
 import type { AgentActor } from './agentTrail.js';
 import type { DataClassification } from '../runtime/definitions.js';
@@ -110,6 +111,22 @@ export async function revealGateParamsTx(
     fields: Object.keys(wd.params ?? {}),
   });
   return { ok: true, params: wd.params };
+}
+
+/** Reveal por ID de tarefa (o que a rota tem): resolve task→instância/elemento e
+ * revela sob withTenant. `notFound` quando o id não é um gate. */
+export async function revealGateForTask(
+  sql: Sql,
+  tenantId: string,
+  taskId: string,
+  context: { actor: string; reason: string },
+): Promise<RevealGateOutcome | { ok: false; reason: 'notFound'; message: string }> {
+  return withTenant(sql, tenantId, async (tx) => {
+    const [t] = await tx<{ instance_id: string; element_id: string }[]>`
+      SELECT instance_id, element_id FROM user_tasks WHERE id = ${taskId} AND is_gate = true`;
+    if (!t) return { ok: false as const, reason: 'notFound' as const, message: `tarefa de gate ${taskId} não encontrada` };
+    return revealGateParamsTx(tx, tenantId, String(t.instance_id), String(t.element_id), context);
+  });
 }
 
 export type SealOutcome =

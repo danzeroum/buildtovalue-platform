@@ -266,6 +266,7 @@ export {
   sealGatedEffectTx,
   executeGatedEffectTx,
   revealGateParamsTx,
+  revealGateForTask,
   type SealOutcome,
   type RevealGateOutcome,
 } from './agent/gateFio.js';
