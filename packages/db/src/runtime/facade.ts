@@ -4,6 +4,14 @@ import { resumeAgentJobs as resumeAgentJobsRow, type PauseKind, type ResumeResul
 import { reproposeGate as reproposeGateRow, type ReproposeResult } from '../agent/repropose.js';
 import type { AuditActor } from '../audit/tenantAudit.js';
 import {
+  exportAudit as exportAuditRow,
+  verifyAudit as verifyAuditRow,
+  type AuditExportFilters,
+  type AuditExportResult,
+  type AuditVerifyResult,
+  type NormalizedActor,
+} from '../audit/export.js';
+import {
   getIdempotentResponse,
   putIdempotentResponse,
   type IdempotentHit,
@@ -212,6 +220,20 @@ export interface PlatformRuntime {
     actor: AuditActor,
     motivo: string,
   ): Promise<ReproposeResult>;
+  /** Export de auditoria (AG-2.3): trilhas normalizadas + recibo com digest; a
+   * própria chamada é auditada carregando digest+intervalo+filtros. */
+  audit: {
+    export(
+      tenantId: string,
+      filters: AuditExportFilters,
+      generatedBy: NormalizedActor,
+    ): Promise<AuditExportResult>;
+    verify(
+      tenantId: string,
+      input: { expectedDigest: string; filters: AuditExportFilters },
+      actor: NormalizedActor,
+    ): Promise<AuditVerifyResult>;
+  };
 }
 
 export type PauseOutcome =
@@ -358,6 +380,11 @@ export function createRuntime(
     },
     async reproposeGate(tenantId, instanceId, elementId, actor, motivo) {
       return reproposeGateRow(sql, tenantId, instanceId, elementId, actor, motivo);
+    },
+    audit: {
+      export: (tenantId, filters, generatedBy) =>
+        exportAuditRow(sql, tenantId, filters, generatedBy, clock()),
+      verify: (tenantId, input, actor) => verifyAuditRow(sql, tenantId, input, actor, clock()),
     },
   };
 }

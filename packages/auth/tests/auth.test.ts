@@ -77,4 +77,28 @@ describe('RBAC v1', () => {
     expect(hasPermission('analyst', 'variables:reveal-sensitive')).toBe(false);
     expect(hasPermission('analyst', 'definitions:deploy')).toBe(true);
   });
+
+  it('[AG-2.3 GATE-D] papel auditor: só leitura + audit:export, ZERO escrita', () => {
+    // concessão nova: admin e auditor exportam auditoria
+    expect(hasPermission('admin', 'audit:export')).toBe(true);
+    expect(hasPermission('auditor', 'audit:export')).toBe(true);
+    // demais papéis NÃO exportam
+    for (const r of ['analyst', 'business', 'operator'] as const) {
+      expect(hasPermission(r, 'audit:export')).toBe(false);
+    }
+    // leitura de metadados: permitida
+    expect(hasPermission('auditor', 'instances:read')).toBe(true);
+    expect(hasPermission('auditor', 'operate:read')).toBe(true);
+    expect(hasPermission('auditor', 'me:read')).toBe(true);
+    // ESCRITA: negada em TUDO (separação de deveres)
+    const writes = [
+      'definitions:deploy',
+      'instances:start',
+      'instances:cancel',
+      'tasks:work',
+      'operate:act',
+      'variables:reveal-sensitive', // lê procedência, NUNCA conteúdo
+    ] as const;
+    for (const p of writes) expect(hasPermission('auditor', p)).toBe(false);
+  });
 });

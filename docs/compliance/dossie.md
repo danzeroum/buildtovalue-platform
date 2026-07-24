@@ -59,7 +59,7 @@ Migrações de referência: `packages/db/migrations/0001…0006`.
 | Mecanismo | Artefato | Evidência | Controle | Status |
 |---|---|---|---|---|
 | Ledger sem conteúdo pessoal | `runtime/outbox.ts` (EmitHistory), payloads de trilha | `tests/lgpd-seam.test.ts` — **aceite nomeado** “ledger sem conteúdo pessoal”; dead-letter guarda só metadados de efeito | AI Act 12 · LGPD | ✅ v1 |
-| Ancoragem de digest das trilhas (D35) | `tenant_audit_events.anchor_ref` (coluna já existe) | — | AI Act 12 · integridade | 🔶 contratado |
+| Ancoragem de digest das trilhas (D35) | `audit/export.ts` `anchorOf` (âncora v1 = digest+intervalo, auto-referência verificável); `tenant_audit_events.anchor_ref` | `audit-export.test.ts` (recibo carrega âncora; verify recompõe). **Assurance declarado**: `self-recorded` (notarização externa = infra do Gate de Piloto) | AI Act 12 · integridade | ✅ v1 (self-recorded) |
 | Export com recibo / Evidence Bundle | — | — | AI Act 12 · rastreável | 🔶 contratado (E4) |
 
 ---
@@ -71,8 +71,9 @@ Migrações de referência: `packages/db/migrations/0001…0006`.
 | Motivo obrigatório e auditado | rotas: reveal (`runtime.ts:302`), cancelamento (`runtime.ts:372`), resolução (`operate.ts:169`), reatribuição (`userTasks.ts` assignment), kill-switch | history: `sensitiveRevealed`, `taskReassigned`, `incidentResolved`; tenant: `agent.killswitch.toggled` — todos `min(1)` no `reason`/`motivo` | AI Act 12 · 14 | ✅ v1 |
 | Cross-tenant = 404 sempre | convenção §0; RLS | `variables.e2e.test.ts`, `api.test.ts` — nunca revela recurso de outro tenant | ISO · isolamento | ✅ v1 |
 | XES / IEEE 1849 por instância | `instances` export | `instances.e2e.test.ts` — log de eventos exportável | AI Act 12 · interoperável | ✅ v1 |
-| `GET /v1/audit/export` (D36) + `audit:export` | proposta AG-2 v2 §4 (rota não criada em v1) | — | AI Act 12 · acesso a registros | 🔶 contratado |
-| `POST` verificar integridade (D35) | proposta AG-2 v2 §4 | — | AI Act 12 · integridade | 🔶 contratado |
+| `GET /v1/audit/export` (D36) + `audit:export` | `routes/audit.ts`; `audit/export.ts` (normaliza as DUAS trilhas; JSON no corpo / CSV no header; a própria chamada auditada com digest+intervalo+filtros) | `audit-export.test.ts`, `audit.e2e.test.ts` — export determinístico, evidência-nunca-conteúdo, ator normalizado | AI Act 12 · acesso a registros | ✅ v1 |
+| `POST /v1/audit/verify` — integridade (D35) | `routes/audit.ts`; `verifyAudit` recompõe o digest e compara | `audit-export.test.ts` — `matches:false` honesto quando a trilha diverge; a verificação fica na trilha | AI Act 12 · integridade | ✅ v1 |
+| Papel `auditor` [GATE-D] — separação de deveres | `auth/rbac.ts` (só leitura + `audit:export`, ZERO escrita); migração `0015` | `auth.test.ts` (grants) · `audit.e2e.test.ts` — auditor recebe 403 em TODA rota de escrita | ISO 42001 · segregação | ✅ v1 |
 
 ---
 
@@ -126,11 +127,14 @@ Itens de **infra** a provisionar cedo (fora do código): secret manager para
 `key_ref = secret://…`; WAL imutável no Postgres do piloto (reforço físico da
 append-only já imposta por permissão na 0006). Itens de **produto** cobertos em
 v1: RLS+FORCE, trilha append-only, envelope de ator, kill-switch auditado,
-motivo obrigatório, ledger sem conteúdo pessoal, cifra de sensíveis. Itens
-**contratados** pendentes de superfície: export auditado (D36), verificação de
-integridade (D35), invariante de tools do agente (D31 — etapa 5). Execução/trilha
-de agente (D27/D30) **fechada na etapa 4** (engine emite `CreateJob(agent)`, pin
-operacional `0008`, trilha `agent:*` granular com ator, ciclo e2e verde).
+motivo obrigatório, ledger sem conteúdo pessoal, cifra de sensíveis. **Fechados na
+AG-2.3:** export auditado (D36) e verificação de integridade (D35) — `/v1/audit/export`
++ `/v1/audit/verify`, ator normalizado das duas trilhas, recibo com `assurance`
+declarado, papel `auditor` de separação de deveres. Invariante de tools do agente
+(D31) fechada na etapa 5. Execução/trilha de agente (D27/D30) **fechada na etapa 4**
+(engine emite `CreateJob(agent)`, pin operacional `0008`, trilha `agent:*` granular
+com ator, ciclo e2e verde). **Ainda contratado (não código):** negação de autorização
+como LOG estruturado (o 403 já existe e é testado; falta o evento de log).
 
 ---
 
