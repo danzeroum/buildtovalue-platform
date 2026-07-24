@@ -1,4 +1,4 @@
-import { signAccessToken } from '@platform/auth';
+import { hashPassword, signAccessToken } from '@platform/auth';
 import {
   createDb,
   createEnvKeyProvider,
@@ -32,6 +32,8 @@ describe('AG-3.2 · rotas de inteligência + kill-switch', () => {
   let adminTok: string;
   let operatorTok: string;
   let auditorTok: string;
+  let realAdminId: string;
+  let realAdminTok: string;
 
   beforeAll(async () => {
     db = await createTestDatabase('ai_routes');
@@ -42,6 +44,11 @@ describe('AG-3.2 · rotas de inteligência + kill-switch', () => {
     await withTenant(migrator, tenant, async (tx) => {
       await tx`INSERT INTO tenant_ai_config (tenant_id, provider, model, key_ref)
                VALUES (${tenant}, 'openai-compatible', 'deepseek-chat', ${KEY_REF})`;
+      // usuário REAL (G-UX-3: o banner precisa do NOME, não do id cru) — a
+      // resolução server-side (users.findById) depende de uma linha existir.
+      const [u] = await tx`INSERT INTO users (tenant_id, email, password_hash, display_name, role)
+        VALUES (${tenant}, 'ana@aico.test', ${await hashPassword('x')}, 'Ana Ruiz', 'admin') RETURNING id`;
+      realAdminId = u.id as string;
     });
     await migrator.end();
 
@@ -59,6 +66,7 @@ describe('AG-3.2 · rotas de inteligência + kill-switch', () => {
     ({ accessToken: adminTok } = await signAccessToken({ sub: 'admin', tenantId: tenant, role: 'admin' }, jwt));
     ({ accessToken: operatorTok } = await signAccessToken({ sub: 'op', tenantId: tenant, role: 'operator' }, jwt));
     ({ accessToken: auditorTok } = await signAccessToken({ sub: 'aud', tenantId: tenant, role: 'auditor' }, jwt));
+    ({ accessToken: realAdminTok } = await signAccessToken({ sub: realAdminId, tenantId: tenant, role: 'admin' }, jwt));
   }, 60_000);
 
   afterAll(async () => {
@@ -92,6 +100,9 @@ describe('AG-3.2 · rotas de inteligência + kill-switch', () => {
     expect(on.json()).toMatchObject({ state: 'paused', by: { type: 'user', id: 'admin' } });
     // o eco do POST também não devolve a razão
     expect(on.body).not.toContain('vazamento');
+    // degrade honesto: 'admin' é um sub SINTÉTICO (sem linha em `users`) — o
+    // resolvedor de nome nunca derruba a resposta, só devolve displayName null.
+    expect(on.json().by.displayName).toBeNull();
 
     // rota AMPLA (operator): vê o FATO (estado/ator/quando), NUNCA a razão
     const fato = await app.inject({ method: 'GET', url: '/v1/ai/kill-switch', headers: bearer(operatorTok) });
@@ -171,5 +182,24 @@ describe('AG-3.2 · rotas de inteligência + kill-switch', () => {
     });
     expect(bad.statusCode).toBe(422);
     expect(bad.body).not.toContain('sk-plaintext-danger'); // nem no erro a chave vaza de volta
+  });
+
+  it('G-UX-3 (banner): ator REAL resolve para o NOME de exibição (não o id cru)', async () => {
+    const on = await app.inject({
+      method: 'POST',
+      url: '/v1/ai/kill-switch',
+      headers: bearer(realAdminTok),
+      payload: { paused: true, reason: 'teste de nome de exibição' },
+    });
+    expect(on.statusCode).toBe(200);
+    expect(on.json()).toMatchObject({
+      state: 'paused',
+      by: { type: 'user', id: realAdminId, displayName: 'Ana Ruiz' },
+    });
+
+    // o FATO amplo (o que o banner consome) resolve o MESMO nome — não só o eco do POST.
+    const fato = await app.inject({ method: 'GET', url: '/v1/ai/kill-switch', headers: bearer(operatorTok) });
+    expect(fato.statusCode).toBe(200);
+    expect(fato.json().by).toMatchObject({ id: realAdminId, displayName: 'Ana Ruiz' });
   });
 });

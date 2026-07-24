@@ -7,13 +7,28 @@ body {
   background: var(--ui-surface-page);
 }
 
+/* G-UX-3 (AG-3.2 §6): o banner de kill-switch é o PRIMEIRO no DOM (antes da
+   nav — leitor de tela informa a emergência antes de tudo), mas VISUALMENTE
+   fica abaixo do header (marcação §3) — `order` desacopla leitura de layout
+   só aqui, de propósito. */
+.shell {
+  display: flex;
+  flex-direction: column;
+}
 .shell-header {
+  order: 1;
   display: flex;
   align-items: center;
   gap: var(--ui-space-calm-gutter);
   padding: var(--ui-space-calm-row) var(--ui-space-calm-gutter);
   background: var(--ui-surface-card);
   border-bottom: 1px solid var(--ui-surface-border);
+}
+.ui-killswitch-banner {
+  order: 2;
+}
+.shell-main {
+  order: 3;
 }
 
 .brand {
@@ -229,6 +244,10 @@ body {
 .link-btn { border: 0; background: none; color: var(--ui-role-info-fg); cursor: pointer; font-size: var(--ui-font-size-label); text-decoration: underline; padding: 0; }
 .link-btn.tiny { font-size: var(--ui-font-size-meta); }
 .modal-note { font-size: var(--ui-font-size-label); color: var(--ui-ink-muted); }
+/* ── AG-3.2: tela de estado (destino do clique no banner) ── */
+.ai-status-body { display: flex; flex-direction: column; gap: var(--ui-space-calm-row); }
+.ai-status-reason { color: var(--ui-ink-muted); font-style: italic; }
+.ai-status-nogo { color: var(--ui-ink-muted); }
 .def-list { display: flex; flex-direction: column; gap: 0.35rem; margin: 0.5rem 0; }
 .def-item { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; border: 1px solid var(--ui-surface-border); border-radius: 8px; padding: 0.5rem 0.7rem; background: var(--ui-surface-card); cursor: pointer; text-align: left; }
 .def-item[data-selected] { border-color: var(--ui-role-success-solid); background: var(--ui-role-success-bg); }

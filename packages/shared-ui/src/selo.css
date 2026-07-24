@@ -91,3 +91,73 @@
   background: currentColor;
   opacity: 1;
 }
+
+/* ── Banner de kill-switch (AG-3.2) — âmbar SEMPRE, nunca vermelho. Componente
+   próprio (não é ui-selo): condição do tenant inteiro, não de uma tarefa. ── */
+.ui-killswitch-banner {
+  background: var(--ui-role-warning-bg);
+  color: var(--ui-role-warning-fg);
+  border-bottom: 1px solid var(--ui-role-warning-solid);
+}
+.ui-killswitch-trigger {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  width: 100%;
+  min-height: 2.75rem; /* piso de 44px — alvo de toque, o banner INTEIRO é clicável */
+  padding: 0.5rem var(--ui-space-calm-gutter, 1.5rem);
+  border: 0;
+  background: none;
+  color: inherit;
+  font-family: var(--ui-font-sans);
+  font-size: var(--ui-font-size-label);
+  text-align: left;
+  cursor: pointer;
+}
+.ui-killswitch-trigger:hover {
+  background: rgba(0, 0, 0, 0.03);
+}
+.ui-killswitch-trigger:focus-visible {
+  outline: 2px solid var(--ui-role-warning-solid);
+  outline-offset: -2px;
+}
+.ui-killswitch-glyph {
+  font-size: 1.1em;
+  line-height: 1.5;
+  flex-shrink: 0;
+}
+.ui-killswitch-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  /* nunca truncar: o ator e a hora precisam quebrar linha, não sumir. */
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.ui-killswitch-line1 time {
+  text-decoration: underline dotted;
+  text-underline-offset: 2px;
+}
+.ui-killswitch-line2 {
+  color: var(--ui-role-warning-fg);
+  opacity: 0.85;
+}
+/* iniciais do ator "user" — papel verde (D25: read/ativo), NÃO o âmbar do
+   banner — distingue visualmente o ator dentro do aviso. */
+.ui-killswitch-initials {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.4em;
+  height: 1.4em;
+  border-radius: 50%;
+  background: var(--ui-role-success-solid);
+  color: var(--ui-surface-card);
+  font-size: 0.7em;
+  font-weight: 700;
+  line-height: 1;
+  vertical-align: middle;
+}
+.ui-killswitch-actor-glyph {
+  font-size: 0.9em;
+}

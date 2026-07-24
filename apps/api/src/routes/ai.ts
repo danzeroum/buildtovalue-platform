@@ -12,11 +12,40 @@ import type { ApiDeps, ZodApp } from '../app.js';
  * DOIS NÍVEIS: o FATO do kill-switch (quem/quando) é amplo — o banner vive na
  * Operação inteira; a RAZÃO é reservada a quem configura. A chave NUNCA sai em
  * nenhuma rota — `keyRef` é o ponteiro `secret://`, jamais o segredo (D29).
+ *
+ * G-UX-3 (marcação do banner): o `by` cru só carrega `{type,id}` — renderizar
+ * "por admin" é o mesmo defeito do rótulo cru que a marcação apontou. Resolve-se
+ * aqui o NOME DE EXIBIÇÃO (via UserRepository); `displayName: null` é o degrade
+ * honesto (ator de outro tipo, ou usuário não encontrado) — o cliente decide a
+ * voz (a marcação já cobre "nunca desconhecido": ela usa o id cru como último
+ * recurso, nunca "desconhecido").
  */
+
+type RawActor = { type: 'user' | 'system' | 'agent'; id: string } | null;
+
+async function resolveActor(by: RawActor, tenantId: string, users: ApiDeps['users']) {
+  if (!by) return null;
+  if (by.type !== 'user') return { ...by, displayName: null as string | null };
+  try {
+    const u = await users.findById(tenantId, by.id);
+    return { ...by, displayName: (u?.display_name as string | undefined) ?? null };
+  } catch {
+    // enriquecimento NUNCA pode derrubar o fato/config (ex.: id não-UUID —
+    // token de teste sintético, ou usuário removido). Degrade honesto: sem nome.
+    return { ...by, displayName: null as string | null };
+  }
+}
+
+const actorSchema = z.object({
+  type: z.enum(['user', 'system', 'agent']),
+  id: z.string(),
+  // resolvido no servidor (users.findById); null = não-usuário ou não encontrado.
+  displayName: z.string().nullable(),
+});
 
 const killSwitchStateSchema = z.object({
   state: z.enum(['active', 'paused']),
-  by: z.object({ type: z.enum(['user', 'system', 'agent']), id: z.string() }).nullable(),
+  by: actorSchema.nullable(),
   since: z.string().nullable(),
 });
 
@@ -41,7 +70,8 @@ function problem(reply: FastifyReply, status: number, type: string, title: strin
 
 /** Projeção da config para a rota. `keyRef` (ponteiro) sai; a CHAVE nunca. A
  *  RAZÃO do kill-switch (nível 2) só quando `canSeeReason` (quem tem ai:configure). */
-function projectConfig(cfg: TenantAiConfig, canSeeReason: boolean) {
+async function projectConfig(cfg: TenantAiConfig, canSeeReason: boolean, tenantId: string, users: ApiDeps['users']) {
+  const rawBy: RawActor = cfg.killSwitch && cfg.killSwitchBy ? { type: 'user', id: cfg.killSwitchBy } : null;
   return {
     provider: cfg.provider,
     model: cfg.model,
@@ -52,7 +82,7 @@ function projectConfig(cfg: TenantAiConfig, canSeeReason: boolean) {
     fxUsdBrl: cfg.fxUsdBrl,
     killSwitch: {
       state: cfg.killSwitch ? ('paused' as const) : ('active' as const),
-      by: cfg.killSwitch && cfg.killSwitchBy ? { type: 'user' as const, id: cfg.killSwitchBy } : null,
+      by: await resolveActor(rawBy, tenantId, users),
       since: cfg.killSwitch ? cfg.killSwitchAt : null,
       reason: canSeeReason && cfg.killSwitch ? cfg.killSwitchReason : null,
     },
@@ -64,6 +94,12 @@ export function registerAiRoutes(rawApp: ZodApp, deps: ApiDeps): void {
   const app = rawApp.withTypeProvider<ZodTypeProvider>();
   const runtime = deps.runtime;
   if (!runtime) return; // testes de auth puros não injetam runtime
+
+  /** FATO (nível 1) com o `by` já resolvido para nome de exibição. */
+  const factOf = async (tenantId: string) => {
+    const state = await runtime.ai.killSwitchState(tenantId);
+    return { ...state, by: await resolveActor(state.by, tenantId, deps.users) };
+  };
 
   // ── 1.1 · LER o FATO do kill-switch — Operação inteira (banner) ──────────────
   // `ai:read-state` é AMPLO. NUNCA devolve a razão (nível 2, reservada) — a função
@@ -79,7 +115,7 @@ export function registerAiRoutes(rawApp: ZodApp, deps: ApiDeps): void {
         response: { 200: killSwitchStateSchema, 403: problemSchema },
       },
     },
-    async (req) => runtime.ai.killSwitchState(req.auth!.tenantId),
+    async (req) => factOf(req.auth!.tenantId),
   );
 
   // ── 1.3 · ACIONAR / RETOMAR — admin, motivo nas DUAS direções, auditado ──────
@@ -108,7 +144,7 @@ export function registerAiRoutes(rawApp: ZodApp, deps: ApiDeps): void {
         return problem(reply, 404, PROBLEM_TYPES.notFound, 'Sem configuração de inteligência para este tenant', String(req.id));
       }
       // eco = FATO (sem a razão no corpo de volta); a razão fica p/ a rota admin.
-      return runtime.ai.killSwitchState(req.auth!.tenantId);
+      return factOf(req.auth!.tenantId);
     },
   );
 
@@ -129,7 +165,7 @@ export function registerAiRoutes(rawApp: ZodApp, deps: ApiDeps): void {
       if (!cfg) return problem(reply, 404, PROBLEM_TYPES.notFound, 'Sem configuração de inteligência para este tenant', String(req.id));
       // NÍVEL 2: a razão só é PROJETADA a quem tem `ai:configure` (admin). Auditor
       // lê a config (evidência de binding) mas a razão vem null.
-      return projectConfig(cfg, hasPermission(req.auth!.role, 'ai:configure'));
+      return projectConfig(cfg, hasPermission(req.auth!.role, 'ai:configure'), req.auth!.tenantId, deps.users);
     },
   );
 
@@ -175,7 +211,7 @@ export function registerAiRoutes(rawApp: ZodApp, deps: ApiDeps): void {
       }
       const cfg = await runtime.ai.config(req.auth!.tenantId);
       // quem chega aqui tem `ai:configure` (admin) → razão projetada.
-      return projectConfig(cfg!, true);
+      return projectConfig(cfg!, true, req.auth!.tenantId, deps.users);
     },
   );
 }

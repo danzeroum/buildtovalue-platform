@@ -52,6 +52,15 @@
   Leva PRÓPRIA, fora da fase de superfícies. **[ABERTO — GATILHO: revisão de 60 dias
   (2026-09-22) OU o Console adotar RSC/server actions OU advisory novo em react-router]**.
   Detalhe: `docs/security/audit-exceptions.md`.
+- **§2.22 — `brace-expansion` (GHSA-mh99-v99m-4gvg), sem fix possível do nosso lado.**
+  Advisory novo no CI da PR #57 (AG-3.2 UI). Sem patch nas linhas antigas (`1.x`/`2.x`,
+  usadas por `minimatch` transitivo em `eslint`/`@vitest/coverage-v8`) — o fix só chegou a
+  partir de `~3.0.2`/`5.0.2`. **Override forçado testado e revertido**: quebra em runtime
+  (`brace_expansion_1.default is not a function` — API incompatível entre majors da mesma
+  linha de versão). Fix real depende de upstream (`eslint`/`@vitest/coverage-v8`
+  atualizarem sua dependência de `minimatch`). **[ABERTO — GATILHO: revisão de 60 dias
+  (2026-09-22) OU nova major de `eslint`/`@vitest/coverage-v8` OU advisory novo]**.
+  Detalhe: `docs/security/audit-exceptions.md`.
 
 ## §3 · Infra & ambiente (Gate de Piloto)
 
