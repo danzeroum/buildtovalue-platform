@@ -197,6 +197,12 @@ export {
 } from './agent/tenantAiConfig.js';
 export { fixtureAiProvider, type AiProvider, type AiCompletion } from './agent/aiProvider.js';
 export {
+  createLocalSecretResolver,
+  secretEnvName,
+  type SecretResolver,
+  type SecretBackend,
+} from './agent/secretResolver.js';
+export {
   resumeAgentJobs,
   resumeAgentJobsTx,
   type PauseKind,

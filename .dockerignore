@@ -1,0 +1,15 @@
+# Contexto de build enxuto (as imagens são multi-stage; o builder faz o install).
+node_modules
+**/node_modules
+**/dist
+**/.turbo
+**/coverage
+apps/e2e/test-results
+apps/e2e/playwright-report
+apps/console/dist
+.git
+.github
+.env
+.env.*
+!.env.example
+*.log

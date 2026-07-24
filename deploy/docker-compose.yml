@@ -1,0 +1,143 @@
+# Ambiente de TESTE/DEMO do BuildToValue numa VPS compartilhada, com Postgres
+# DEDICADO. NÃO é o ambiente de piloto (ver deploy-vps.md §"o que NÃO satisfaz").
+#
+# Invariantes (não mudam): migração one-shot com o PAPEL DE MIGRAÇÃO antes da
+# api subir (service_completed_successfully); api e worker conectam com app_api
+# (sem BYPASSRLS); Postgres SEM portas publicadas; api só em 127.0.0.1.
+#
+# Nada de nginx aqui: a VPS já tem o `global-ingress-gateway` em 80/443. Ver
+# deploy/ingress-example.conf + as duas formas de plugar em deploy-vps.md.
+name: buildtovalue
+
+services:
+  # Postgres DEDICADO. SEM ports publicadas (regra dura: nada de banco em
+  # 0.0.0.0). Volume nomeado. Enxuto — começa apertado (ajuste sob carga).
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: app_migrator # dono do banco = papel de migração
+      POSTGRES_PASSWORD: ${MIGRATOR_PASSWORD:?defina no .env}
+      POSTGRES_DB: buildtovalue
+    command:
+      - postgres
+      - -c
+      - shared_buffers=128MB
+      - -c
+      - max_connections=30
+      - -c
+      - work_mem=4MB
+    volumes:
+      - btv_pgdata:/var/lib/postgresql/data
+    networks: [btv_internal]
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U app_migrator -d buildtovalue']
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    deploy:
+      resources:
+        limits:
+          memory: 384m
+          cpus: '0.5'
+    logging:
+      driver: json-file
+      options: { max-size: '10m', max-file: '3' }
+    restart: unless-stopped
+
+  # Migração ONE-SHOT com o PAPEL DE MIGRAÇÃO. A api/worker só sobem depois
+  # (service_completed_successfully). Forward-only.
+  migrate:
+    build: { context: .., dockerfile: deploy/Dockerfile.migrate }
+    environment:
+      DATABASE_MIGRATION_URL: postgres://app_migrator:${MIGRATOR_PASSWORD:?}@postgres:5432/buildtovalue
+    depends_on:
+      postgres: { condition: service_healthy }
+    networks: [btv_internal]
+    restart: 'no'
+    logging:
+      driver: json-file
+      options: { max-size: '10m', max-file: '3' }
+
+  api:
+    build: { context: .., dockerfile: deploy/Dockerfile.api }
+    environment:
+      NODE_ENV: production
+      NODE_OPTIONS: --max-old-space-size=192
+      API_HOST: 0.0.0.0 # dentro do container; o mapeamento abaixo prende no host
+      API_PORT: '3000'
+      # app_api (sem BYPASSRLS) — é o que garante o isolamento por tenant.
+      DATABASE_URL: postgres://app_api:app_api_dev@postgres:5432/buildtovalue
+      JWT_SECRET: ${JWT_SECRET:?defina no .env (>=32)}
+      FIELD_KEY_SECRET: ${FIELD_KEY_SECRET:?defina no .env (>=16)}
+      RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-120}
+    ports:
+      # SÓ localhost — o ingress da VPS faz o proxy. Porta do host configurável.
+      - '127.0.0.1:${API_HOST_PORT:-3000}:3000'
+    depends_on:
+      postgres: { condition: service_healthy }
+      migrate: { condition: service_completed_successfully }
+    networks: [btv_internal]
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+          cpus: '0.5'
+    logging:
+      driver: json-file
+      options: { max-size: '10m', max-file: '3' }
+    restart: unless-stopped
+
+  # Worker: SEM porta publicada, conexão DIRETA ao Postgres (LISTEN/NOTIFY não
+  # funciona atrás de pooler em transaction mode). /metrics fica interno.
+  worker:
+    build: { context: .., dockerfile: deploy/Dockerfile.worker }
+    environment:
+      NODE_ENV: production
+      NODE_OPTIONS: --max-old-space-size=192
+      DATABASE_URL: postgres://app_api:app_api_dev@postgres:5432/buildtovalue
+      WORKER_API_BASE: http://api:3000
+      JWT_SECRET: ${JWT_SECRET:?}
+      FIELD_KEY_SECRET: ${FIELD_KEY_SECRET:?}
+      # §A: resolvedor de secret:// (env|file). O AIProvider real resolve o
+      # ponteiro do tenant_ai_config no runtime — a chave NUNCA fica no banco.
+      SECRET_BACKEND: ${SECRET_BACKEND:-env}
+      SECRET_DIR: ${SECRET_DIR:-/run/secrets/btv}
+    depends_on:
+      postgres: { condition: service_healthy }
+      migrate: { condition: service_completed_successfully }
+    networks: [btv_internal]
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+          cpus: '0.5'
+    logging:
+      driver: json-file
+      options: { max-size: '10m', max-file: '3' }
+    restart: unless-stopped
+
+  # Seed do DEMO — ONE-OFF, só sob demanda (`--profile seed`). Reusa o STAGE
+  # builder da api (tem tsx + o script), então não polui as imagens de runtime.
+  #   docker compose --profile seed run --rm seed
+  seed:
+    profiles: ['seed']
+    build: { context: .., dockerfile: deploy/Dockerfile.api, target: builder }
+    working_dir: /repo
+    command: ['pnpm', '--filter', '@platform/api', 'run', 'seed:demo']
+    environment:
+      DATABASE_URL: postgres://app_api:app_api_dev@postgres:5432/buildtovalue
+      DATABASE_MIGRATION_URL: postgres://app_migrator:${MIGRATOR_PASSWORD:?}@postgres:5432/buildtovalue
+    depends_on:
+      postgres: { condition: service_healthy }
+      migrate: { condition: service_completed_successfully }
+    networks: [btv_internal]
+    restart: 'no'
+
+volumes:
+  btv_pgdata:
+
+networks:
+  # Rede INTERNA — Postgres e worker nunca expostos. Para plugar no ingress por
+  # rede compartilhada, ver deploy-vps.md (adicionar a api a uma rede externa).
+  btv_internal:
+    driver: bridge
