@@ -169,6 +169,26 @@ como LOG estruturado (o 403 já existe e é testado; falta o evento de log).
   sem executar). **Correção real:** identidade de token fresca por iteração,
   determinística sob replay — lote de lib da **AG-3** (§2.16 de `pendencias.md`).
 
+- **D38 — provider REAL é peça do host; o `agentflow` não executa (AG-2.5).** O
+  `agentflow` ship NÃO tem execução real: `AgentRunner.run?` é **opcional e ABSENTE**
+  por construção (cerca §0 — sem rede/SDK/credencial); `simulate` é replay de
+  fixtures que nunca monta prompt nem chama provider. Logo o **`realWalker`** vive no
+  host: resolve **um nó `llm` por vez na ordem de visita** (chama o provider real,
+  re-simula com a saída real → a decisão a jusante roteia sobre dados reais). Nunca
+  paga por um nó que uma saída real a montante rotearia para fora. **Custo honesto:**
+  usage REAL da API × `ANTHROPIC_PRICE_TABLE` **versionada** (centavos de BRL); a
+  trilha grava **qual versão** calculou; modelo ausente → **parada honesta**
+  (`price-missing`, nunca zero). **Budget** enforçado pelo custo REAL acumulado, não
+  pela projeção do `CostModel`. **Falha de provider** (erro/timeout/rate-limit) →
+  `provider-unavailable` — **âmbar, sem retry**; o operador retoma pelo resume (§5.2).
+  Ambos entram no conjunto de **paradas honestas** (não incidente vermelho).
+  **Guardas duras:** `createRealAiProvider` recusa `NODE_ENV=test`/`VITEST`/`CI` e
+  recusa chave placeholder/exemplo (inclui as fixtures do repo). **Limitação v1
+  declarada:** não há **multi-hop de prompt** (saída de um `llm` dentro do *prompt*
+  de outro) — o executor passo-a-passo com estado costurado é o motor real da **AG-4**;
+  o seam `AgentWalker` já o recebe sem tocar o `runAgentJob`. Nenhum detalhe da API
+  vaza do adaptador — trocar de provedor não toca o walker.
+
 ---
 
 ## Coexistências transitórias sob gate (rastreabilidade)
