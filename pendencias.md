@@ -479,6 +479,29 @@ Duas ações registradas:
 Documentado como **D37** no dossiê (`docs/compliance/dossie.md`, "Limitações declaradas") e no
 runbook da demo (`docs/runbooks/demo.md`) — o cliente não pode descobrir o limite ao vivo.
 
+## 2.18 AUDITORIA DE EVIDÊNCIA (AG-2.2) — itens rebaixados de ✅ para aberto
+
+A auditoria do relatório de fase (`docs/reports/ag2-2.md` §4) cruzou cada critério de aceite
+desde a F1 com o artefato de máquina que o prova. O dossiê estava majoritariamente honesto
+(cada ✅ cita teste real), mas três padrões viraram **item aberto** — sem retrabalho de trilha,
+só honestidade:
+
+1. **[UX] estados vazio/erro/carregando** — o gate "obrigatórios" (CLAUDE.md) é parcial: o leg
+   **CARREGANDO não tem teste** em lugar nenhum; **vazio/erro** só em `operate.test.tsx` +
+   `tasks.test.tsx` (não em forms/studio). Ação antes da AG-3 (que multiplica telas): asserção
+   de loading/`aria-busy` + vazio/erro em forms/studio.
+2. **[LGPD] leak-fail de LOG** — o dossiê §05 marcava "teste a criar"; **não existe**.
+   `agent-trail-leak.test.ts` cobre a TRILHA do agente, não o redaction de log estruturado.
+   A fase-2.md §6 super-afirmou. Ação: criar o teste de leak-fail de log OU manter o item.
+3. **[a11y] telas anteriores à AG-2.2** — "axe serious=0" foi afirmado sem máquina de navegador
+   e **era falso** (ink-subtle 2,7:1). Corrigido + coberto pelo harness (#39). Fechado; aqui só
+   para registro do padrão a não repetir.
+
+Verificados-uma-vez-sem-gate (categoria (b), não bloqueiam, mas não são ✅ de máquina):
+restore do banco (manual, `database.md`), p95 do advance (bench reproduzível, não CI-gated),
+e2e de navegador do fluxo-alvo (fora do CI — cobertura e2e em CI = testes de contrato). O
+**wire-up de um job de CI de navegador** (target-flow + axe) fecharia (b)→(a) para a UI.
+
 ## 3. Registro de fluxo (sem ação sua)
 
 - **~~Follow-up bpmn~~ RESOLVIDO (PR bpmn#169, mergeada 22/07):**
