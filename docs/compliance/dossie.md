@@ -83,7 +83,7 @@ Migrações de referência: `packages/db/migrations/0001…0006`.
 |---|---|---|---|---|
 | Bindings `tenant_id` + `user_id` (D34) | envelope de ator `actor{type,id,requestId}` (`0006` `tenant_audit_events`) | `tests/tenant-audit.test.ts` — envelope consultável por coluna | AI Act 12 · rastreável | ✅ v1 |
 | Negação de autorização auditada (D34) | `requirePermission` (403) | — (log estruturado + métrica: refino em etapa posterior) | AI Act 12 · segurança | 🔶 contratado |
-| Redaction leak-fail de LOG (build falha se sensível em log) | — | **NÃO EXISTE** (item aberto — auditoria AG-2.2): `agent-trail-leak.test.ts` cobre a TRILHA do agente, não o redaction de log estruturado. A fase-2.md §6 super-afirmou; criar o teste OU manter como item | AI Act 12 · LGPD | 🔶 item aberto |
+| Redaction leak-fail de LOG (teste falha se sensível em log) | `observability/redaction.ts` (REDACT_PATHS + rede `email`/`to`); `apps/api/tests/log-leak.e2e.test.ts` | LEAK-FAIL por TODOS os caminhos (**api · dispatcher · worker/handlers**): dados sensíveis por fluxos REAIS, falha se aparecerem em claro; controle positivo prova a redaction ativa. **Achou e corrigiu um leak real**: `send-email` logava o destinatário (PII) em claro → agora loga `hasRecipient` | AI Act 12 · LGPD | ✅ v1 |
 
 ---
 

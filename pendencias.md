@@ -490,9 +490,11 @@ só honestidade:
    **CARREGANDO não tem teste** em lugar nenhum; **vazio/erro** só em `operate.test.tsx` +
    `tasks.test.tsx` (não em forms/studio). Ação antes da AG-3 (que multiplica telas): asserção
    de loading/`aria-busy` + vazio/erro em forms/studio.
-2. **[LGPD] leak-fail de LOG** — o dossiê §05 marcava "teste a criar"; **não existe**.
-   `agent-trail-leak.test.ts` cobre a TRILHA do agente, não o redaction de log estruturado.
-   A fase-2.md §6 super-afirmou. Ação: criar o teste de leak-fail de log OU manter o item.
+2. **[LGPD] leak-fail de LOG — FECHADO (Gate 8.4).** `apps/api/tests/log-leak.e2e.test.ts`:
+   dados sensíveis por fluxos REAIS de **api · dispatcher · worker/handlers**, falha se
+   aparecerem em claro (+ controle positivo da redaction). **Achou um leak real**: o handler
+   `send-email` logava o destinatário (PII) em claro — corrigido para `hasRecipient`; rede de
+   segurança `email`/`to` em REDACT_PATHS. Dossiê §05 → ✅.
 3. **[a11y] telas anteriores à AG-2.2** — "axe serious=0" foi afirmado sem máquina de navegador
    e **era falso** (ink-subtle 2,7:1). Corrigido + coberto pelo harness (#39). Fechado; aqui só
    para registro do padrão a não repetir.
