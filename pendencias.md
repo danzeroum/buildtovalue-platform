@@ -502,6 +502,31 @@ restore do banco (manual, `database.md`), p95 do advance (bench reproduzível, n
 e2e de navegador do fluxo-alvo (fora do CI — cobertura e2e em CI = testes de contrato). O
 **wire-up de um job de CI de navegador** (target-flow + axe) fecharia (b)→(a) para a UI.
 
+## 2.19 AG-2.3 — export de auditoria + verificação de integridade (triagem A–D APROVADA)
+
+Shape aprovado em `docs/handoff/proposta-ag2-3-export.md`; triagem do dono (24/07) dobrada no
+código. Entregue: `/v1/audit/export` (normaliza as DUAS trilhas físicas num registro único) +
+`/v1/audit/verify` (recompõe o digest, `matches:false` honesto), papel `auditor`.
+
+- **[A] `actor: null` = "ato do motor, sem ator"** — evento puro do engine (sem humano/sistema/
+  agente nomeado) grava `null`; não se inventa `{system,engine}`. Documentado no contrato.
+- **[B] recibo declara o próprio nível de garantia** — `assurance: "self-recorded"` + nota. A
+  âncora v1 é auto-referência verificável (digest+intervalo); notarização externa/WAL imutável é
+  **infra do Gate de Piloto** e sobe o valor de `assurance` quando existir. Nada de reivindicar
+  "ancorado-verificável" (D30) sem runtime real.
+- **[C] recibo no corpo (JSON) / header `X-Audit-Receipt` (CSV)** — e o **evento `audit.export`
+  carrega digest + intervalo + filtros** (a trilha é auto-suficiente; o auditor é auditado).
+- **[D] papel `auditor` [GATE, migração 0015]** — só leitura de metadados + `audit:export`, ZERO
+  escrita; `audit:export` concedida a `admin` e `auditor`. Teste prova 403 em TODA rota de escrita.
+- **Decisão de implementação (honesta, reversível):** os meta-eventos `audit.export`/`audit.verify`
+  **não entram** no próprio snapshot de export — incluí-los tornaria o digest não-reproduzível (o
+  ato de exportar mudaria o resultado). Seguem gravados e consultáveis à parte. É a condição para
+  o export provar a si mesmo, não ocultação.
+
+Aceite provado: `audit-export.test.ts` (13) + `audit.e2e.test.ts` (6) + `auth.test.ts` (grants).
+**Fora de escopo v1 (nomeado):** paginação por cursor do export de intervalos grandes; ancoragem
+externa (infra do piloto); Console de Auditoria como TELA (só API na v1, já era F4/F5).
+
 ## 3. Registro de fluxo (sem ação sua)
 
 - **~~Follow-up bpmn~~ RESOLVIDO (PR bpmn#169, mergeada 22/07):**

@@ -160,6 +160,23 @@ export {
   type TenantAuditInput,
 } from './audit/tenantAudit.js';
 export {
+  exportAudit,
+  verifyAudit,
+  normalizeActor,
+  canonicalJson,
+  computeDigest,
+  recordsToCsv,
+  META_EVENT_TYPES,
+  type AuditExportRecord,
+  type AuditExportFilters,
+  type AuditExportResult,
+  type AuditReceipt,
+  type AuditVerifyResult,
+  type NormalizedActor,
+  type AuditSource,
+  type Assurance,
+} from './audit/export.js';
+export {
   getTenantAiConfig,
   upsertTenantAiConfig,
   setKillSwitch,

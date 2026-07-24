@@ -65,8 +65,16 @@ Regras de normalização:
 - **`payload` cru NÃO entra.** Se algum campo de metadado seguro for necessário além destes,
   entra por **whitelist explícita**, nunca o objeto inteiro.
 
-**Ordem total** (a triar): por `at` ascendente; empate → `source` (`instance` antes de
-`tenant`), depois `seq`/`id`. Determinística para o digest ser estável.
+**Ordem total:** por `at` ascendente; empate → `source` (`instance` antes de `tenant`),
+depois `seq`/`id`. Determinística para o digest ser estável.
+
+**Meta-eventos fora do snapshot (decisão de implementação, honesta):** os eventos da
+PRÓPRIA auditoria (`audit.export`, `audit.verify`) **não entram** no conjunto exportado.
+Motivo: o ato de exportar grava um evento; incluí-lo tornaria o digest não-reproduzível (o
+export mudaria o próprio resultado). Eles seguem gravados, imutáveis e consultáveis à parte
+— só não fazem parte do snapshot de negócio. Somado ao `to` pinado no recibo (§4), é isso que
+faz "mesma consulta → mesmo digest" ser verdade. Não é ocultação: é a condição para o export
+poder provar a si mesmo.
 
 ---
 

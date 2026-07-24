@@ -30,6 +30,7 @@ import { registerDefinitionRoutes } from './routes/definitions.js';
 import { registerRuntimeRoutes } from './routes/runtime.js';
 import { registerOperateRoutes } from './routes/operate.js';
 import { registerUserTaskRoutes } from './routes/userTasks.js';
+import { registerAuditRoutes } from './routes/audit.js';
 
 /**
  * Dependências injetadas (DIP, G-COD-1): a API depende de interfaces de
@@ -215,6 +216,7 @@ export async function buildApp(deps: ApiDeps): Promise<ZodApp> {
   registerDefinitionRoutes(app, deps);
   registerUserTaskRoutes(app, deps);
   registerOperateRoutes(app, deps);
+  registerAuditRoutes(app, deps);
 
   app.get('/v1/openapi.json', { schema: { hide: true } }, async () => app.swagger());
 

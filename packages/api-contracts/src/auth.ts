@@ -15,7 +15,7 @@ export const loginResponseSchema = z.object({
     id: z.string().uuid(),
     displayName: z.string(),
     email: z.string(),
-    role: z.enum(['admin', 'analyst', 'business', 'operator']),
+    role: z.enum(['admin', 'analyst', 'business', 'operator', 'auditor']),
   }),
 });
 export type LoginResponse = z.infer<typeof loginResponseSchema>;
@@ -30,6 +30,6 @@ export const meResponseSchema = z.object({
   tenantId: z.string().uuid(),
   displayName: z.string(),
   email: z.string(),
-  role: z.enum(['admin', 'analyst', 'business', 'operator']),
+  role: z.enum(['admin', 'analyst', 'business', 'operator', 'auditor']),
 });
 export type MeResponse = z.infer<typeof meResponseSchema>;
