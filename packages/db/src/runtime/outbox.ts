@@ -3,6 +3,7 @@ import type { Sql, TransactionSql } from '../client.js';
 import { withTenant } from '../tenancy.js';
 import { recordGateProposal } from '../agent/gate.js';
 import { buildGatePayloadTx } from '../agent/gateFio.js';
+import type { DataClassification } from './definitions.js';
 
 /**
  * Efeito serializado na outbox — a forma estrutural do catálogo do ADR-0001.
@@ -266,19 +267,22 @@ async function applyEffect(
         const proposalVar =
           typeof node.properties.proposalVar === 'string' ? node.properties.proposalVar : undefined;
         const [varRow] = proposalVar
-          ? await tx<{ value: unknown }[]>`
-              SELECT value FROM variables
+          ? await tx<{ value: unknown; classification: string }[]>`
+              SELECT value, classification FROM variables
               WHERE instance_id = ${row.instance_id} AND name = ${proposalVar}`
           : [];
         const params =
           varRow && typeof varRow.value === 'object' && varRow.value !== null
             ? (varRow.value as Record<string, unknown>)
             : {};
+        // AG-3.1: o world-delta HERDA a classificação da variável proposalVar —
+        // sensível → params mascarados por padrão no card (mesma disciplina D20).
         const wd = await buildGatePayloadTx(tx, {
           toolRef: node.properties.toolRef,
           params,
           diagram: defRow.diagram,
           gateElementId: effect.elementId!,
+          paramsClassification: varRow?.classification as DataClassification | undefined,
         });
         if (wd) payload = wd as unknown as Record<string, unknown>;
         // baseline D28: a revisão em que o gate abriu (a aprovação re-verifica).

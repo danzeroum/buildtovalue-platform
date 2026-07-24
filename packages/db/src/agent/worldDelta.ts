@@ -1,5 +1,6 @@
 import type { BpmnDiagram } from '@buildtovalue/core';
 import type { ToolAuthorization, ToolEffect } from '@buildtovalue/agentflow';
+import type { DataClassification } from '../runtime/definitions.js';
 
 /**
  * WORLD-DELTA do gate (AG-2.2 etapa 5, schema CONGELADO no P1 anotado). O payload
@@ -23,6 +24,38 @@ export interface WorldDelta {
   params: Record<string, unknown>;
   /** consequência do processo — `null` = degrade honesto (só a tool). */
   processConsequence: ProcessConsequence | null;
+  /**
+   * AG-3.1 (PII do world-delta): classificação HERDADA da variável `proposalVar`
+   * de onde os `params` vieram (a mesma disciplina de `variables`). `sensitive` →
+   * os params entram MASCARADOS no card do aprovador; revelar é ato auditado + RBAC.
+   * Ausente/`none` = params sem PII sensível, saem em claro. NUNCA se expõe params
+   * sensíveis em claro "para depois mascarar na tela" — o mascaramento é do dado.
+   */
+  paramsClassification?: DataClassification;
+}
+
+/**
+ * VISÃO do world-delta para o aprovador (AG-3.1). Se `paramsClassification` é
+ * `sensitive`, os VALORES dos params saem — só os NOMES dos campos + a contagem
+ * ficam (formato não-sensível: "N campos", nunca o conteúdo). `paramsMasked` diz
+ * à UI que há detalhe atrás da revelação auditada. As demais dimensões (tool,
+ * effect, dataScope, consequência) não são PII e seguem em claro.
+ */
+export interface WorldDeltaView {
+  delta: Omit<WorldDelta, 'params'> & { params: Record<string, unknown> };
+  paramsMasked: boolean;
+  /** nomes dos campos de params (seguros — estrutura, não conteúdo). */
+  paramsFields: string[];
+}
+
+export function maskWorldDelta(wd: WorldDelta): WorldDeltaView {
+  const fields = Object.keys(wd.params ?? {});
+  const sensitive = wd.paramsClassification === 'sensitive';
+  return {
+    delta: { ...wd, params: sensitive ? {} : wd.params },
+    paramsMasked: sensitive,
+    paramsFields: fields,
+  };
 }
 
 export interface ProcessConsequence {
@@ -99,6 +132,8 @@ export function buildWorldDelta(input: {
   evidenceRequired: string;
   params: Record<string, unknown>;
   processConsequence: ProcessConsequence | null;
+  /** classificação herdada da variável `proposalVar` (AG-3.1). */
+  paramsClassification?: DataClassification;
 }): WorldDelta {
   return {
     tool: input.toolRef,
@@ -109,5 +144,6 @@ export function buildWorldDelta(input: {
     evidenceRequired: input.evidenceRequired,
     params: input.params,
     processConsequence: input.processConsequence,
+    ...(input.paramsClassification ? { paramsClassification: input.paramsClassification } : {}),
   };
 }

@@ -43,4 +43,10 @@ export const REDACT_PATHS: string[] = [
   '*.email',
   'to',
   '*.to',
+  // AG-3.1 (world-delta do gate): os `params` propostos (destinatários, corpo)
+  // carregam PII herdada da variável proposalVar. O world-delta vive sob `payload`
+  // (já redigido), mas o REVEAL auditado devolve `{ params: {…PII…} }` fora de
+  // `payload` — esta rede garante que um log do reveal saia `[REDACTED]`.
+  'params',
+  '*.params',
 ];

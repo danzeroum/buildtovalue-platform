@@ -60,6 +60,11 @@
   background: var(--ui-role-agent-bg);
   color: var(--ui-role-agent-fg);
 }
+/* MASCARADO — papel próprio (D20), não o do gate. */
+.ui-selo[data-tone='masked'] {
+  background: var(--ui-role-masked-bg);
+  color: var(--ui-role-masked-fg);
+}
 
 /* grupo procedência: ator + evidência lado a lado. */
 .ui-selo-group {

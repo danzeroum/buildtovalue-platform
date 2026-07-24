@@ -66,10 +66,13 @@ export function ActorBadge({ actor }: { actor: Actor | null }) {
  */
 export type EvidenceState = 'auditado' | 'mascarado' | 'ancoravel';
 
+// Glyphs MONOCROMÁTICOS (correção 2 da ratificação): herdam currentColor, como os
+// de ator (●■◆▸). Nada de color-emoji (🔒/⚓ renderizavam coloridos, quebrando a paleta).
+// mascarado usa o papel PRÓPRIO `masked` (correção 1), não o `gate`.
 const EVIDENCE: Record<EvidenceState, { label: string; tone: string; glyph: string }> = {
   auditado: { label: 'auditado', tone: 'success', glyph: '✓' },
-  mascarado: { label: 'mascarado', tone: 'gate', glyph: '🔒' },
-  ancoravel: { label: 'ancorável', tone: 'info', glyph: '⚓' },
+  mascarado: { label: 'mascarado', tone: 'masked', glyph: '▦' },
+  ancoravel: { label: 'ancorável', tone: 'info', glyph: '◈' },
 };
 
 export function EvidenceSeal({ state, note }: { state: EvidenceState; note?: string }) {

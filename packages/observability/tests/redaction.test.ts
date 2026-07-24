@@ -63,6 +63,20 @@ describe('redaction do logger', () => {
     expect(output).toContain('[REDACTED]');
   });
 
+  it('LEAK-FAIL (AG-3.1): params do world-delta do gate nunca vazam valor em log', () => {
+    const { lines, stream } = capture();
+    const logger = createLogger({ service: 'api', destination: stream });
+    // o reveal auditado devolve { params: {…PII…} } fora de `payload`
+    logger.info({ params: { to: ['ana@leak.test'], corpo: 'dados-do-cliente-999' } }, 'gate-reveal');
+    // e o world-delta sob payload segue redigido por inteiro
+    logger.info({ task: { payload: { params: { corpo: 'segredo-no-payload' } } } }, 'gate-detail');
+    const output = lines.join('');
+    expect(output).not.toContain('ana@leak.test');
+    expect(output).not.toContain('dados-do-cliente-999');
+    expect(output).not.toContain('segredo-no-payload');
+    expect(output).toContain('[REDACTED]');
+  });
+
   it('mantém campos não sensíveis intactos', () => {
     const { lines, stream } = capture();
     const logger = createLogger({ service: 'api', destination: stream });
