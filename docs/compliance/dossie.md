@@ -47,10 +47,10 @@ Migrações de referência: `packages/db/migrations/0001…0006`.
 | Decisão humana no roteamento (D-decisão) | `runtime/userTasks.ts` `completeUserTask`; `registry/lint.ts` `deriveDecisionRouting` | `tests/decision.test.ts` + `decision.e2e.test.ts` — decisão **nunca ignorada em silêncio**: ausente/inesperada/valor-fora-das-opções → 422; flui p/ `variables` **e** `history_events` (`taskDecision`, autor+valor) | AI Act 14 · supervisão · 12 · registros | ✅ v1 |
 | Dead-letter re-enfileirável (D22) | `runtime/outbox.ts` (payload no incidente), `runtime/operate.ts` `retryIncident` | `tests/dead-letter.test.ts` — efeito esgotado vira incidente com payload; `/retry` re-enfileira; crash-test D11 (UNIQUE segura) | ISO · confiabilidade | ✅ v1 |
 | Fencing (effect_key / lock / claim) | outbox/jobs/user_tasks | `skeleton-crash.e2e.test.ts` — 100 instâncias, kill nas duas janelas, zero efeito duplicado; claim token rotacionado | ISO · confiabilidade | ✅ v1 |
-| Gate humano do agente (world-delta · D28) | contrato `expectedInstanceRevision` (fencing) | — | AI Act 14 · supervisão | 🔶 contratado |
+| Gate humano do agente (world-delta · D28) | `runtime/userTasks.ts` `completeUserTask` (`expectedInstanceRevision` re-verifica na aprovação); `agent/gateFio.ts` (world-delta no `user_tasks.payload` + selo do efeito) | `gate-runtime.test.ts` (D28 fresco×expirado), `gate-fio.test.ts` (payload+selo+degrade), `agent-gate-e2e.test.ts` (ponta a ponta: propõe→gate→aprova com revisão→efeito com selo→completa; + reprovar sem executar; + staleness) | AI Act 14 · supervisão | ✅ v1 |
 | Trilha de fatos do agente (D27) · evidência-verificada (D30) | `0006`/`0007`/`0008` — `history_events.agent_io` (trilha `agent:*` granular, um fato por linha + envelope de ator D33), `agentflow.FactSource` inclui `evidencia-verificada` (só do `run` real) | `agent-trail-leak` (vazamento), `agent-cycle-e2e` (ciclo completo com pin), engine `replay` + lint aceite-7 (fronteira D27 pelos dois lados) | AI Act 12 · registros/autenticidade | ✅ v1 |
 | Paradas honestas · budget (D29) | `agentRunner` — kill-switch em execução + budget → parada honesta | `agent-runner` (kill-switch passo-a-passo, unidade do budget) | AI Act 14 · limites | ✅ v1 |
-| Invariante de tools (D31) | `tenant_tools.requires_gate` · `effectRequiresGate` | — (etapa 5) | AI Act 14 · limites | 🔶 contratado |
+| Invariante de tools (D31) | `0009` `tool_definitions` (`effect`↔`authorization`); `registry/lint.ts` (`EFFECT_NEEDS_GATE`, `EXEC_LOOP_WAIT_UNSUPPORTED`); `agent/gate.ts`/`gateFio.ts`/`repropose.ts` (world-delta, selo, staleness `agentToolStale`, reproposta com cap, `agentProposalExpired`) | `tool-gate` (effect↔authz + gate reachável), `gate-tasklist` (marcador `is_gate` + fila exclui), `gate-repropose` (cap + fato + expirada persistida), `honest-stop`/`agent-resume` (parada honesta ≠ incidente + retomada), `loop-wait-lint` (laço com espera recusado — D37) | AI Act 14 · limites | ✅ v1 |
 
 ---
 
@@ -82,7 +82,7 @@ Migrações de referência: `packages/db/migrations/0001…0006`.
 |---|---|---|---|---|
 | Bindings `tenant_id` + `user_id` (D34) | envelope de ator `actor{type,id,requestId}` (`0006` `tenant_audit_events`) | `tests/tenant-audit.test.ts` — envelope consultável por coluna | AI Act 12 · rastreável | ✅ v1 |
 | Negação de autorização auditada (D34) | `requirePermission` (403) | — (log estruturado + métrica: refino em etapa posterior) | AI Act 12 · segurança | 🔶 contratado |
-| Redaction leak-fail (build falha se sensível em log) | — | teste dedicado de CI a criar | AI Act 12 · LGPD | 🔶 contratado |
+| Redaction leak-fail de LOG (build falha se sensível em log) | — | **NÃO EXISTE** (item aberto — auditoria AG-2.2): `agent-trail-leak.test.ts` cobre a TRILHA do agente, não o redaction de log estruturado. A fase-2.md §6 super-afirmou; criar o teste OU manter como item | AI Act 12 · LGPD | 🔶 item aberto |
 
 ---
 
@@ -115,6 +115,7 @@ retroativa de trilha imutável na F4.
 | Decisão com escolha exata + igualdade explícita | `routes/tasks.tsx` (radios de `decisionOptions`); OpenAPI da conclusão | `tasks.test.tsx` — escolha exata, sem texto livre | AI Act 13 · 14 | ✅ v1 |
 | Lint de rejeição explicada | `/studio` — lint D19 com issues | `studio.test.tsx`; `registry.test.ts` | AI Act 13 · 12 | ✅ v1 |
 | Revelação mascarada por padrão (D20) | `/operate` — reveal com motivo | `operate.test.tsx` — mascarado→revela com motivo auditado | AI Act 13 · LGPD | ✅ v1 |
+| Piso de acessibilidade (axe serious=0) — **NAVEGADOR** | harness `@axe-core/playwright` | `apps/e2e/tests/axe.spec.ts` — login + fluxo principal, falha em serious/critical. **Antes**: só jsdom (`vitest-axe`), que NÃO computa contraste — afirmado sem máquina de navegador até AG-2.2 (ver `ag2-2.md` §3) | AI Act 13 · legibilidade | ✅ v1 (a partir de AG-2.2) |
 | Selo de procedência (ator + estado de evidência) | `shared-ui` (retrofit) | — | AI Act 13 · legibilidade | ⬜ F4 |
 
 ---
@@ -161,5 +162,6 @@ operacional `0008`, trilha `agent:*` granular com ator, ciclo e2e verde).
 ---
 
 *Atualização deste dossiê é obrigatória a cada fechamento de fase (circuito do
-designer). Última: fechamento da AG-2.2 etapa 5 (gate de tool D31; limitação
-declarada D37 — laço com espera).*
+designer). Última: fechamento da AG-2.2 (gate de tool D31 ✅; limitação declarada
+D37 — laço com espera; a11y de navegador ✅; **auditoria de evidência** em
+`docs/reports/ag2-2.md` §4 — itens abertos rebaixados honestamente).*
