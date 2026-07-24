@@ -19,7 +19,8 @@
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "migrate": "tsx src/migrate-cli.ts",
-    "test:serial": "vitest run --config vitest.serial.config.mts"
+    "test:serial": "vitest run --config vitest.serial.config.mts",
+    "test:real": "vitest run --config vitest.real.config.mts"
   },
   "dependencies": {
     "postgres": "^3.4.7",

@@ -77,6 +77,17 @@ describe('redaction do logger', () => {
     expect(output).toContain('[REDACTED]');
   });
 
+  it('LEAK-FAIL (AG-2.5): a chave do provider (apiKey) nunca vaza em log', () => {
+    const { lines, stream } = capture();
+    const logger = createLogger({ service: 'worker', destination: stream });
+    logger.info({ apiKey: 'sk-ant-super-secreta-123' }, 'provider');
+    logger.info({ provider: { apiKey: 'sk-deepseek-secreta-999' } }, 'build');
+    const output = lines.join('');
+    expect(output).not.toContain('sk-ant-super-secreta-123');
+    expect(output).not.toContain('sk-deepseek-secreta-999');
+    expect(output).toContain('[REDACTED]');
+  });
+
   it('mantém campos não sensíveis intactos', () => {
     const { lines, stream } = capture();
     const logger = createLogger({ service: 'api', destination: stream });
