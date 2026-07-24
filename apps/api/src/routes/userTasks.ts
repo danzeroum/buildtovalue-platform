@@ -93,6 +93,9 @@ export function registerUserTaskRoutes(rawApp: ZodApp, deps: ApiDeps): void {
           status: z.enum(['open', 'completed', 'cancelled']).optional(),
           instanceId: z.string().uuid().optional(),
           filter: z.enum(['mine', 'role', 'unassigned']).optional(),
+          // D31: por padrão a Tasklist EXCLUI gates de tool (não são tarefa de
+          // negócio); o Operate passa includeGates=true para ver "aguardando gate".
+          includeGates: z.coerce.boolean().optional(),
         }),
         response: {
           200: z.object({ items: z.array(taskSummarySchema), nextCursor: z.string().nullable() }),

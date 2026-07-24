@@ -59,6 +59,8 @@ describe('tokens D25 — invariantes estruturais', () => {
       '--ui-role-warning-solid': role.warning.solid,
       '--ui-role-danger-solid': role.danger.solid,
       '--ui-role-info-solid': role.info.solid,
+      '--ui-role-gate-solid': role.gate.solid,
+      '--ui-role-agent-solid': role.agent.solid,
       '--ui-font-size-meta': fontSize.meta,
     })) {
       expect(css).toContain(`${name}: ${value}`);

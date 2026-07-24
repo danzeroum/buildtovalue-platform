@@ -38,6 +38,14 @@
   --ui-role-info-bg: #e3ecf7;
   --ui-role-info-fg: #2d4c70;
   --ui-role-info-solid: #33567e;
+  /* DECISÃO/GATE (dourado) — papel próprio (§2.12.1), divergível do warning. */
+  --ui-role-gate-bg: #f6edd4;
+  --ui-role-gate-fg: #6d5115;
+  --ui-role-gate-solid: #8a6d1e;
+  /* AGENTE (violeta) — superfície de agente/squad (§2.12.2), teste AA. */
+  --ui-role-agent-bg: #ecebf6;
+  --ui-role-agent-fg: #3c3883;
+  --ui-role-agent-solid: #5b57b8;
 
   --ui-font-size-meta: 0.6875rem; /* 11px — PISO */
   --ui-font-size-label: 0.8125rem;

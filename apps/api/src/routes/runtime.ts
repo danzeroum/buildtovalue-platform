@@ -670,7 +670,7 @@ export function registerRuntimeRoutes(rawApp: ZodApp, deps: ApiDeps): void {
         querystring: z.object({
           cursor: z.string().optional(),
           limit: z.coerce.number().int().min(1).max(100).optional(),
-          status: z.enum(['available', 'locked', 'completed', 'failed', 'cancelled']).optional(),
+          status: z.enum(['available', 'locked', 'completed', 'failed', 'cancelled', 'paused']).optional(),
           type: z.string().optional(),
           instanceId: z.string().uuid().optional(),
         }),
@@ -685,6 +685,8 @@ export function registerRuntimeRoutes(rawApp: ZodApp, deps: ApiDeps): void {
                 retriesLeft: z.number().int(),
                 error: z.string().nullable(),
                 createdAt: z.string(),
+                // §5.2: voz da parada honesta (budget/kill-switch) — null se não pausado.
+                pauseKind: z.string().nullable(),
               }),
             ),
             nextCursor: z.string().nullable(),
@@ -703,6 +705,7 @@ export function registerRuntimeRoutes(rawApp: ZodApp, deps: ApiDeps): void {
           retriesLeft: job.retries_left,
           error: job.error,
           createdAt: String(job.created_at),
+          pauseKind: job.pause_kind ?? null,
         })),
         nextCursor: page.nextCursor,
       };
