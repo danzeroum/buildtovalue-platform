@@ -57,12 +57,15 @@ describe('JobHandlerRegistry (F2.3, G-API-4)', () => {
     });
   });
 
-  it('send-email é stub que conclui e registra a intenção', async () => {
+  it('send-email é stub que conclui e registra a intenção SEM o destinatário (leak-fail 8.4)', async () => {
     const log = vi.fn();
     const registry = createHandlerRegistry({ fetchImpl: fakeFetch().impl, log });
     const run = await registry.run(job('send-email', { to: 'a@b.c' }));
     expect(run).toEqual({ ok: true, result: { emailStub: true } });
-    expect(log).toHaveBeenCalledWith('send-email (stub)', expect.objectContaining({ to: 'a@b.c' }));
+    // o destinatário é PII e NÃO vai ao log: registra só o sinal (hasRecipient).
+    expect(log).toHaveBeenCalledWith('send-email (stub)', { jobId: 'j1', hasRecipient: true });
+    const [, fields] = log.mock.calls[0];
+    expect(JSON.stringify(fields)).not.toContain('a@b.c');
   });
 
   it('webhook: assina com HMAC-SHA256 quando payload.secret existe', async () => {

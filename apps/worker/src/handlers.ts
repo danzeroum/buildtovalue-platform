@@ -99,7 +99,10 @@ export function createHandlerRegistry(deps: RegistryDeps = {}): HandlerRegistry 
   registry.register('send-email', async (job) => {
     // Stub do plano (F2.3): provedor real entra pós-piloto; o job registra
     // a intenção e conclui — o fluxo não fica preso em infraestrutura.
-    log('send-email (stub)', { jobId: job.jobId, to: job.payload.to });
+    // O destinatário é PII (Art. 5 LGPD) e NUNCA vai em claro para o log —
+    // ele vive no `payload` (redigido por inteiro). Loga só o jobId +
+    // se há destinatário (sinal de ops sem o dado). (Gate 8.4: leak-fail de log.)
+    log('send-email (stub)', { jobId: job.jobId, hasRecipient: Boolean(job.payload.to) });
     return { ok: true, result: { emailStub: true } };
   });
 

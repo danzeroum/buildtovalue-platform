@@ -35,4 +35,12 @@ export const REDACT_PATHS: string[] = [
   '*.submission',
   'result',
   '*.result',
+  // Gate 8.4 (leak-fail de log): rede de segurança para PII de contato que um
+  // call-site possa extrair do container redigido. O primário é NÃO logar PII
+  // (o handler send-email loga `hasRecipient`, não o endereço); estes caminhos
+  // garantem que, se `email`/`to` reaparecerem num log, saem `[REDACTED]`.
+  'email',
+  '*.email',
+  'to',
+  '*.to',
 ];
