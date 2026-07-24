@@ -3,6 +3,10 @@
 > BLOQUEANTE: nenhum piloto com cliente real antes de TODOS os itens
 > evidenciados. Cada linha aponta a evidência quando existir; itens sem
 > evidência ficam explícitos como PENDENTES.
+>
+> **Auditoria a/b/c dos 13 itens + necessidades de infra** (secret manager, KMS,
+> WAL imutável — o que `KeyProvider`/`AIProvider` esperam):
+> `docs/privacy/gate-piloto-auditoria.md`.
 
 | # | Critério (plano §8.4) | Evidência / Estado |
 |---|---|---|
