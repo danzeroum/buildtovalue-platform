@@ -102,6 +102,9 @@ services:
       # ponteiro do tenant_ai_config no runtime — a chave NUNCA fica no banco.
       SECRET_BACKEND: ${SECRET_BACKEND:-env}
       SECRET_DIR: ${SECRET_DIR:-/run/secrets/btv}
+      # Taxa USD→BRL (config, NÃO cotação de rede) — a tabela de preço da DeepSeek
+      # é em USD; sem taxa, um modelo USD faz parada honesta (fx-missing).
+      FX_USD_BRL: ${FX_USD_BRL:-5.40}
     depends_on:
       postgres: { condition: service_healthy }
       migrate: { condition: service_completed_successfully }

@@ -10,6 +10,7 @@ import { agentTasksOf, type BpmnDiagram } from '@buildtovalue/core';
 import type { Sql, TransactionSql } from '../client.js';
 import { withTenant } from '../tenancy.js';
 import { historySeq } from '../runtime/outbox.js';
+import { lintAgentGraphExecution } from './agentGraphLint.js';
 
 /**
  * Registry de AGENTES (AG-2.2 etapa 3 [GATE + MIGRAÇÃO]). Espelha o registry de
@@ -66,7 +67,9 @@ export async function deployAgentDefinition(
   tenantId: string,
   input: { graph: AgentWorkflow; createdBy?: string },
 ): Promise<DeployAgentOutcome> {
-  const issues = validateGraph(input.graph);
+  // GATE = validação da lib (§3) + lint de EXECUÇÃO do host (o que o runtime v1
+  // não honra, ex. cadeia llm→llm — AG-2.5). Erro de qualquer um bloqueia; nada gravado.
+  const issues = [...validateGraph(input.graph), ...lintAgentGraphExecution(input.graph)];
   const errors = issues.filter((i) => i.severity === 'error');
   if (errors.length > 0) return { ok: false, issues };
 
