@@ -135,7 +135,7 @@ describe('audit export/verify via /v1 + auditor não escreve nada (D)', () => {
     const uuid = '11111111-1111-4111-8111-111111111111'; // v4 válido (passa params.uuid)
     // Corpos VÁLIDOS de propósito: a validação de schema roda ANTES do preHandler;
     // com corpo válido, o 403 é a NEGAÇÃO DE PERMISSÃO honesta (não um 400 de forma).
-    const writes: Array<{ method: 'POST' | 'PATCH'; url: string; payload?: unknown }> = [
+    const writes: Array<{ method: 'POST' | 'PATCH'; url: string; payload?: Record<string, unknown> }> = [
       { method: 'POST', url: '/v1/instances', payload: { definitionRef: 'proc@1' } },
       { method: 'POST', url: `/v1/instances/${uuid}/cancellation`, payload: { reason: 'motivo' } },
       { method: 'POST', url: '/v1/process-definitions', payload: { name: 'p', diagram: {} } },
@@ -159,7 +159,7 @@ describe('audit export/verify via /v1 + auditor não escreve nada (D)', () => {
         method: w.method,
         url: w.url,
         headers: bearer(auditorToken),
-        ...(w.payload !== undefined ? { payload: w.payload } : {}),
+        payload: w.payload ?? {}, // corpo válido/vazio; rotas sem schema de body ignoram
       });
       expect(res.statusCode, `${w.method} ${w.url} deveria ser 403 para auditor`).toBe(403);
     }
