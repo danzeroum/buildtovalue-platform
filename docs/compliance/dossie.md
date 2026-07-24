@@ -73,7 +73,7 @@ Migrações de referência: `packages/db/migrations/0001…0006`.
 | Mecanismo | Artefato | Evidência | Controle | Status |
 |---|---|---|---|---|
 | Ledger sem conteúdo pessoal | `runtime/outbox.ts` (EmitHistory), payloads de trilha | `tests/lgpd-seam.test.ts` — **aceite nomeado** “ledger sem conteúdo pessoal”; dead-letter guarda só metadados de efeito | AI Act 12 · LGPD | ✅ v1 |
-| Ancoragem de digest das trilhas (D35) | `audit/export.ts` `anchorOf` (âncora v1 = digest+intervalo, auto-referência verificável); `tenant_audit_events.anchor_ref` | `audit-export.test.ts` (recibo carrega âncora; verify recompõe). **Assurance declarado**: `self-recorded` (notarização externa = infra do Gate de Piloto) | AI Act 12 · integridade | ✅ v1 (self-recorded) |
+| Ancoragem PERIÓDICA de digest (D35, AG-2.4) | `0016` (xid8 por linha + `audit_anchors` append-only); `audit/anchor.ts` (marca d'água por snapshot `pg_snapshot_xmin` — intervalo fechado por construção, sem serializar escritas; cadeia de âncoras; job no worker + advisory lock + métrica `anchor_lag`) | `audit-anchor.test.ts` — **adulterar 1 linha → verify aponta o intervalo** (aceite ADENDO-03 §3); boundary `xid < watermark` exclusiva; recibo do export **declara a cobertura**. **Assurance**: `self-recorded` (→ `externally-anchored` quando o WAL imutável existir) | AI Act 12 · integridade | ✅ v1 (self-recorded) |
 | Export com recibo / Evidence Bundle | — | — | AI Act 12 · rastreável | 🔶 contratado (E4) |
 
 ---

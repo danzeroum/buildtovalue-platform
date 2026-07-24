@@ -1,6 +1,8 @@
 import { createHash } from 'node:crypto';
 import type { Sql, TransactionSql } from '../client.js';
 import { withTenant } from '../tenancy.js';
+import { canonicalJson } from './canonical.js';
+import { anchorFrontier } from './anchor.js';
 import { recordTenantAuditEventTx, type AuditActor } from './tenantAudit.js';
 
 /**
@@ -61,6 +63,12 @@ export interface AuditExportFilters {
 /** Nível de garantia declarado pelo próprio recibo [B]. */
 export type Assurance = 'self-recorded';
 
+/** Cobertura de ancoragem por trilha — a fronteira que o recibo DECLARA. */
+export interface AnchorCoverage {
+  throughXid: string | null;
+  throughTime: string | null;
+}
+
 export interface AuditReceipt {
   digest: string; // sha256:<hex> sobre a sequência canônica de registros
   algorithm: 'sha256';
@@ -70,6 +78,14 @@ export interface AuditReceipt {
   /** [B] o recibo DECLARA seu próprio nível de garantia — não deixa inferir. */
   assurance: Assurance;
   assuranceNote: string;
+  /** [AG-2.4] cobertura de ancoragem: a garantia se DECLARA, não se infere. O
+   * recibo diz até onde o export está ancorado e quantas linhas ainda não estão —
+   * evita afirmar cobertura falsa (vale já com self-recorded; idem externally). */
+  coverage: {
+    perTrail: { tenant: AnchorCoverage; instance: AnchorCoverage };
+    unanchoredCount: number;
+    note: string;
+  };
   generatedAt: string;
   generatedBy: NormalizedActor;
 }
@@ -128,16 +144,12 @@ export function normalizeActor(
   return { type: a.type as NormalizedActor['type'], id: a.id, requestId: a.requestId ?? null };
 }
 
-/** Serialização canônica: chaves ordenadas, compacta, determinística. */
-export function canonicalJson(value: unknown): string {
-  if (value === null || value === undefined) return 'null';
-  if (Array.isArray(value)) return '[' + value.map(canonicalJson).join(',') + ']';
-  if (typeof value === 'object') {
-    const obj = value as Record<string, unknown>;
-    const keys = Object.keys(obj).sort();
-    return '{' + keys.map((k) => JSON.stringify(k) + ':' + canonicalJson(obj[k])).join(',') + '}';
-  }
-  return JSON.stringify(value);
+/** Serialização canônica (reexport do módulo compartilhado — sem ciclo com anchor). */
+export { canonicalJson };
+
+/** Comparação de xid8 como inteiro (64-bit) via BigInt — sem perda de precisão. */
+function xidGte(a: string, b: string): boolean {
+  return BigInt(a) >= BigInt(b);
 }
 
 /** Digest determinístico da sequência canônica de registros. */
@@ -166,6 +178,14 @@ interface OrderedRecord {
   record: AuditExportRecord;
   /** chave física estável por origem: `instance:<seq>` / `tenant:<id>`. */
   tiebreak: string;
+  /** xid8 da linha (interno — NUNCA entra no record/digest; alimenta a cobertura). */
+  xid: string;
+}
+
+/** xid por registro exportado — interno, para o recibo declarar a fronteira ancorada. */
+export interface RecordXid {
+  source: AuditSource;
+  xid: string;
 }
 
 /** Consulta AMBAS as trilhas com os filtros, normaliza, e ordena por ordem total. */
@@ -173,7 +193,7 @@ async function queryRecordsTx(
   tx: TransactionSql,
   filters: AuditExportFilters,
   effectiveTo: string,
-): Promise<AuditExportRecord[]> {
+): Promise<{ records: AuditExportRecord[]; xids: RecordXid[] }> {
   const from = filters.from ?? null;
   const source = filters.source ?? 'both';
   const ordered: OrderedRecord[] = [];
@@ -191,10 +211,11 @@ async function queryRecordsTx(
         motivo: string | null;
         anchor_ref: string | null;
         created_at: Date;
+        xid: string;
       }>
     >`
       SELECT id, actor_type, actor_id, request_id, event_type, resource_type,
-             resource_id, motivo, anchor_ref, created_at
+             resource_id, motivo, anchor_ref, created_at, xid
       FROM tenant_audit_events
       WHERE event_type <> ALL (${[...META_EVENT_TYPES]}::text[])
         ${from ? tx`AND created_at >= ${from}` : tx``}
@@ -208,6 +229,7 @@ async function queryRecordsTx(
     for (const r of rows) {
       ordered.push({
         tiebreak: `tenant:${String(r.id).padStart(20, '0')}`,
+        xid: String(r.xid),
         record: {
           source: 'tenant',
           at: r.created_at.toISOString(),
@@ -238,9 +260,10 @@ async function queryRecordsTx(
         kind: string;
         payload: { actor?: { type?: string; id?: string; requestId?: string }; motivo?: string };
         occurred_at: Date;
+        xid: string;
       }>
     >`
-      SELECT id, instance_id, seq, kind, payload, occurred_at
+      SELECT id, instance_id, seq, kind, payload, occurred_at, xid
       FROM history_events
       WHERE occurred_at <= ${effectiveTo}
         ${from ? tx`AND occurred_at >= ${from}` : tx``}
@@ -253,6 +276,7 @@ async function queryRecordsTx(
       const seqNum = Number(r.seq);
       ordered.push({
         tiebreak: `instance:${String(seqNum).padStart(20, '0')}`,
+        xid: String(r.xid),
         record: {
           source: 'instance',
           at: r.occurred_at.toISOString(),
@@ -269,7 +293,10 @@ async function queryRecordsTx(
   }
 
   ordered.sort(compareOrdered);
-  return ordered.map((o) => o.record);
+  return {
+    records: ordered.map((o) => o.record),
+    xids: ordered.map((o) => ({ source: o.record.source, xid: o.xid })),
+  };
 }
 
 /**
@@ -289,9 +316,19 @@ export async function exportAudit(
   const pinnedFilters: AuditExportFilters = { ...filters, to: effectiveTo };
 
   return withTenant(sql, tenantId, async (tx) => {
-    const records = await queryRecordsTx(tx, pinnedFilters, effectiveTo);
+    const { records, xids } = await queryRecordsTx(tx, pinnedFilters, effectiveTo);
     const digest = computeDigest(records);
     const anchorRef = anchorOf(digest, filters.from ?? null, effectiveTo);
+    // [AG-2.4] fronteira ancorada por trilha + quantas linhas do export a ultrapassam.
+    const tenantFront = await anchorFrontier(tx, 'tenant');
+    const instanceFront = await anchorFrontier(tx, 'instance');
+    const front: Record<AuditSource, AnchorCoverage> = {
+      tenant: tenantFront,
+      instance: instanceFront,
+    };
+    const unanchoredCount = xids.filter(
+      (x) => front[x.source].throughXid === null || xidGte(x.xid, front[x.source].throughXid!),
+    ).length;
     const receipt: AuditReceipt = {
       digest,
       algorithm: 'sha256',
@@ -300,6 +337,14 @@ export async function exportAudit(
       anchorRef,
       assurance: 'self-recorded',
       assuranceNote: ASSURANCE_NOTE,
+      coverage: {
+        perTrail: { tenant: tenantFront, instance: instanceFront },
+        unanchoredCount,
+        note:
+          unanchoredCount === 0
+            ? 'todas as linhas deste export estão dentro da cobertura ancorada'
+            : `${unanchoredCount} linha(s) deste export ainda NÃO ancorada(s) (além da fronteira de digest)`,
+      },
       generatedAt: now,
       generatedBy,
     };
@@ -334,7 +379,7 @@ export async function verifyAudit(
 ): Promise<AuditVerifyResult> {
   const effectiveTo = input.filters.to ?? now;
   return withTenant(sql, tenantId, async (tx) => {
-    const records = await queryRecordsTx(tx, input.filters, effectiveTo);
+    const { records } = await queryRecordsTx(tx, input.filters, effectiveTo);
     const actualDigest = computeDigest(records);
     const matches = actualDigest === input.expectedDigest;
     const anchorRef = anchorOf(actualDigest, input.filters.from ?? null, effectiveTo);

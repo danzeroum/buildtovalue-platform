@@ -67,6 +67,15 @@ export const auditReceiptSchema = z.object({
   /** [B] o recibo declara o PRÓPRIO nível de garantia. */
   assurance: z.literal('self-recorded'),
   assuranceNote: z.string(),
+  /** [AG-2.4] cobertura de ancoragem declarada (garantia se declara, não se infere). */
+  coverage: z.object({
+    perTrail: z.object({
+      tenant: z.object({ throughXid: z.string().nullable(), throughTime: z.string().nullable() }),
+      instance: z.object({ throughXid: z.string().nullable(), throughTime: z.string().nullable() }),
+    }),
+    unanchoredCount: z.number().int(),
+    note: z.string(),
+  }),
   generatedAt: z.string(),
   generatedBy: normalizedActorSchema,
 });
