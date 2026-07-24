@@ -1,7 +1,7 @@
 import postgres from 'postgres';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { withTenant } from '../src/tenancy.js';
-import { lockJobs } from '../src/runtime/jobs.js';
+import { lockJobs, pauseJob } from '../src/runtime/jobs.js';
 import {
   assertSecretRef,
   getKillSwitchState,
@@ -127,5 +127,54 @@ describe('kill-switch de agente (D29 / §5.2)', () => {
     expect((await getTenantAiConfig(api, tenant))?.fxUsdBrl).toBeNull();
     // e o upsert NÃO tocou o estado do kill-switch (configurar ≠ acionar)
     expect((await getKillSwitchState(api, tenant)).state).toBe('active');
+  });
+
+  it('AG-3.2: aciona com job agent JÁ EM EXECUÇÃO — lease cancelado no acionamento, sem esperar o worker notar entre passos', async () => {
+    const actor = { type: 'user' as const, id: 'admin', requestId: 'r4' };
+    const instanceId = await withTenant(api, tenant, async (tx) => {
+      const [inst] = await tx`
+        INSERT INTO instances (tenant_id, definition_ref, engine_version, state_schema_version, state, status)
+        VALUES (${tenant}, 'skeleton@1', 'e', 1, '{}'::jsonb, 'active') RETURNING id`;
+      await tx`INSERT INTO jobs (tenant_id, instance_id, wait_key, type)
+        VALUES (${tenant}, ${inst.id}, 'w-live', 'agent')`;
+      return inst.id as string;
+    });
+
+    // o worker PEGA o job (locked, com token) — simula execução em voo. (limit
+    // largo porque o tenant compartilhado do describe pode ter outros agent jobs
+    // remanescentes de testes anteriores; identificamos o NOSSO pelo wait_key.)
+    const lockedBatch = await lockJobs(api, tenant, 'w-live-worker', { limit: 10, types: ['agent'] });
+    const locked = lockedBatch.find((j) => j.wait_key === 'w-live')!;
+    expect(locked).toBeTruthy();
+    const staleToken = locked.lock_token!;
+
+    // ACIONA com o job AINDA locked — a fronteira do lado da ROTA (não do worker).
+    await setKillSwitch(api, tenant, true, actor, 'suspeita de vazamento no fornecedor X');
+
+    const [row] = await withTenant(
+      api, tenant,
+      (tx) => tx`SELECT status, pause_kind, lock_token, error FROM jobs WHERE id = ${locked.id}`,
+    );
+    expect(row).toMatchObject({ status: 'paused', pause_kind: 'kill-switch', lock_token: null });
+    // parada honesta, não falha: NENHUM incidente aberto para esta instância.
+    const incidents = await withTenant(api, tenant, (tx) => tx`SELECT 1 FROM incidents WHERE instance_id = ${instanceId}`);
+    expect(incidents).toHaveLength(0);
+    // a RAZÃO (nível 2, reservada ao admin) NÃO vaza para `jobs.error` — essa
+    // coluna é lida por quem tem `operate:read` (operador · auditor), superfície
+    // mais ampla que `ai:configure`. A mensagem aqui é genérica.
+    expect(row.error).not.toContain('vazamento');
+    expect(row.error).toMatch(/parada honesta/i);
+
+    // o worker, ao tentar concluir com o token AGORA INVÁLIDO, seria recusado
+    // (fencing) — mesmo comportamento tolerado hoje pelo worker (409 → log, não
+    // erro). Prova aqui na camada de dados: pauseJob com o token velho falha limpo.
+    const staleAttempt = await pauseJob(api, tenant, locked.id, staleToken, 'tentativa tardia do worker', 'kill-switch');
+    expect(staleAttempt).toMatchObject({ ok: false, reason: 'notLocked' }); // já pausado — não é erro, é no-op
+
+    // RETOMA: o job force-pausado (pause_kind='kill-switch') volta a lockar,
+    // igual a um job pausado pelo próprio worker.
+    await setKillSwitch(api, tenant, false, actor, 'ok, liberado');
+    const relockedBatch = await lockJobs(api, tenant, 'w-live-worker-2', { limit: 10, types: ['agent'] });
+    expect(relockedBatch.some((j) => j.id === locked.id)).toBe(true);
   });
 });
