@@ -21,8 +21,9 @@
 O protótipo A2 já fixa voz e tratamento. Da rota, o design depende de três coisas:
 
 1. **Estado do kill-switch legível em qualquer rota** — o banner “agentes pausados” aparece
-   em **toda a Operação**, não só em Administração. Então o estado (ativo/pausado + quem +
-   quando + motivo) precisa ser leitura barata para o shell, não só para a tela de admin.
+   em **toda a Operação**, não só em Administração. **Correção (contrato real supera o
+   rascunho — dois níveis, não um):** banner amplo = **fato** (estado · ator · hora); a
+   **razão** só na tela de admin (`ai:configure`) — nunca no banner.
 2. **Motivo obrigatório nas duas direções** — pausar **e** reativar. Sem `reason` no reativar,
    a trilha fica com metade da história.
 3. **Config: nunca devolver a chave.** A resposta traz a **referência** (`secret://…`) e um

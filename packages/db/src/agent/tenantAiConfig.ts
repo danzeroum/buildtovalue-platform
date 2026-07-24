@@ -180,6 +180,26 @@ export async function setKillSwitch(
     if (res.count === 0) {
       throw new Error('sem configuração de inteligência para este tenant');
     }
+    // AG-3.2: fecha a MESMA fronteira da AG-2.2 etapa 3, agora do LADO DA ROTA —
+    // agent jobs JÁ EM EXECUÇÃO (locked) têm o lease cancelado AQUI, sem esperar o
+    // worker notar entre passos (que pode demorar o tempo de UMA chamada de LLM em
+    // voo). Bypassa o fencing DE PROPÓSITO: é ação do operador sobre o tenant, não
+    // corrida entre workers. Se o worker, ao concluir depois, chamar /honest-stop
+    // com o token agora inválido, a rota devolve 409 e o worker já trata isso como
+    // no-op (mesmo padrão de `conclude()` no worker — log, sem erro).
+    //
+    // `jobs.error` é lido por quem tem `operate:read` (operador · auditor) — uma
+    // superfície MAIS AMPLA que o `ai:configure` que guarda a razão reservada
+    // (nível 2). Por isso a mensagem aqui é GENÉRICA — nunca o `motivo` do
+    // acionamento (o mesmo cuidado que o AgentRunner já tinha ao não vazar o
+    // motivo de negócio na mensagem do passo).
+    if (killed) {
+      await tx`
+        UPDATE jobs SET status = 'paused',
+                        error = 'kill-switch acionado — parada honesta imediata (lease cancelado no acionamento)',
+                        pause_kind = 'kill-switch', lock_token = NULL, lock_until = NULL
+        WHERE tenant_id = ${tenantId} AND type = 'agent' AND status = 'locked'`;
+    }
     await recordTenantAuditEventTx(tx, tenantId, actor, {
       eventType: 'agent.killswitch.toggled',
       resourceType: 'ai_config',
