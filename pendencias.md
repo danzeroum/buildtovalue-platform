@@ -486,10 +486,11 @@ desde a F1 com o artefato de máquina que o prova. O dossiê estava majoritariam
 (cada ✅ cita teste real), mas três padrões viraram **item aberto** — sem retrabalho de trilha,
 só honestidade:
 
-1. **[UX] estados vazio/erro/carregando** — o gate "obrigatórios" (CLAUDE.md) é parcial: o leg
-   **CARREGANDO não tem teste** em lugar nenhum; **vazio/erro** só em `operate.test.tsx` +
-   `tasks.test.tsx` (não em forms/studio). Ação antes da AG-3 (que multiplica telas): asserção
-   de loading/`aria-busy` + vazio/erro em forms/studio.
+1. **[UX] estados vazio/erro/carregando** — **CARREGANDO fechado por máquina**:
+   `apps/e2e/tests/loading.spec.ts` (job de navegador no CI) segura `/v1/instances` e prova o
+   `NonIdeal` de loading (`role=status`, `aria-busy`, "Carregando…") — o leg que não tinha teste
+   em lugar nenhum. **Ainda aberto:** asserção de **vazio/erro em forms/studio** (jsdom) — só
+   `operate.test.tsx` + `tasks.test.tsx` cobrem hoje. Ação antes da AG-3 (que multiplica telas).
 2. **[LGPD] leak-fail de LOG — FECHADO (Gate 8.4).** `apps/api/tests/log-leak.e2e.test.ts`:
    dados sensíveis por fluxos REAIS de **api · dispatcher · worker/handlers**, falha se
    aparecerem em claro (+ controle positivo da redaction). **Achou um leak real**: o handler

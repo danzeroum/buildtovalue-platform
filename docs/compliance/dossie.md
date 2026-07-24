@@ -16,6 +16,20 @@ trilhas **nunca** contêm dado pessoal (teste nomeado, §01); `evidência-verifi
 só existe a partir do runtime real (D30). Nada neste dossiê reivindica prova que
 o código não produz.
 
+**Princípio de evidência (vinculante):** *um critério sem gate de máquina é
+HIPÓTESE, não fato*. A máquina desmentiu afirmações de relatório assim que cada
+uma ganhou gate: (1) `axe serious = 0` era falso (contraste `ink-subtle` 2,7:1,
+achado pelo harness de navegador); (2) o `send-email` logava o destinatário em
+claro (achado pelo leak-fail de log); (3) o estado "carregando" nunca teve teste
+(agora coberto no job de navegador); (4) o `target-flow` (e2e do fluxo principal)
+carregava **apodrecimento acumulado** — dois botões "Fechar" no modal e a tarefa
+caindo fora da aba "Minhas" (modelo de claim D21) — que só apareceu quando o teste
+passou a **rodar de verdade** no CI. Corolário: **teste fora do CI não é teste, é
+documentação** — apodrece silenciosamente e dá falsa confiança. Regra a partir
+daqui: nenhuma linha ✅ deste dossiê se apoia em verificação-uma-vez ou "por
+construção" — ou existe um teste/benchmark **no CI** que falha quando a propriedade
+quebra, ou o status é honestamente rebaixado a item.
+
 **Legenda de status**
 - ✅ **v1** — implementado e coberto por teste nesta base.
 - 🔶 **contratado** — contrato/migração já gravados; superfície/rota fica em

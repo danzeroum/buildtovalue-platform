@@ -15,7 +15,10 @@ export default defineConfig({
   timeout: 60_000,
   expect: { timeout: 15_000 },
   fullyParallel: false,
-  retries: 0,
+  // No CI, 1 worker: o target-flow cria estado real (instância/tarefa) e o
+  // loading segura leituras — serializar evita corrida entre specs no runner.
+  workers: process.env.CI ? 1 : undefined,
+  retries: process.env.CI ? 1 : 0,
   reporter: [['list']],
   use: {
     baseURL: process.env.E2E_BASE_URL ?? 'http://localhost:5173',

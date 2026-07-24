@@ -23,9 +23,15 @@ test('fluxo-alvo: login → iniciar → assumir → concluir → Operação', as
   await dialog.getByRole('radio', { name: /Reembolso de despesas/ }).click();
   await dialog.getByRole('button', { name: 'Iniciar instância' }).click();
   await expect(dialog.getByText(/criada/)).toBeVisible();
-  await dialog.getByRole('button', { name: 'Fechar' }).click();
+  // O modal tem duas afordâncias "Fechar" (o ✕ do cabeçalho, via aria-label, e o
+  // botão neutro do rodapé). O ✕ é o alvo estável — `getByLabel` casa só o
+  // aria-label, sem ambiguidade de strict mode.
+  await dialog.getByLabel('Fechar').click();
 
-  // 3) O worker materializa a user task a partir da outbox — espere aparecer
+  // 3) O worker materializa a user task a partir da outbox — ela nasce SEM dono
+  // (modelo de claim D21), então some da aba "Minhas" (default). Vai para
+  // "Não atribuídas" para encontrá-la e assumi-la.
+  await page.getByRole('radio', { name: /Não atribuídas/ }).click();
   const taskItem = page.getByRole('button', { name: /aprovar_reembolso/ });
   await expect(taskItem).toBeVisible({ timeout: 20_000 });
   await taskItem.click();
