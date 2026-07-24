@@ -37,6 +37,9 @@ jobs:
       - run: pnpm -r run build
       - run: pnpm typecheck
       - run: pnpm test:coverage
+      # Gate do caminho REAL da ancoragem (pg_snapshot_xmin): rodado ISOLADO,
+      # depois do run principal, para o snapshot global ao cluster ser determinístico.
+      - run: pnpm --filter @platform/db run test:serial
 
   # Job de NAVEGADOR (auditoria AG-2.2): "axe serious = 0", o fluxo-alvo e o
   # estado CARREGANDO passam a ter gate de máquina no CI — não mais afirmação.
