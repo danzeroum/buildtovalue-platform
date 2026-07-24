@@ -55,9 +55,9 @@ export async function listUserTasks(
     status?: string;
     instanceId?: string;
     filter?: 'mine' | 'role' | 'unassigned';
-    /** D31: por padrão a Tasklist NÃO mostra gates de tool (não são tarefa de
-     *  negócio; o modo-agente da fila é AG-3). Operate/superfície de gate passam
-     *  true para consultá-los explicitamente. */
+    /** AG-3.1: o modo-agente da fila EXISTE agora — o gate ENTRA na Tasklist por
+     *  padrão (marcado por is_gate; o tratamento distinto é da UI). Antes (etapa 5)
+     *  ficava fora "até a AG-3". `includeGates:false` volta à visão só-negócio. */
     includeGates?: boolean;
   } = {},
 ): Promise<{ items: UserTaskListItem[]; nextCursor: string | null }> {
@@ -78,9 +78,9 @@ export async function listUserTasks(
       FROM user_tasks
       WHERE (${options.status ?? null}::text IS NULL OR status = ${options.status ?? null})
         AND (${options.instanceId ?? null}::uuid IS NULL OR instance_id = ${options.instanceId ?? null})
-        -- D31: gate de tool NÃO é tarefa comum — some da Tasklist de negócio por
-        -- padrão (o modo-agente da fila é AG-3). includeGates=true traz de volta.
-        AND (${options.includeGates ?? false} = true OR is_gate = false)
+        -- AG-3.1: o gate ENTRA na Tasklist por padrão (marcado is_gate); só sai
+        -- quando o cliente pede a visão só-negócio (includeGates=false).
+        AND (${options.includeGates ?? true} = true OR is_gate = false)
         AND (${options.filter === 'mine'} = false OR assignee = ${viewer.sub})
         AND (${options.filter === 'unassigned'} = false OR assignee IS NULL)
         AND (${options.filter === 'role'} = false OR ${viewer.role} = ANY(candidate_roles))

@@ -93,8 +93,8 @@ export function registerUserTaskRoutes(rawApp: ZodApp, deps: ApiDeps): void {
           status: z.enum(['open', 'completed', 'cancelled']).optional(),
           instanceId: z.string().uuid().optional(),
           filter: z.enum(['mine', 'role', 'unassigned']).optional(),
-          // D31: por padrão a Tasklist EXCLUI gates de tool (não são tarefa de
-          // negócio); o Operate passa includeGates=true para ver "aguardando gate".
+          // AG-3.1: a Tasklist INCLUI gates por padrão (marcados por isGate; o
+          // tratamento distinto é da UI). includeGates=false volta à visão só-negócio.
           includeGates: z.coerce.boolean().optional(),
         }),
         response: {
