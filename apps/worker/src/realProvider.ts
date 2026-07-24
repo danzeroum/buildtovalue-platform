@@ -71,12 +71,15 @@ export async function buildRealWalker(sql: Sql, tenantId: string, env: RealProvi
   try {
     const resolver = createLocalSecretResolver({ backend: 'file', baseDir: env.dir });
     const apiKey = await resolver.resolve(cfg.keyRef); // fail-closed: perm frouxa/ausente lança
+    // AG-3.2: o câmbio vem da CONFIG POR TENANT quando presente; o env (`FX_USD_BRL`)
+    // vira piso/fallback. A taxa é usada no cálculo e vai gravada no custo (imutável, D30).
+    const fxRates: FxRates | undefined = cfg.fxUsdBrl != null ? { USD: cfg.fxUsdBrl } : env.fxRates;
     const provider = createOpenAiCompatProvider({
       apiKey,
       baseUrl: cfg.baseUrl,
       model: cfg.model,
       priceTable: DEEPSEEK_PRICE_TABLE,
-      fxRates: env.fxRates,
+      fxRates,
     });
     return createRealWalker({ provider, resolvePrompt: ensaioPromptResolver });
   } catch (err) {
