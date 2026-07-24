@@ -132,6 +132,9 @@ export function registerUserTaskRoutes(rawApp: ZodApp, deps: ApiDeps): void {
             // valores EXATOS que roteiam (do gateway a jusante); o cliente
             // oferece escolha exata. null = texto livre (gateway não-derivável).
             decisionOptions: z.array(z.string()).nullable(),
+            // AG-3.1 (P1): a revisão que o cliente vê — a aprovação a reenvia
+            // como expectedInstanceRevision (D28: proposta expira se a inst. avançou).
+            instanceRevision: z.number().int().nonnegative(),
           }),
           403: problemSchema,
           404: problemSchema,
@@ -162,6 +165,7 @@ export function registerUserTaskRoutes(rawApp: ZodApp, deps: ApiDeps): void {
           paramsFields: view.paramsFields,
           decisionVar: task.decision_var,
           decisionOptions: task.decision_options,
+          instanceRevision: task.instance_revision,
         };
       }
       return {
@@ -171,6 +175,7 @@ export function registerUserTaskRoutes(rawApp: ZodApp, deps: ApiDeps): void {
         paramsFields: [],
         decisionVar: task.decision_var,
         decisionOptions: task.decision_options,
+        instanceRevision: task.instance_revision,
       };
     },
   );

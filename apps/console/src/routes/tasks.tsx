@@ -9,6 +9,7 @@ import { can } from '../capabilities.js';
 import { relativeTime, shortId } from '../format.js';
 import { useSession } from '../shell.js';
 import { Button, NonIdeal, StatusPill, Tag } from '../ui/ui.js';
+import { GateDetail, type GateTask } from './GateDetail.js';
 
 type Filter = 'mine' | 'role' | 'unassigned';
 const FILTERS: { key: Filter; label: string }[] = [
@@ -184,6 +185,18 @@ function TaskDetailPane({ taskId, onChanged }: { taskId: string; onChanged: () =
     );
 
   const task = detail.value.data;
+  // AG-3.1 (P1): o gate é MODO do detalhe — world-delta + aprovar/reprovar, não
+  // formulário. O backend já entrega o payload MASCARADO + is_gate.
+  if (task.isGate) {
+    return (
+      <GateDetail
+        task={task as unknown as GateTask}
+        me={user!.id}
+        canWork={can(user!.role, 'tasks:work')}
+        onChanged={onChanged}
+      />
+    );
+  }
   return (
     <TaskForm
       task={task}

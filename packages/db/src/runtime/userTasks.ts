@@ -110,6 +110,10 @@ export interface UserTaskDetail extends UserTaskListItem {
   decision_var: string | null;
   /** etapa 6: valores EXATOS que roteiam (do gateway a jusante); null = texto livre. */
   decision_options: string[] | null;
+  /** AG-3.1 (P1): a revisão da instância que o cliente VÊ ao carregar o gate. A
+   * aprovação a reenvia como `expectedInstanceRevision` — D28 (a proposta expira
+   * se a instância avançou desde que o gate abriu). */
+  instance_revision: number;
 }
 
 export async function getUserTask(
@@ -122,7 +126,7 @@ export async function getUserTask(
     const [row] = await tx`
       SELECT ut.id, ut.instance_id, ut.element_id, ut.form_ref, ut.assignee,
              ut.candidate_roles, ut.status, ut.claimed_at, ut.created_at, ut.payload,
-             ut.is_gate, i.definition_ref
+             ut.is_gate, i.definition_ref, i.revision
       FROM user_tasks ut JOIN instances i ON i.id = ut.instance_id
       WHERE ut.id = ${taskId}`;
     if (!row) return undefined;
@@ -143,6 +147,7 @@ export async function getUserTask(
       ),
       decision_var: decision.decisionVar,
       decision_options: decision.decisionOptions,
+      instance_revision: Number(row.revision),
     };
   });
 }
