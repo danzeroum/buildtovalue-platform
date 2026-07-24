@@ -2,6 +2,8 @@ import { createServer } from 'node:http';
 import { loadConfig } from '@platform/config';
 import { signAccessToken } from '@platform/auth';
 import {
+  anchorLag,
+  anchorTrailOnce,
   buildAgentFacts,
   classificationsForRef,
   createDb,
@@ -189,14 +191,36 @@ async function conclude(
 let lastIdempotencySweep = 0;
 const IDEMPOTENCY_SWEEP_INTERVAL_MS = 10 * 60_000;
 
+// AG-2.4: ancoragem periódica de digest (D35). Espaçada (default 5min), fora do
+// caminho de escrita; single-flight por advisory lock dentro do próprio job.
+let lastAnchorSweep = 0;
+const ANCHOR_SWEEP_INTERVAL_MS = Number(process.env.WORKER_ANCHOR_INTERVAL_MS ?? 5 * 60_000);
+const ANCHOR_TRAILS = ['tenant', 'instance'] as const;
+
 async function tick(): Promise<boolean> {
   let hadWork = false;
   const sweepKeys = Date.now() - lastIdempotencySweep > IDEMPOTENCY_SWEEP_INTERVAL_MS;
   if (sweepKeys) lastIdempotencySweep = Date.now();
+  const sweepAnchors = Date.now() - lastAnchorSweep > ANCHOR_SWEEP_INTERVAL_MS;
+  if (sweepAnchors) lastAnchorSweep = Date.now();
   for (const tenantId of await tenantsWithWork()) {
     if (sweepKeys) {
       const cleaned = await sweepIdempotencyKeys(sql, tenantId);
       if (cleaned.deleted > 0) logger.info({ tenantId, ...cleaned }, 'idempotency_keys expiradas removidas');
+    }
+    if (sweepAnchors) {
+      // Ancora os intervalos fechados de cada trilha e publica o anchor-lag.
+      for (const trail of ANCHOR_TRAILS) {
+        const res = await anchorTrailOnce(sql, tenantId, trail);
+        if (res.anchorId) {
+          logger.info(
+            { tenantId, trail, anchorId: res.anchorId, rowCount: res.rowCount, toXid: res.toXid },
+            'trilha ancorada',
+          );
+        }
+        const lag = await anchorLag(sql, tenantId, trail);
+        metrics.anchorLagRows.set({ tenant: tenantId, trail }, lag.unanchoredRows);
+      }
     }
     const dispatched = await dispatchOutboxOnce(sql, tenantId, {
       onInfo: (row) => logger.debug({ effect: row.effect.type }, 'efeito informativo'),

@@ -160,6 +160,17 @@ export {
   type TenantAuditInput,
 } from './audit/tenantAudit.js';
 export {
+  anchorTrailOnce,
+  verifyAnchors,
+  anchorLag,
+  anchorFrontier,
+  type Trail,
+  type AnchorResult,
+  type AnchorMismatch,
+  type VerifyAnchorsResult,
+  type AnchorLag,
+} from './audit/anchor.js';
+export {
   exportAudit,
   verifyAudit,
   normalizeActor,

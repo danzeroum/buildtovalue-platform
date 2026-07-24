@@ -22,6 +22,7 @@ export interface RuntimeMetrics {
   effectsDispatched: Counter<'tenant'>;
   effectsDeadLettered: Counter<'tenant'>;
   timersFired: Counter<'tenant'>;
+  anchorLagRows: Gauge<'tenant' | 'trail'>;
 }
 
 export function createRuntimeMetrics(): RuntimeMetrics {
@@ -40,6 +41,14 @@ export function createRuntimeMetrics(): RuntimeMetrics {
     effectsDispatched: counter('runtime_effects_dispatched_total', 'Efeitos aplicados pelo dispatcher'),
     effectsDeadLettered: counter('runtime_effects_dead_lettered_total', 'Efeitos em dead-letter'),
     timersFired: counter('runtime_timers_fired_total', 'Timers disparados'),
+    // AG-2.4: backlog de ancoragem (linhas commitadas ainda não ancoradas). Job
+    // parado → este número cresce sem teto = afirmação de ancoragem apodrecendo.
+    anchorLagRows: new Gauge({
+      name: 'runtime_anchor_lag_rows',
+      help: 'Linhas de trilha ainda nao ancoradas (por tenant/trilha)',
+      labelNames: ['tenant', 'trail'] as const,
+      registers: [registry],
+    }),
   };
 }
 
