@@ -209,6 +209,16 @@ export function GateDetail({
             {task.paramsMasked && (
               <span className="gate-masked">
                 {' '}· <EvidenceSeal state="mascarado" /> {task.paramsFields.length} campo(s) sensível(is)
+                {/* mascarar NÃO cega: a ESTRUTURA (nomes dos campos) fica sempre
+                    visível — é seguro (não é conteúdo); os VALORES ficam atrás da
+                    revelação auditada. */}
+                {task.paramsFields.length > 0 && (
+                  <>
+                    {' — '}
+                    <span className="gate-masked-fields">{task.paramsFields.join(', ')}</span>
+                    {' '}(valores atrás da revelação)
+                  </>
+                )}
               </span>
             )}
           </li>

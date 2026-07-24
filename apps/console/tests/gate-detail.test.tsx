@@ -188,12 +188,16 @@ describe('GateDetail — P1 (AG-3.1)', () => {
     expect(call?.[1]?.body?.reason).toBe('conferência de teto');
   });
 
-  it('mascarado: mostra a CONTAGEM de campos sensíveis sem os valores', () => {
+  it('mascarar NÃO cega: contagem + NOMES dos campos visíveis; VALORES só atrás do reveal', () => {
     seed();
-    renderGate(makeTask());
+    renderGate(makeTask()); // paramsFields: ['valor', 'conta']
+    // formato não-sensível SEMPRE visível: contagem + estrutura (nomes dos campos)
     expect(screen.getByText(/2 campo\(s\) sensível\(is\)/)).toBeInTheDocument();
-    // nenhum valor sensível vaza antes de revelar
+    expect(screen.getByText('valor, conta')).toBeInTheDocument();
+    expect(screen.getByText(/valores atrás da revelação/)).toBeInTheDocument();
+    // mas NENHUM valor sensível vaza antes de revelar
     expect(screen.queryByText(/BR-9/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/1200/)).not.toBeInTheDocument();
   });
 
   it('sem tasks:work: «Assumir» desabilitado (somente leitura)', () => {

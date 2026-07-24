@@ -293,7 +293,9 @@ body {
 .gate-effect[data-heavy] { color: var(--ui-role-danger-fg); font-weight: 600; }
 .gate-only-tool { color: var(--ui-ink-muted); font-style: italic; }
 .gate-origin { color: var(--ui-ink-muted); font-size: var(--ui-font-size-meta); }
-.gate-masked { color: var(--ui-ink-muted); }
+/* chip de PII: carrega o papel MASKED (classificação D20), NÃO o do gate/ink. */
+.gate-masked { color: var(--ui-role-masked-fg); }
+.gate-masked-fields { font-weight: 600; }
 /* contrato: secundário, mono, discreto — não compete com a consequência */
 .gate-contract { color: var(--ui-ink-muted); font-size: var(--ui-font-size-meta);
   border-top: 1px solid var(--ui-surface-border); padding-top: 0.5rem; }
