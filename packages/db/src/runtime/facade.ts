@@ -1,6 +1,7 @@
 import type { Sql } from '../client.js';
 import { createFieldCipher, type KeyProvider } from '../crypto/fieldCipher.js';
 import { resumeAgentJobs as resumeAgentJobsRow, type PauseKind, type ResumeResult } from '../agent/resume.js';
+import { reproposeGate as reproposeGateRow, type ReproposeResult } from '../agent/repropose.js';
 import type { AuditActor } from '../audit/tenantAudit.js';
 import {
   getIdempotentResponse,
@@ -196,6 +197,14 @@ export interface PlatformRuntime {
     actor: AuditActor,
     motivo: string,
   ): Promise<ResumeResult>;
+  /** Reproposta de gate (Q4) — ação explícita do operador, cap duro, fato na trilha. */
+  reproposeGate(
+    tenantId: string,
+    instanceId: string,
+    elementId: string,
+    actor: AuditActor,
+    motivo: string,
+  ): Promise<ReproposeResult>;
 }
 
 export type PauseOutcome =
@@ -339,6 +348,9 @@ export function createRuntime(
     },
     async resumeAgentJobs(tenantId, pauseKind, actor, motivo) {
       return resumeAgentJobsRow(sql, tenantId, pauseKind, actor, motivo);
+    },
+    async reproposeGate(tenantId, instanceId, elementId, actor, motivo) {
+      return reproposeGateRow(sql, tenantId, instanceId, elementId, actor, motivo);
     },
   };
 }

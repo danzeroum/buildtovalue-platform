@@ -6,7 +6,7 @@ import { withTenant } from '../tenancy.js';
 import { getDefinitionDecisionInfo, getFormDefinitionByRef } from '../registry/store.js';
 import { advanceInstance } from './advance.js';
 import { insertAuditEvent } from './audit.js';
-import { recordGateApprovalTx } from '../agent/gate.js';
+import { getGateState, recordGateApprovalTx, REPROPOSAL_CAP } from '../agent/gate.js';
 
 /**
  * User tasks pelo CONTRATO público (shape §6): claim PERSISTENTE (D21 —
@@ -272,6 +272,17 @@ export async function completeUserTask(
     // avançou desde que o gate abriu (a revisão que o cliente viu não é mais a
     // atual), a proposta EXPIROU — reavaliar, não executar sob world-delta velho.
     if (isGate && input.expectedInstanceRevision !== undefined && input.expectedInstanceRevision !== Number(task.revision)) {
+      // PERSISTE o estado (marcação §6): âmbar consultável no Operate, não só o
+      // 409 do ato de aprovar — a UI pinta a nota "reavaliar" + a ação de reproposta.
+      // effect_key por revisão: re-tentar aprovar no mesmo ponto NÃO duplica; uma
+      // reproposta que reabre e expira de novo (nova revisão) gera outro incidente.
+      const state = await getGateState(tx, String(task.instance_id), String(task.element_id));
+      await tx`INSERT INTO incidents (tenant_id, instance_id, kind, message, effect_key, payload)
+        VALUES (${tenantId}, ${task.instance_id}, 'agentProposalExpired',
+                ${`proposta expirada em '${String(task.element_id)}' — a instância avançou desde a proposta; reavaliar`},
+                ${`host:proposal-expired:${String(task.instance_id)}:${String(task.element_id)}:${String(task.revision)}`},
+                ${tx.json({ gateId: String(task.element_id), expectedRevision: input.expectedInstanceRevision, currentRevision: Number(task.revision), reproposalCount: state?.reproposalCount ?? 0, cap: REPROPOSAL_CAP } as never)})
+        ON CONFLICT (effect_key) DO NOTHING`;
       return {
         ok: false as const,
         reason: 'proposalExpired' as const,

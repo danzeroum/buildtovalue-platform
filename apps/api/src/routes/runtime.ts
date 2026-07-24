@@ -557,6 +557,59 @@ export function registerRuntimeRoutes(rawApp: ZodApp, deps: ApiDeps): void {
     },
   );
 
+  // REPROPOSTA de gate (Q4): ação EXPLÍCITA do operador para reavaliar uma proposta
+  // (tipicamente expirada). Cap duro por elemento — estourou = 409 com o motivo, nunca
+  // silêncio; cada reproposta consome novo orçamento e vira fato na trilha (ator+momento).
+  app.post(
+    '/v1/agents/reproposta',
+    {
+      preHandler: [app.authenticate, app.requirePermission('operate:act')],
+      schema: {
+        tags: ['agents'],
+        summary: 'Reavalia (repropõe) um gate — ação explícita, cap duro, consumo de orçamento auditado (Q4)',
+        security: [{ bearerAuth: [] }],
+        body: z.object({
+          instanceId: z.string().uuid(),
+          elementId: z.string().min(1).max(200),
+          motivo: z.string().max(2000),
+        }),
+        response: {
+          200: z.object({ reproposta: z.number(), cap: z.number() }),
+          404: problemSchema,
+          409: problemSchema,
+        },
+      },
+    },
+    async (
+      req: { auth?: { tenantId: string; sub?: string }; body: { instanceId: string; elementId: string; motivo: string }; id: unknown },
+      reply: FastifyReply,
+    ) => {
+      const result = await runtime.reproposeGate(
+        req.auth!.tenantId,
+        req.body.instanceId,
+        req.body.elementId,
+        { type: 'user', id: req.auth!.sub ?? 'operator', requestId: String(req.id) },
+        req.body.motivo,
+      );
+      if (!result.ok) {
+        if (result.reason === 'no-gate-state') {
+          return problem(reply, 404, PROBLEM_TYPES.notFound, 'Gate sem proposta para reavaliar', String(req.id));
+        }
+        // CAP DURO atingido: 409 nomeando o motivo (nunca silêncio) — a UI desabilita
+        // o botão com este texto quando `reproposta >= cap`.
+        return problem(
+          reply,
+          409,
+          PROBLEM_TYPES.conflict,
+          'Limite de repropostas atingido',
+          String(req.id),
+          `limite de repropostas (${result.cap}) atingido — resolva manualmente ou escale`,
+        );
+      }
+      return { reproposta: result.count, cap: result.cap };
+    },
+  );
+
   app.post(
     '/v1/jobs/locks',
     {
