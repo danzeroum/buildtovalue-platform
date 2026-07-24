@@ -1,0 +1,88 @@
+/*
+ * Selo de procedência + gate/autonomia (AG-3.0). Consome APENAS tokens do
+ * shared-ui (tokens.css) — nenhum hex aqui. Sinal por cor + RÓTULO (nunca só
+ * cor); piso de 11px; id em mono. Importar junto de tokens.css no app.
+ */
+.ui-selo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+  padding: 0.1rem 0.4rem;
+  border-radius: 0.375rem;
+  font-family: var(--ui-font-sans);
+  font-size: var(--ui-font-size-meta); /* 11px — piso */
+  line-height: 1.4;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.ui-selo-glyph {
+  font-size: 0.9em;
+  line-height: 1;
+}
+
+.ui-selo-label {
+  font-weight: 500;
+}
+
+/* id do ator em mono (regra do mono, D25.2). */
+.ui-selo-id {
+  font-family: var(--ui-font-mono);
+  color: var(--ui-ink-muted);
+  font-size: 0.95em;
+}
+
+/* nota de assurance/gate — voz secundária, tinta sutil. */
+.ui-selo-note {
+  color: var(--ui-ink-muted);
+  font-style: italic;
+}
+
+/* ---- tons por papel (bg/fg pareados com contraste AA nos tokens) ---- */
+.ui-selo[data-tone='neutral'] {
+  background: var(--ui-surface-sunken);
+  color: var(--ui-ink-base);
+  border-color: var(--ui-surface-border);
+}
+.ui-selo[data-tone='success'] {
+  background: var(--ui-role-success-bg);
+  color: var(--ui-role-success-fg);
+}
+.ui-selo[data-tone='gate'] {
+  background: var(--ui-role-gate-bg);
+  color: var(--ui-role-gate-fg);
+}
+.ui-selo[data-tone='info'] {
+  background: var(--ui-role-info-bg);
+  color: var(--ui-role-info-fg);
+}
+.ui-selo[data-tone='agent'] {
+  background: var(--ui-role-agent-bg);
+  color: var(--ui-role-agent-fg);
+}
+
+/* grupo procedência: ator + evidência lado a lado. */
+.ui-selo-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  flex-wrap: wrap;
+}
+
+/* ---- dial de autonomia ---- */
+.ui-selo-pips {
+  display: inline-flex;
+  gap: 2px;
+}
+.ui-selo-pip {
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 50%;
+  /* apagado: contorno; aceso: preenchido com a cor do papel (currentColor do fg) */
+  border: 1px solid currentColor;
+  opacity: 0.4;
+}
+.ui-selo-pip[data-on] {
+  background: currentColor;
+  opacity: 1;
+}

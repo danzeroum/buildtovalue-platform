@@ -62,6 +62,9 @@ export function StudioRoute() {
 export function PublishModal({ diagram, onClose }: { diagram: BpmnDiagram; onClose: () => void }) {
   const [issues, setIssues] = useState<LintIssue[] | null>(null);
   const [linting, setLinting] = useState(true);
+  // AG-3.0: falha do lint NÃO vira "[]" (que se passaria por "0 rejeições, pode
+  // publicar" — estado desonesto). Sem o lint, não dá para afirmar o escopo v1.
+  const [lintError, setLintError] = useState<string | null>(null);
   const [result, setResult] = useState<{ kind: 'ok'; ref: string } | { kind: 'error'; message: string } | null>(null);
 
   useEffect(() => {
@@ -71,7 +74,13 @@ export function PublishModal({ diagram, onClose }: { diagram: BpmnDiagram; onClo
         body: { diagram: diagram as unknown as Record<string, never> },
       });
       if (!alive) return;
-      setIssues(error ? [] : ((data?.issues as LintIssue[]) ?? []));
+      if (error) {
+        setLintError(problemMessage(error, 'Falha ao rodar o lint D19'));
+        setIssues(null);
+      } else {
+        setLintError(null);
+        setIssues((data?.issues as LintIssue[]) ?? []);
+      }
       setLinting(false);
     })();
     return () => {
@@ -81,7 +90,8 @@ export function PublishModal({ diagram, onClose }: { diagram: BpmnDiagram; onClo
 
   const rejections = (issues ?? []).filter((i) => i.severity === 'error');
   const warnings = (issues ?? []).filter((i) => i.severity === 'warning');
-  const blocked = rejections.length > 0;
+  // sem lint confirmado (rejeição OU erro do próprio lint) a publicação fica travada.
+  const blocked = rejections.length > 0 || lintError !== null;
 
   async function publish() {
     const { data, error, response } = await api.POST('/v1/process-definitions', {
@@ -112,6 +122,13 @@ export function PublishModal({ diagram, onClose }: { diagram: BpmnDiagram; onClo
 
         {linting ? (
           <NonIdeal kind="loading" title="Rodando o lint D19…" />
+        ) : lintError ? (
+          <NonIdeal
+            kind="error"
+            title="Não foi possível rodar o lint D19"
+            detail="Sem o lint não dá para confirmar o escopo v1 — a publicação fica bloqueada até rodar de novo."
+            technical={lintError}
+          />
         ) : result?.kind === 'ok' ? (
           <p className="publish-ok" role="status" aria-live="polite">
             Publicado como <span className="mono">{result.ref}</span>. Instâncias em voo permanecem na versão anterior
@@ -164,9 +181,15 @@ export function PublishModal({ diagram, onClose }: { diagram: BpmnDiagram; onClo
               intent="primary"
               onClick={publish}
               disabled={linting || blocked}
-              title={blocked ? `${rejections.length} rejeição(ões) bloqueiam a publicação` : undefined}
+              title={
+                lintError
+                  ? 'lint indisponível — rode de novo antes de publicar'
+                  : rejections.length > 0
+                    ? `${rejections.length} rejeição(ões) bloqueiam a publicação`
+                    : undefined
+              }
             >
-              {blocked ? `Publicar (${rejections.length} rejeições)` : 'Publicar'}
+              {rejections.length > 0 ? `Publicar (${rejections.length} rejeições)` : 'Publicar'}
             </Button>
           )}
         </footer>
