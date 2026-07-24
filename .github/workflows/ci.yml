@@ -34,3 +34,73 @@ jobs:
       - run: pnpm -r run build
       - run: pnpm typecheck
       - run: pnpm test:coverage
+
+  # Job de NAVEGADOR (auditoria AG-2.2): "axe serious = 0", o fluxo-alvo e o
+  # estado CARREGANDO passam a ter gate de máquina no CI — não mais afirmação.
+  # Sobe o stack real (Postgres semeado + API + worker + console) e roda o
+  # Playwright (axe.spec + target-flow.spec + loading.spec).
+  browser:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      PGADMIN: postgres://postgres:postgres@localhost:5432/postgres
+      DATABASE_URL: postgres://app_api:app_api_dev@localhost:5432/buildtovalue
+      DATABASE_MIGRATION_URL: postgres://app_migrator:app_migrator_dev@localhost:5432/buildtovalue
+      JWT_SECRET: ci-only-jwt-secret-min-32-bytes-aaaa
+      FIELD_KEY_SECRET: ci-field-key-secret-min-16
+      API_PORT: '3000'
+      API_HOST: '127.0.0.1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm -r run build
+
+      - name: Banco do demo (papel de migração + database owner=app_migrator)
+        run: |
+          psql "$PGADMIN" -v ON_ERROR_STOP=1 -c "DO \$\$ BEGIN
+            IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname='app_migrator') THEN
+              CREATE ROLE app_migrator LOGIN PASSWORD 'app_migrator_dev' NOBYPASSRLS CREATEROLE;
+            END IF; END \$\$;"
+          psql "$PGADMIN" -v ON_ERROR_STOP=1 -c "CREATE DATABASE buildtovalue OWNER app_migrator"
+
+      - name: Migra (cria app_api + tabelas + RLS)
+        run: pnpm --filter @platform/db run migrate
+
+      - name: Semeia o demo (acme / admin@acme.test / demo1234)
+        run: pnpm --filter @platform/api run seed:demo
+
+      - name: Instala o Chromium do Playwright
+        run: pnpm --filter @platform/e2e exec playwright install --with-deps chromium
+
+      - name: Sobe API + worker (dist, lêem env do job)
+        run: |
+          nohup node apps/api/dist/server.js > /tmp/api.log 2>&1 &
+          nohup node apps/worker/dist/main.js > /tmp/worker.log 2>&1 &
+          echo "aguardando /ready da API…"
+          timeout 60 bash -c 'until curl -sf http://127.0.0.1:3000/ready >/dev/null; do sleep 1; done' \
+            || { echo "API nao ficou pronta"; cat /tmp/api.log; exit 1; }
+
+      - name: e2e de navegador (axe + fluxo-alvo + carregando)
+        run: pnpm --filter @platform/e2e run e2e
+
+      - name: Logs dos serviços (só em falha)
+        if: failure()
+        run: |
+          echo "=== API ==="; cat /tmp/api.log || true
+          echo "=== WORKER ==="; cat /tmp/worker.log || true
