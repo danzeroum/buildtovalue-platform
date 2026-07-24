@@ -65,7 +65,9 @@ export interface AgentWalkResult {
       nodeId: string;
       costCents: number;
       priceTableVersion?: string;
-      usage?: { inputTokens: number; outputTokens: number };
+      costCurrency?: string;
+      fxRate?: number;
+      usage?: { inputTokens: number; outputTokens: number; cachedInputTokens?: number };
     }>;
   };
 }

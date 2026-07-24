@@ -175,19 +175,32 @@ como LOG estruturado (o 403 já existe e é testado; falta o evento de log).
   fixtures que nunca monta prompt nem chama provider. Logo o **`realWalker`** vive no
   host: resolve **um nó `llm` por vez na ordem de visita** (chama o provider real,
   re-simula com a saída real → a decisão a jusante roteia sobre dados reais). Nunca
-  paga por um nó que uma saída real a montante rotearia para fora. **Custo honesto:**
-  usage REAL da API × `ANTHROPIC_PRICE_TABLE` **versionada** (centavos de BRL); a
-  trilha grava **qual versão** calculou; modelo ausente → **parada honesta**
-  (`price-missing`, nunca zero). **Budget** enforçado pelo custo REAL acumulado, não
-  pela projeção do `CostModel`. **Falha de provider** (erro/timeout/rate-limit) →
-  `provider-unavailable` — **âmbar, sem retry**; o operador retoma pelo resume (§5.2).
-  Ambos entram no conjunto de **paradas honestas** (não incidente vermelho).
-  **Guardas duras:** `createRealAiProvider` recusa `NODE_ENV=test`/`VITEST`/`CI` e
-  recusa chave placeholder/exemplo (inclui as fixtures do repo). **Limitação v1
-  declarada:** não há **multi-hop de prompt** (saída de um `llm` dentro do *prompt*
-  de outro) — o executor passo-a-passo com estado costurado é o motor real da **AG-4**;
-  o seam `AgentWalker` já o recebe sem tocar o `runAgentJob`. Nenhum detalhe da API
-  vaza do adaptador — trocar de provedor não toca o walker.
+  paga por um nó que uma saída real a montante rotearia para fora. **Budget** enforçado
+  pelo custo REAL acumulado, não pela projeção do `CostModel`. **Falha de provider**
+  (erro/timeout/rate-limit) → `provider-unavailable` — **âmbar, sem retry**; o operador
+  retoma pelo resume (§5.2). Modelo ausente da tabela → `price-missing`; moeda
+  estrangeira sem taxa → `fx-missing`. Todos entram nas **paradas honestas** (não
+  incidente vermelho).
+  - **Agnóstico de provedor (revisão pós-#48):** o adaptador **`openai-compatible`**
+    é a 1ª impl (DeepSeek/Groq/Together/OpenRouter/local — muda só `base_url`+`model`);
+    o **Anthropic** é a 2ª, que PROVA a abstração (API distinta atrás da mesma interface;
+    teste de paridade roda um consumidor genérico contra as duas). Nenhum detalhe da API
+    vaza do adaptador — trocar de provedor não toca o walker.
+  - **Custo honesto, moeda + câmbio (decisão (a) do dono):** usage REAL × tabela
+    **versionada**; cada modelo declara `currency` (USD/BRL); a conversão usa **taxa
+    configurável** (config, nunca cotação de rede no caminho quente). O custo gravado
+    registra **moeda + taxa + versão** — sem os três, reconciliar custo histórico é
+    impossível. **Cache de prompt** explícito: tokens de cache-hit (reportados pelo
+    provedor) cobram pela taxa de cache; provedor sem reporte → caminho normal (nunca
+    assume zero nem estima desconto).
+  - **Guardas duras:** as fábricas recusam `NODE_ENV=test`/`VITEST`/`CI`, chave
+    placeholder/exemplo (inclui as fixtures do repo) e — openai-compatible — `base_url`
+    ausente/não-https, validada **na escrita** do `tenant_ai_config` (não só no uso).
+  - **Multi-hop RECUSADO no deploy (não só documentado):** dois nós `llm` encadeados
+    completam **em silêncio** (o 2º não vê a saída do 1º). Verificado → o deploy do
+    agente recusa a cadeia `llm→llm` (`EXEC_AGENT_LLM_CHAIN_UNSUPPORTED`, erro), mesmo
+    princípio de `EXEC_LOOP_WAIT_UNSUPPORTED`. O motor passo-a-passo com estado costurado
+    é a **AG-4**; o seam `AgentWalker` já o recebe sem tocar o `runAgentJob`.
 
 ---
 

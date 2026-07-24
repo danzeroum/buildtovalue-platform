@@ -192,25 +192,40 @@ export {
   upsertTenantAiConfig,
   setKillSwitch,
   assertSecretRef,
+  normalizeProviderBaseUrl,
+  OPENAI_COMPATIBLE,
   type TenantAiConfig,
   type AiConfigInput,
 } from './agent/tenantAiConfig.js';
 export { fixtureAiProvider, type AiProvider, type AiCompletion } from './agent/aiProvider.js';
 export {
   ANTHROPIC_PRICE_TABLE,
+  DEEPSEEK_PRICE_TABLE,
   costOf,
   isPriced,
   PriceMissingError,
+  FxRateMissingError,
   type PriceTable,
   type ModelPricing,
   type Usage,
   type CostBreakdown,
+  type Currency,
+  type FxRates,
 } from './agent/priceTable.js';
 export {
-  createRealAiProvider,
   assertRealKey,
-  ProviderUnavailableError,
+  assertBaseUrl,
+  assertNotTestEnv,
+  ProviderConfigError,
   PlaceholderKeyError,
+} from './agent/providerGuards.js';
+export {
+  createOpenAiCompatProvider,
+  type OpenAiCompatProviderOptions,
+} from './agent/openaiCompatProvider.js';
+export {
+  createRealAiProvider,
+  ProviderUnavailableError,
   type RealAiProviderOptions,
 } from './agent/anthropicProvider.js';
 export {
@@ -219,6 +234,7 @@ export {
   type PromptResolver,
   type OutputParser,
 } from './agent/realWalker.js';
+export { lintAgentGraphExecution } from './registry/agentGraphLint.js';
 export {
   createLocalSecretResolver,
   secretEnvName,

@@ -11,11 +11,15 @@ export interface AiCompletion {
    * provider REAL (AG-2.5) vem do usage REAL × tabela de preço; no fixture é
    * ausente (custo zero, determinístico). */
   costCents?: number;
-  /** usage REAL da API (AG-2.5) — presente só no provider real. NUNCA estimado. */
-  usage?: { inputTokens: number; outputTokens: number };
-  /** versão da tabela de preço que calculou `costCents` (AG-2.5) — vai para a
-   * trilha (decisão (ii) do dono: o custo é auditável contra a tabela que o produziu). */
+  /** usage REAL da API (AG-2.5) — presente só no provider real. NUNCA estimado.
+   * `cachedInputTokens` = subconjunto da entrada que bateu cache (quando reportado). */
+  usage?: { inputTokens: number; outputTokens: number; cachedInputTokens?: number };
+  /** versão da tabela de preço que calculou `costCents` (AG-2.5) — vai para a trilha. */
   priceTableVersion?: string;
+  /** moeda da entrada de preço (USD/BRL) — para reconciliar custo histórico (decisão (a)). */
+  costCurrency?: string;
+  /** taxa BRL/moeda usada na conversão (1 se a entrada já é BRL). */
+  fxRate?: number;
   /** modelo que efetivamente respondeu (AG-2.5). */
   model?: string;
 }

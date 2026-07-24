@@ -1,14 +1,19 @@
 # Runbook — ensaio do agente com PROVIDER REAL (AG-2.5)
 
-O ensaio exercita, ponta a ponta, um `agentTask` executado com **chave REAL** da
-Anthropic (backend `secret://` de arquivo), medindo **custo REAL** (usage da API ×
+O ensaio exercita, ponta a ponta, um `agentTask` executado com **chave REAL** do
+provedor (backend `secret://` de arquivo), medindo **custo REAL** (usage da API ×
 tabela de preço versionada). É o ensaio que destrava o provider real **sem** cofre
 gerenciado — deixando claro que **cofre gerenciado é requisito do GATE, não do
 ensaio** (§4).
 
-> **O CI NUNCA roda isto.** O provider real recusa `NODE_ENV=test`/`VITEST`/`CI`
-> e recusa chave placeholder (`createRealAiProvider`, guardas duras). O interior
-> do `agentTask` não é reproduzível (D27) — o CI usa fixtures, custo zero.
+**Provider AGNÓSTICO.** O adaptador **`openai-compatible`** (primeiro) cobre
+DeepSeek, Groq, Together, OpenRouter e modelos locais: muda-se só `base_url` +
+`model` por tenant. O adaptador **Anthropic** existe como segunda implementação —
+prova que a abstração é abstração. Trocar de provedor NÃO toca o walker.
+
+> **O CI NUNCA roda isto.** O provider real recusa `NODE_ENV=test`/`VITEST`/`CI`,
+> recusa chave placeholder E (openai-compatible) `base_url` ausente/não-https. O
+> interior do `agentTask` não é reproduzível (D27) — o CI usa fixtures, custo zero.
 
 ---
 
@@ -17,9 +22,15 @@ ensaio** (§4).
 1. **Execução real** — um `agentTask` (grafo governado pelo registry) caminha com
    o `realWalker`: cada nó `llm` alcançado chama a Anthropic de verdade; a saída
    real roteia a decisão a jusante.
-2. **Custo real, honesto** — o custo vem do **usage real** × `ANTHROPIC_PRICE_TABLE`
-   (centavos de BRL). A trilha grava **qual versão** da tabela calculou. Modelo
-   fora da tabela → **parada honesta** (`price-missing`), nunca zero.
+2. **Custo real, honesto** — o custo vem do **usage real** × tabela de preço
+   versionada (`DEEPSEEK_PRICE_TABLE`/`ANTHROPIC_PRICE_TABLE`). Cada modelo declara
+   sua **moeda** (USD/BRL); a conversão usa uma **taxa configurável** (`FX_USD_BRL`,
+   config — nunca cotação de rede no caminho quente). O custo gravado registra
+   **moeda + taxa + versão**. Modelo fora da tabela → **parada honesta** (`price-missing`);
+   moeda estrangeira sem taxa → **parada honesta** (`fx-missing`). Nunca estima.
+   **Cache de prompt** tratado explícito: os tokens que batem cache (a DeepSeek
+   reporta `prompt_cache_hit_tokens`) são cobrados pela taxa de cache (mais barata),
+   para o budget não estourar antes da hora; provedor que não reporta → caminho normal.
 3. **Budget real** — o custo REAL acumulado (não a projeção do `CostModel`) barra
    a próxima chamada ao estourar `budget_cents/100`.
 4. **Paradas honestas** — falha/timeout/rate-limit do provider → `provider-unavailable`
@@ -43,11 +54,14 @@ Backend de **arquivo** (`SECRET_BACKEND=file`), diretório `SECRET_DIR`
 | campo | valor |
 |---|---|
 | **Caminho do arquivo** | `${SECRET_DIR}/tenants/<slug>/ai-key` — ex. `/run/secrets/btv/tenants/acme/ai-key` |
-| **Conteúdo do arquivo** | a chave REAL `sk-ant-…`, **uma linha** (o `\n` final é aparado). Nada mais no arquivo. |
+| **Conteúdo do arquivo** | a chave REAL `sk-…`, **uma linha** (o `\n` final é aparado). Nada mais no arquivo. |
 | **Permissão** | `chmod 600` (o resolvedor **recusa** permissão frouxa — fail-closed) |
 | **`tenant_ai_config.key_ref`** | `secret://tenants/<slug>/ai-key` (o mesmo caminho, com o esquema `secret://`) |
-| **`tenant_ai_config.provider`** | `anthropic` |
-| **`tenant_ai_config.model`** | um modelo **precificado**: `claude-opus-4-8`, `claude-sonnet-5` ou `claude-haiku-4-5-20251001` |
+| **`tenant_ai_config.provider`** | `openai-compatible` (DeepSeek etc.) \| `anthropic` |
+| **`tenant_ai_config.base_url`** | **obrigatória p/ `openai-compatible`** (https, validada na escrita). DeepSeek: `https://api.deepseek.com`. Ignorada p/ `anthropic`. |
+| **`tenant_ai_config.model`** | um modelo **precificado**. DeepSeek: `deepseek-chat` / `deepseek-reasoner`. Anthropic: `claude-opus-4-8` / `claude-sonnet-5` / `claude-haiku-4-5-20251001` |
+
+**Linha DeepSeek (o ensaio atual):** `provider='openai-compatible'`, `base_url='https://api.deepseek.com'`, `model='deepseek-chat'`, `key_ref='secret://tenants/<slug>/ai-key'`. O worker precisa de `FX_USD_BRL` no ambiente (taxa USD→BRL; a tabela DeepSeek é em USD).
 
 ```bash
 # na VPS, como o usuário do worker:
@@ -119,8 +133,12 @@ passa a rotear sobre dados reais).
 
 O que a v1 **não** faz: costurar a **saída de um `llm` dentro do *prompt* de outro
 `llm`** (o `resolvePrompt` monta o prompt do nó a partir do `promptRef`/Library,
-não do output corrente de nós anteriores). Para o ensaio isso basta — o grafo do
-ensaio é um `llm` alimentando uma **decisão**, não uma cadeia de `llm`s. O
-**executor passo-a-passo com estado costurado** (prompt do nó N vê a saída de N-1)
-é o motor real da **AG-4**; o seam (`AgentWalker`) já está pronto para recebê-lo
-sem tocar o `runAgentJob`.
+não do output corrente de nós anteriores). Verificado: um grafo `llm-a → llm-b`
+**completa em silêncio** — `b` roda sem ver a saída de `a`. Como isso é resultado
+silenciosamente errado, o deploy **RECUSA** a cadeia `llm→llm`
+(`EXEC_AGENT_LLM_CHAIN_UNSUPPORTED`, erro) — mesmo princípio de
+`EXEC_LOOP_WAIT_UNSUPPORTED`: recusar o que o runtime não honra, nunca deixar o
+cliente cair no beco. Grafos de um `llm` + decisão/tool (o caso do ensaio) passam.
+O **executor passo-a-passo com estado costurado** (prompt do nó N vê a saída de
+N-1) é o motor real da **AG-4**; o seam (`AgentWalker`) já o recebe sem tocar o
+`runAgentJob`.

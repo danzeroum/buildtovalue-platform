@@ -72,7 +72,9 @@ interface LlmCall {
   nodeId: string;
   costCents: number;
   priceTableVersion?: string;
-  usage?: { inputTokens: number; outputTokens: number };
+  costCurrency?: string;
+  fxRate?: number;
+  usage?: { inputTokens: number; outputTokens: number; cachedInputTokens?: number };
 }
 
 function mapComplete(state: SimulationState, calls: LlmCall[]): AgentWalkResult {
@@ -170,6 +172,8 @@ export function createRealWalker(deps: RealWalkerDeps): AgentWalker {
         nodeId: node.id,
         costCents: cents,
         priceTableVersion: completion.priceTableVersion,
+        costCurrency: completion.costCurrency,
+        fxRate: completion.fxRate,
         usage: completion.usage,
       });
 

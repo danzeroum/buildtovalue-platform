@@ -2,6 +2,10 @@ import type { Sql } from '../client.js';
 import { withTenant } from '../tenancy.js';
 import { recordTenantAuditEventTx, type AuditActor } from '../audit/tenantAudit.js';
 import { resumeAgentJobsTx } from './resume.js';
+import { assertBaseUrl } from './providerGuards.js';
+
+/** Provedores que o adaptador openai-compatible atende (base_url + model). */
+export const OPENAI_COMPATIBLE = 'openai-compatible';
 
 /**
  * Inteligência do tenant (ADENDO-02 D29). O segredo do provider vive SÓ como
@@ -16,6 +20,8 @@ import { resumeAgentJobsTx } from './resume.js';
  */
 export interface TenantAiConfig {
   provider: string;
+  /** Base URL do provedor — presente p/ openai-compatible, null p/ anthropic nativo. */
+  baseUrl: string | null;
   model: string;
   keyRef: string;
   budgetCents: number | null;
@@ -24,6 +30,7 @@ export interface TenantAiConfig {
 
 export interface AiConfigInput {
   provider: string;
+  baseUrl?: string | null;
   model: string;
   keyRef: string;
   budgetCents?: number | null;
@@ -35,17 +42,31 @@ export function assertSecretRef(keyRef: string): void {
   }
 }
 
+/**
+ * Validação de provider × base_url NA ESCRITA (decisão do dono: validar no
+ * upsert, não só no uso). `openai-compatible` EXIGE base_url https; `anthropic`
+ * nativo IGNORA base_url (host fixo no adaptador) — nada de default silencioso.
+ * Devolve a base_url normalizada a gravar (null para anthropic).
+ */
+export function normalizeProviderBaseUrl(provider: string, baseUrl: string | null | undefined): string | null {
+  if (provider === OPENAI_COMPATIBLE) {
+    return assertBaseUrl(baseUrl); // lança se ausente/malformada/não-https
+  }
+  return null; // anthropic (ou outro nativo): base_url não se aplica
+}
+
 export async function getTenantAiConfig(sql: Sql, tenantId: string): Promise<TenantAiConfig | null> {
   const rows = await withTenant(
     sql,
     tenantId,
-    (tx) => tx`SELECT provider, model, key_ref, budget_cents, kill_switch
+    (tx) => tx`SELECT provider, base_url, model, key_ref, budget_cents, kill_switch
                FROM tenant_ai_config WHERE tenant_id = ${tenantId}`,
   );
   const r = rows[0];
   return r
     ? {
         provider: r.provider as string,
+        baseUrl: (r.base_url as string | null) ?? null,
         model: r.model as string,
         keyRef: r.key_ref as string,
         budgetCents: (r.budget_cents as number | null) ?? null,
@@ -62,19 +83,21 @@ export async function upsertTenantAiConfig(
   actor: AuditActor,
 ): Promise<void> {
   assertSecretRef(input.keyRef);
+  // Valida provider × base_url NA ESCRITA (openai-compatible exige https; anthropic ignora).
+  const baseUrl = normalizeProviderBaseUrl(input.provider, input.baseUrl);
   await withTenant(sql, tenantId, async (tx) => {
     await tx`
-      INSERT INTO tenant_ai_config (tenant_id, provider, model, key_ref, budget_cents)
-      VALUES (${tenantId}, ${input.provider}, ${input.model}, ${input.keyRef}, ${input.budgetCents ?? null})
+      INSERT INTO tenant_ai_config (tenant_id, provider, base_url, model, key_ref, budget_cents)
+      VALUES (${tenantId}, ${input.provider}, ${baseUrl}, ${input.model}, ${input.keyRef}, ${input.budgetCents ?? null})
       ON CONFLICT (tenant_id) DO UPDATE SET
-        provider = EXCLUDED.provider, model = EXCLUDED.model,
+        provider = EXCLUDED.provider, base_url = EXCLUDED.base_url, model = EXCLUDED.model,
         key_ref = EXCLUDED.key_ref, budget_cents = EXCLUDED.budget_cents, updated_at = now()`;
     await recordTenantAuditEventTx(tx, tenantId, actor, {
       eventType: 'config.ai.updated',
       resourceType: 'ai_config',
       resourceId: tenantId,
       // NUNCA registra a chave/segredo — só o que é seguro para o auditor.
-      payload: { provider: input.provider, model: input.model },
+      payload: { provider: input.provider, model: input.model, baseUrl },
     });
   });
 }
