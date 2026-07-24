@@ -197,6 +197,24 @@ body {
 .inline-banner { border-radius: 6px; padding: 0.5rem 0.7rem; font-size: var(--ui-font-size-label); margin: 0.5rem 0; }
 .inline-banner.tone-danger { background: var(--ui-role-danger-bg); color: var(--ui-role-danger-fg); }
 .inline-banner.tone-success { background: var(--ui-role-success-bg); color: var(--ui-role-success-fg); }
+/* PARADA HONESTA / gate — âmbar (§2.12): distinto do vermelho de incidente. */
+.inline-banner.tone-warning { background: var(--ui-role-warning-bg); color: var(--ui-role-warning-fg); }
+
+/* Voz de estado do agente (D31) — âmbar (parada honesta/gate) × vermelho (incidente).
+   Sinal NUNCA só por cor: sempre ícone + rótulo (o .voice-icon é aria-hidden). */
+.voice { display: inline-flex; align-items: center; gap: 0.35rem; border-radius: 999px; padding: 0.1rem 0.5rem; font-size: var(--ui-font-size-meta); font-weight: 600; }
+.voice-icon { font-size: 0.85em; }
+.voice[data-family='amber'] { background: var(--ui-role-warning-bg); color: var(--ui-role-warning-fg); }
+.voice[data-family='red'] { background: var(--ui-role-danger-bg); color: var(--ui-role-danger-fg); }
+.voice[data-family='gate'] { background: var(--ui-role-gate-bg); color: var(--ui-role-gate-fg); }
+.state-note { border-radius: 8px; padding: 0.6rem 0.8rem; margin: 0.5rem 0; border: 1px solid var(--ui-surface-border); }
+.state-note[data-family='amber'] { background: var(--ui-role-warning-bg); color: var(--ui-role-warning-fg); border-color: var(--ui-role-warning-solid); }
+.state-note .state-note-title { font-weight: 700; display: flex; align-items: center; gap: 0.4rem; }
+.state-note .state-note-body { font-size: var(--ui-font-size-label); margin-top: 0.25rem; }
+.state-note .state-note-exit { font-size: var(--ui-font-size-label); margin-top: 0.4rem; }
+.job-pause-voice { margin-top: 0.25rem; }
+.history-list .hist-kind-raw { color: var(--ui-ink-subtle); font-size: var(--ui-font-size-meta); }
+.history-list li[data-agent] { border-left: 2px solid var(--ui-role-agent-solid); padding-left: 0.4rem; }
 .task-form-body[data-locked] { opacity: 0.6; }
 .task-foot { display: flex; justify-content: space-between; align-items: center; gap: var(--ui-space-calm-gutter); border-top: 1px solid var(--ui-surface-border); margin-top: var(--ui-space-calm-block); padding-top: var(--ui-space-calm-row); }
 .foot-note { font-size: var(--ui-font-size-meta); color: var(--ui-ink-muted); }

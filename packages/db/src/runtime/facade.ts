@@ -116,7 +116,14 @@ export interface PlatformRuntime {
     list(
       tenantId: string,
       viewer: TaskViewer,
-      options?: { cursor?: string; limit?: number; status?: string; instanceId?: string; filter?: 'mine' | 'role' | 'unassigned' },
+      options?: {
+        cursor?: string;
+        limit?: number;
+        status?: string;
+        instanceId?: string;
+        filter?: 'mine' | 'role' | 'unassigned';
+        includeGates?: boolean;
+      },
     ): Promise<{ items: UserTaskListItem[]; nextCursor: string | null }>;
     get(tenantId: string, taskId: string, viewer: TaskViewer): Promise<UserTaskDetail | undefined>;
     claim(tenantId: string, taskId: string, user: string): Promise<ClaimOutcome>;

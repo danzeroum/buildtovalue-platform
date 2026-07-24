@@ -54,6 +54,13 @@ export const role = {
   danger: { bg: '#f7e6e0', fg: '#9c2f28', solid: '#b3372f' },
   /** Informação neutra (azul discreto dos selos de teste). */
   info: { bg: '#e3ecf7', fg: '#2d4c70', solid: '#33567e' },
+  /** DECISÃO / GATE (dourado) — token PRÓPRIO (§2.12.1): mesma cor do warning
+   *  HOJE, divergível amanhã. O gate humano/decisão fala por este papel, não pelo
+   *  de aviso genérico nem pela escala de classificação. */
+  gate: { bg: '#f6edd4', fg: '#6d5115', solid: '#8a6d1e' },
+  /** AGENTE (violeta) — a superfície de agente/squad (§2.12.2). Fixado com teste
+   *  AA AGORA, antes da AG-3, para não nascer ad-hoc. */
+  agent: { bg: '#ecebf6', fg: '#3c3883', solid: '#5b57b8' },
 } as const;
 
 /** Pisos de acessibilidade (D25.3). */
@@ -83,4 +90,6 @@ export const CONTRAST_PAIRS: ReadonlyArray<{ name: string; fg: string; bg: strin
   { name: 'warning', fg: role.warning.fg, bg: role.warning.bg },
   { name: 'danger', fg: role.danger.fg, bg: role.danger.bg },
   { name: 'info', fg: role.info.fg, bg: role.info.bg },
+  { name: 'gate', fg: role.gate.fg, bg: role.gate.bg },
+  { name: 'agent', fg: role.agent.fg, bg: role.agent.bg },
 ];

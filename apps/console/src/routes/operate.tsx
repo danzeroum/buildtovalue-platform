@@ -15,6 +15,19 @@ import { can } from '../capabilities.js';
 import { relativeTime, shortId } from '../format.js';
 import { useSession } from '../shell.js';
 import { Button, NonIdeal, StatusPill, Tag } from '../ui/ui.js';
+import { historyLabel, voiceOf } from '../voices.js';
+
+/** Voz do agente (D31): ícone + rótulo + família (âmbar/vermelho). SINAL NUNCA
+ *  SÓ POR COR — o ícone é decorativo (aria-hidden), o rótulo carrega o sentido. */
+function Voice({ kind }: { kind: string }) {
+  const v = voiceOf(kind);
+  return (
+    <span className="voice" data-family={v.family}>
+      <span className="voice-icon" aria-hidden="true">{v.icon}</span>
+      {v.label}
+    </span>
+  );
+}
 
 type StatusFilter = '' | 'active' | 'incident' | 'completed' | 'cancelled';
 type OpTab = 'incidents' | 'jobs' | 'timers' | 'variables' | 'history';
@@ -258,6 +271,8 @@ function InstanceDetailPane({ instanceId, onChanged }: { instanceId: string; onC
 
       <PositionSection instance={inst} />
 
+      {inst.status === 'active' && <GateWaitingNote instanceId={inst.id} />}
+
       <div className="op-tabs" role="tablist" aria-label="Detalhe da instância">
         {tabs.map(([key, label]) => (
           <button
@@ -334,6 +349,37 @@ function PositionSection({ instance }: { instance: InstanceDetail }) {
   );
 }
 
+/** AGUARDANDO GATE HUMANO (D31, marcação §1): âmbar. A instância está parada numa
+ *  tarefa de gate de tool (is_gate) — que a Tasklist de negócio EXCLUI; aqui o
+ *  Operate a mostra com includeGates=true. Distinta de incidente (não é vermelho). */
+function GateWaitingNote({ instanceId }: { instanceId: string }) {
+  const res = useResource(
+    (signal) =>
+      api.GET('/v1/user-tasks', {
+        params: { query: { instanceId, status: 'open', includeGates: true, limit: 20 } },
+        signal,
+      }),
+    [instanceId],
+  );
+  if (res.value.state !== 'ready') return null; // silencioso: é um realce, não um bloqueio
+  const gate = res.value.data.items.find((t) => t.isGate);
+  if (!gate) return null;
+  const v = voiceOf('aguardando-gate');
+  return (
+    <div className="state-note" data-family="amber" role="note">
+      <div className="state-note-title">
+        <span className="voice-icon" aria-hidden="true">{v.icon}</span>
+        {v.label}
+      </div>
+      <div className="state-note-body">
+        O agente propôs; o processo aguarda a aprovação humana do gate{' '}
+        <span className="mono">{gate.elementId}</span>. O efeito irreversível só roda sob aval
+        (com selo). O controle canônico de aprovar/reprovar entra na AG-3.
+      </div>
+    </div>
+  );
+}
+
 function IncidentsTab({ instanceId, canAct, onChanged }: { instanceId: string; canAct: boolean; onChanged: () => void }) {
   const [reloadKey, setReloadKey] = useState(0);
   const [resolving, setResolving] = useState<string | null>(null);
@@ -369,11 +415,25 @@ function IncidentsTab({ instanceId, canAct, onChanged }: { instanceId: string; c
       {incidents.map((i) => (
         <li key={i.id} className="incident-card" data-status={i.status}>
           <div className="incident-body">
-            <strong className="incident-kind">{i.kind}</strong>
+            {/* voz humana + família (âmbar/vermelho), ícone+rótulo — não só cor. */}
+            <Voice kind={i.kind} />
             <span>{i.message}</span>
             <span className="mono incident-meta">
               <StatusPill status={i.status} /> · {relativeTime(i.createdAt)}
             </span>
+            {/* PROPOSTA EXPIRADA (marcação §6): nota âmbar com a SAÍDA HONESTA —
+                aprovar indisponível (motivo) + reprovar SEGUE disponível (roteia
+                pela rota de reprovação sem executar). A reavaliação é AG-3 (D37). */}
+            {i.kind === 'agentProposalExpired' && (
+              <div className="state-note" data-family="amber" role="note">
+                <div className="state-note-exit">
+                  <strong>Aprovar está indisponível</strong> — a proposta do agente expirou (a
+                  instância avançou desde a proposta). <strong>Reprovar segue disponível</strong>:
+                  roteia pela rota de reprovação, sem executar o efeito. A reavaliação automática
+                  não existe na v1 (entra na AG-3).
+                </div>
+              </div>
+            )}
             {note?.id === i.id && (
               <span className="incident-note" role="status" aria-live="polite">
                 {note.text}
@@ -445,6 +505,13 @@ function JobsTab({ instanceId }: { instanceId: string }) {
             <td className="mono">{j.type}</td>
             <td>
               <StatusPill status={j.status} />
+              {/* PARADA HONESTA (§5.2): job pausado carrega a voz âmbar (budget/
+                  kill-switch) — âmbar, retomável; distinto do vermelho de incidente. */}
+              {j.status === 'paused' && j.pauseKind && (
+                <div className="job-pause-voice">
+                  <Voice kind={j.pauseKind} />
+                </div>
+              )}
             </td>
             <td>{j.retriesLeft}</td>
             <td className="job-error">{j.error ?? '—'}</td>
@@ -591,8 +658,9 @@ function HistoryTab({ instanceId }: { instanceId: string }) {
   return (
     <ol className="history-list mono">
       {events.map((e) => (
-        <li key={e.seq}>
-          <span className="seq">seq {e.seq}</span> · <strong>{e.kind}</strong> ·{' '}
+        <li key={e.seq} data-agent={e.kind.startsWith('agent:') || undefined}>
+          <span className="seq">seq {e.seq}</span> · <strong>{historyLabel(e.kind)}</strong>{' '}
+          <span className="hist-kind-raw">{e.kind}</span> ·{' '}
           <span className="hist-when">{relativeTime(e.occurredAt)}</span>
         </li>
       ))}

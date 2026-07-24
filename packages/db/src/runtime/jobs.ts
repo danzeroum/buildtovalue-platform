@@ -62,6 +62,9 @@ export interface JobListItem {
   retries_left: number;
   error: string | null;
   created_at: string;
+  /** §5.2: discrimina a parada honesta (budget/kill-switch) — null se não pausado.
+   *  O Operate pinta a voz âmbar certa (parada honesta ≠ incidente vermelho). */
+  pause_kind: string | null;
 }
 
 /** GET /v1/jobs (shape §5): cursor + filtros status/type/instanceId. */
@@ -86,7 +89,7 @@ export async function listJobs(
     : undefined;
   return withTenant(sql, tenantId, async (tx) => {
     const rows = await tx`
-      SELECT id, instance_id, type, status, retries_left, error, created_at,
+      SELECT id, instance_id, type, status, retries_left, error, created_at, pause_kind,
              created_at::text AS created_at_cursor
       FROM jobs
       WHERE (${options.status ?? null}::text IS NULL OR status = ${options.status ?? null})
