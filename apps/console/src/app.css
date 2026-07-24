@@ -41,11 +41,13 @@ body {
   background: var(--ui-role-success-bg);
 }
 
-/* Regra do mono (D25.2): rota é IDENTIFICADOR — mono legítimo, no piso de 11px. */
+/* Regra do mono (D25.2): rota é IDENTIFICADOR — mono legítimo, no piso de 11px.
+   AA (axe serious): ink-subtle (#a49c8f) a 11px reprova (2.5:1); a rota usa
+   ink-muted, que passa AA no par ink.muted/surface (teste de tokens). */
 .nav-route {
   font-family: var(--ui-font-mono);
   font-size: var(--ui-font-size-meta);
-  color: var(--ui-ink-subtle);
+  color: var(--ui-ink-muted);
 }
 
 .shell-main {
@@ -73,7 +75,10 @@ body {
 .nav-item { display: inline-flex; flex-direction: column; text-decoration: none; padding: 0.25rem 0.6rem; border-radius: 6px; color: var(--ui-ink-muted); }
 .nav-item.active { background: var(--ui-role-success-solid); color: var(--ui-surface-card); }
 .nav-label { font-size: var(--ui-font-size-body); }
-.nav-route { font-family: var(--ui-font-mono); font-size: var(--ui-font-size-meta); opacity: 0.75; }
+.nav-route { font-family: var(--ui-font-mono); font-size: var(--ui-font-size-meta); }
+/* AA (axe serious): a rota ativa vive sobre o verde SÓLIDO — usa o branco do
+   estado ativo (6.5:1), não o ink-muted herdado (2.4:1). O harness axe trava isto. */
+.nav-item.active .nav-route { color: var(--ui-surface-card); }
 .shell-user { margin-left: auto; display: flex; align-items: center; gap: var(--ui-space-dense-gutter); }
 .user-name { color: var(--ui-ink-base); }
 .user-role { font-family: var(--ui-font-mono); font-size: var(--ui-font-size-meta); color: var(--ui-ink-muted); border: 1px solid var(--ui-surface-border); border-radius: 999px; padding: 0.1rem 0.5rem; }
@@ -117,7 +122,7 @@ body {
 .ui-nonideal[data-kind="error"] h2 { color: var(--ui-role-danger-fg); }
 .ui-skeleton { height: 1rem; background: var(--ui-surface-sunken); border-radius: 4px; margin: 0.4rem 0; }
 .ui-skeleton.short { width: 40%; }
-.ui-technical summary { font-size: var(--ui-font-size-meta); color: var(--ui-ink-subtle); cursor: pointer; }
+.ui-technical summary { font-size: var(--ui-font-size-meta); color: var(--ui-ink-muted); cursor: pointer; }
 .ui-technical code { font-family: var(--ui-font-mono); font-size: var(--ui-font-size-meta); }
 
 /* comum de rota */
@@ -137,7 +142,7 @@ body {
 .field-list ul { list-style: none; margin: 0; padding: 0; }
 .field-item { width: 100%; display: flex; align-items: center; gap: 0.4rem; background: var(--ui-surface-card); border: 1px solid var(--ui-surface-border); border-radius: 6px; padding: 0.4rem 0.5rem; margin: 0.25rem 0; cursor: pointer; text-align: left; }
 .field-item[data-selected] { border-color: var(--ui-role-success-solid); }
-.type-tag { font-size: var(--ui-font-size-meta); color: var(--ui-ink-subtle); margin-left: auto; }
+.type-tag { font-size: var(--ui-font-size-meta); color: var(--ui-ink-muted); margin-left: auto; }
 .add-palette { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: var(--ui-space-calm-row); }
 .palette-pill { font-size: var(--ui-font-size-meta); border: 1px dashed var(--ui-surface-border); border-radius: 999px; padding: 0.15rem 0.55rem; background: var(--ui-surface-raised); cursor: pointer; }
 .segmented { display: inline-flex; border: 1px solid var(--ui-surface-border); border-radius: 8px; overflow: hidden; }
@@ -146,7 +151,7 @@ body {
 .classification { border: 1px solid var(--ui-surface-border); border-radius: 8px; padding: 0.6rem; margin-top: var(--ui-space-calm-row); }
 .consequences { margin-top: 0.6rem; background: var(--ui-role-danger-bg); border: 1px solid var(--ui-role-danger-solid); border-radius: 6px; padding: 0.5rem 0.7rem; color: var(--ui-role-danger-fg); }
 .consequences .mono-note { font-family: var(--ui-font-mono); font-size: var(--ui-font-size-meta); margin: 0.4rem 0 0; }
-.sfeel-legend { font-size: var(--ui-font-size-meta); color: var(--ui-ink-subtle); }
+.sfeel-legend { font-size: var(--ui-font-size-meta); color: var(--ui-ink-muted); }
 .publish-ok { background: var(--ui-role-success-bg); color: var(--ui-role-success-fg); border-radius: 6px; padding: 0.5rem 0.7rem; }
 .publish-error { background: var(--ui-role-danger-bg); color: var(--ui-role-danger-fg); border-radius: 6px; padding: 0.5rem 0.7rem; }
 .publish-error .mono, .lint-item .mono { font-family: var(--ui-font-mono); font-size: var(--ui-font-size-meta); }
@@ -167,7 +172,7 @@ body {
 .lint-badge[data-severity="error"] { background: var(--ui-role-danger-bg); color: var(--ui-role-danger-fg); }
 .lint-badge[data-severity="warning"] { background: var(--ui-role-warning-bg); color: var(--ui-role-warning-fg); }
 .lint-clean { background: var(--ui-role-success-bg); color: var(--ui-role-success-fg); border-radius: 6px; padding: 0.5rem 0.7rem; }
-.lint-ref { color: var(--ui-ink-subtle); }
+.lint-ref { color: var(--ui-ink-muted); }
 .issues-inline { font-size: var(--ui-font-size-meta); color: var(--ui-role-warning-fg); }
 
 /* ============ /tasks (F3.4) ============ */
@@ -185,7 +190,7 @@ body {
 .task-item:focus-visible { outline: 2px solid var(--ui-role-info-solid); outline-offset: -2px; }
 .task-item-top { display: flex; justify-content: space-between; gap: 0.5rem; }
 .task-item-top strong { font-size: var(--ui-font-size-body); }
-.task-age { font-size: var(--ui-font-size-meta); color: var(--ui-ink-subtle); }
+.task-age { font-size: var(--ui-font-size-meta); color: var(--ui-ink-muted); }
 .task-item-meta { font-size: var(--ui-font-size-meta); color: var(--ui-ink-muted); }
 .task-tags { display: flex; gap: 0.35rem; }
 .task-detail-wrap { border: 1px solid var(--ui-surface-border); border-radius: 8px; background: var(--ui-surface-card); padding: var(--ui-space-calm-gutter); min-height: 60vh; }
@@ -213,7 +218,7 @@ body {
 .state-note .state-note-body { font-size: var(--ui-font-size-label); margin-top: 0.25rem; }
 .state-note .state-note-exit { font-size: var(--ui-font-size-label); margin-top: 0.4rem; }
 .job-pause-voice { margin-top: 0.25rem; }
-.history-list .hist-kind-raw { color: var(--ui-ink-subtle); font-size: var(--ui-font-size-meta); }
+.history-list .hist-kind-raw { color: var(--ui-ink-muted); font-size: var(--ui-font-size-meta); }
 .history-list li[data-agent] { border-left: 2px solid var(--ui-role-agent-solid); padding-left: 0.4rem; }
 .task-form-body[data-locked] { opacity: 0.6; }
 .task-foot { display: flex; justify-content: space-between; align-items: center; gap: var(--ui-space-calm-gutter); border-top: 1px solid var(--ui-surface-border); margin-top: var(--ui-space-calm-block); padding-top: var(--ui-space-calm-row); }
@@ -269,9 +274,9 @@ body {
 .op-table td { border-bottom: 1px solid var(--ui-surface-border); padding: 0.35rem 0.5rem; }
 .job-error { color: var(--ui-role-danger-fg); font-size: var(--ui-font-size-meta); }
 .var-note, .var-table + .reload-vars { font-size: var(--ui-font-size-label); color: var(--ui-ink-muted); }
-.var-value .masked { font-family: var(--ui-font-mono); letter-spacing: 0.1em; color: var(--ui-ink-subtle); }
+.var-value .masked { font-family: var(--ui-font-mono); letter-spacing: 0.1em; color: var(--ui-ink-muted); }
 .revealed-note { font-size: var(--ui-font-size-meta); color: var(--ui-role-warning-fg); }
 .reload-vars { display: inline-block; margin-top: 0.5rem; }
 .history-list { list-style: none; margin: 0; padding: 0; font-size: var(--ui-font-size-meta); color: var(--ui-ink-base); line-height: 1.9; }
-.history-list .seq { color: var(--ui-ink-subtle); }
+.history-list .seq { color: var(--ui-ink-muted); }
 .history-list .hist-when { color: var(--ui-ink-muted); }

@@ -22,7 +22,19 @@ export default defineConfig({
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
   },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  projects: [
+    {
+      name: 'chromium',
+      use: {
+        ...devices['Desktop Chrome'],
+        // Ambientes com Chromium pré-instalado (sem download): aponte para o
+        // binário via PW_EXECUTABLE_PATH. Vazio → Playwright resolve o próprio.
+        ...(process.env.PW_EXECUTABLE_PATH
+          ? { launchOptions: { executablePath: process.env.PW_EXECUTABLE_PATH } }
+          : {}),
+      },
+    },
+  ],
   webServer: {
     command: 'pnpm --filter @platform/console dev',
     url: process.env.E2E_BASE_URL ?? 'http://localhost:5173',

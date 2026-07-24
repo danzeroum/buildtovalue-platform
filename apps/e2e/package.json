@@ -5,9 +5,11 @@
   "type": "module",
   "scripts": {
     "e2e": "playwright test",
+    "e2e:axe": "playwright test axe.spec.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.12.1",
     "@playwright/test": "^1.49.1"
   }
 }
