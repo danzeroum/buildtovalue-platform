@@ -42,6 +42,17 @@ describe('capabilities — espelho do RBAC v1', () => {
       expect(can('auditor', p)).toBe(false);
     }
   });
+
+  it('AG-3.4 (P5): tools:read é admin+auditor; tools:configure só admin', () => {
+    expect(can('admin', 'tools:read')).toBe(true);
+    expect(can('admin', 'tools:configure')).toBe(true);
+    expect(can('auditor', 'tools:read')).toBe(true);
+    expect(can('auditor', 'tools:configure')).toBe(false);
+    for (const role of ['analyst', 'business', 'operator'] as const) {
+      expect(can(role, 'tools:read')).toBe(false);
+      expect(can(role, 'tools:configure')).toBe(false);
+    }
+  });
 });
 
 /**

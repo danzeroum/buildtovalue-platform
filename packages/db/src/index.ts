@@ -42,9 +42,14 @@ export {
 export {
   deployToolDefinition,
   getToolDefinitionByRef,
+  isToolEnabledForTenantTx,
+  listTenantTools,
+  setTenantToolEnabled,
   toolEffectOfTx,
   validateToolContract,
   type DeployToolOutcome,
+  type SetTenantToolEnabledOutcome,
+  type TenantToolCatalogItem,
   type ToolContractIssue,
   type ToolDefinitionRow,
 } from './registry/toolStore.js';

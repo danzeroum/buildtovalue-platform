@@ -3,7 +3,7 @@ import { createDiagram, createEdge, createNode, type BpmnDiagram } from '@buildt
 import postgres from 'postgres';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { buildGatePayloadTx, sealGatedEffectTx, setGatePayloadTx } from '../src/agent/gateFio.js';
-import { deployToolDefinition } from '../src/registry/toolStore.js';
+import { deployToolDefinition, setTenantToolEnabled } from '../src/registry/toolStore.js';
 import { withTenant } from '../src/tenancy.js';
 import { createTestDatabase, type TestDatabase } from './helpers.js';
 
@@ -64,6 +64,9 @@ describe('fio do gate — world-delta → payload → selo (item 2, D31)', () =>
     });
     api = postgres(db.apiUrl, { max: 4, onnotice: () => {} });
     await deployToolDefinition(api, tenant, { contract: sendEmail });
+    // P5 (AG-3.4): sem linha em `tenant_tools` = desabilitada — este arquivo
+    // testa o FIO do gate (staleness/selo), não a disponibilidade da tool.
+    await setTenantToolEnabled(api, tenant, 'tool:send-email', true, { type: 'system', id: 'test-setup' }, 'setup de teste');
   });
 
   afterAll(async () => {

@@ -2,7 +2,7 @@ import type { ToolContract } from '@buildtovalue/agentflow';
 import { createDiagram, createEdge, createNode, type BpmnDiagram } from '@buildtovalue/core';
 import postgres from 'postgres';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { deployToolDefinition, getToolDefinitionByRef, validateToolContract } from '../src/registry/toolStore.js';
+import { deployToolDefinition, getToolDefinitionByRef, setTenantToolEnabled, validateToolContract } from '../src/registry/toolStore.js';
 import { deployProcessDefinition } from '../src/registry/store.js';
 import { createTestDatabase, type TestDatabase } from './helpers.js';
 
@@ -66,6 +66,10 @@ describe('AG-2.2 etapa 5 slice 1 — registry de tool + lint do gate (D31)', () 
     await migrator.end();
     api = postgres(db.apiUrl, { max: 4, onnotice: () => {} });
     await deployToolDefinition(api, tenant, { contract: toolContract() }); // tool:send-email@1.0.0 (gate)
+    // P5 (AG-3.4): sem linha em `tenant_tools` = desabilitada — os testes de
+    // deploy abaixo exercitam o lint de gate (D31), não o de disponibilidade;
+    // habilita explicitamente para não confundir os dois.
+    await setTenantToolEnabled(api, tenant, 'tool:send-email', true, { type: 'system', id: 'test-setup' }, 'setup de teste');
   });
 
   afterAll(async () => {

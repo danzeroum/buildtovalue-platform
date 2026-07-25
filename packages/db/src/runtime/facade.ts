@@ -14,6 +14,12 @@ import {
 } from '../agent/tenantAiConfig.js';
 import type { AuditActor } from '../audit/tenantAudit.js';
 import {
+  listTenantTools,
+  setTenantToolEnabled,
+  type SetTenantToolEnabledOutcome,
+  type TenantToolCatalogItem,
+} from '../registry/toolStore.js';
+import {
   exportAudit as exportAuditRow,
   verifyAudit as verifyAuditRow,
   type AuditExportFilters,
@@ -267,6 +273,19 @@ export interface PlatformRuntime {
       actor: NormalizedActor,
     ): Promise<AuditVerifyResult>;
   };
+  /** P5 (AG-3.4): catálogo de tools por tenant. `enabled` liga/desliga
+   *  disponibilidade — `effect`/`authorization` (imutáveis, `tool_definitions`)
+   *  NUNCA mudam por aqui (D31 ortogonal, §1.2 do shape). */
+  tools: {
+    list(tenantId: string): Promise<TenantToolCatalogItem[]>;
+    setEnabled(
+      tenantId: string,
+      toolId: string,
+      enabled: boolean,
+      actor: AuditActor,
+      motivo: string,
+    ): Promise<SetTenantToolEnabledOutcome>;
+  };
 }
 
 export type PauseOutcome =
@@ -335,6 +354,11 @@ export function createRuntime(
       config: (tenantId) => getTenantAiConfig(sql, tenantId),
       setKillSwitch: (tenantId, paused, actor, motivo) => setKillSwitch(sql, tenantId, paused, actor, motivo),
       configure: (tenantId, input, actor) => upsertTenantAiConfig(sql, tenantId, input, actor),
+    },
+    tools: {
+      list: (tenantId) => listTenantTools(sql, tenantId),
+      setEnabled: (tenantId, toolId, enabled, actor, motivo) =>
+        setTenantToolEnabled(sql, tenantId, toolId, enabled, actor, motivo),
     },
     cancel(tenantId, instanceId, reason) {
       // O engine emite CancelJob/CancelTimer/CloseUserTask para TODAS as

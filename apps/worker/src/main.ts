@@ -290,9 +290,11 @@ async function tick(): Promise<boolean> {
       hadWork = true;
       // EFEITO SOB GATE (D31): o serviceTask a jusante do gate carrega `gatedBy`
       // (injetado no despacho). ANTES do handler, sela — verifica a STALENESS da
-      // tool (mudou/desabilitou desde o aval?) e grava a linha `agent:acao` com o
-      // selo do aval. Stale → incidente `agentToolStale`, o efeito NÃO roda; o
-      // gate aprovado permanece na trilha (a falha é posterior ao aval de boa-fé).
+      // tool (mudou desde o aval?) e se ela segue HABILITADA para o tenant (P5,
+      // AG-3.4), e grava a linha `agent:acao` com o selo do aval. Stale → incidente
+      // `agentToolStale` (vermelho); desabilitada → `agentToolDisabled` (âmbar) —
+      // nos dois casos o efeito NÃO roda; o gate aprovado permanece na trilha (a
+      // falha é posterior ao aval de boa-fé).
       const gatedBy = typeof job.payload.gatedBy === 'string' ? job.payload.gatedBy : undefined;
       if (gatedBy) {
         const instance = await getInstance(sql, tenantId, job.instance_id);

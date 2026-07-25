@@ -45,6 +45,7 @@ export type LintCode =
   | 'EXEC_DECISION_VAR_SENSITIVE'
   | 'EXEC_AGENT_GATE_MISSING'
   | 'EXEC_TOOL_EFFECT_UNGATED'
+  | 'EXEC_TOOL_DISABLED'
   | 'EXEC_LOOP_WAIT_UNSUPPORTED';
 
 /** Subconjunto executável v1 (espelha o engine publicado — D19). */
