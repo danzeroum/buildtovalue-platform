@@ -144,6 +144,7 @@ body {
 .mono { font-family: var(--ui-font-mono); }
 .doc-bar { display: flex; align-items: center; justify-content: space-between; gap: var(--ui-space-calm-gutter); border-bottom: 1px solid var(--ui-surface-border); padding-bottom: var(--ui-space-calm-row); margin-bottom: var(--ui-space-calm-block); }
 .doc-bar h1 { font-family: var(--ui-font-serif); color: var(--ui-ink-strong); margin: 0; }
+.doc-bar-actions { display: flex; align-items: center; gap: var(--ui-space-dense-gutter); flex-wrap: wrap; }
 .doc-actions { display: flex; align-items: center; gap: var(--ui-space-dense-gutter); }
 .draft-badge { font-size: var(--ui-font-size-meta); color: var(--ui-ink-muted); }
 .field { display: flex; flex-direction: column; gap: 0.25rem; margin: 0.5rem 0; }

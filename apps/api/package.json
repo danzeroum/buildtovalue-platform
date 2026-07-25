@@ -29,6 +29,7 @@
   },
   "devDependencies": {
     "typescript": "^5.9.3",
-    "postgres": "^3.4.7"
+    "postgres": "^3.4.7",
+    "@buildtovalue/agentflow": "1.1.0-next.1"
   }
 }

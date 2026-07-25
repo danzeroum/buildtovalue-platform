@@ -19,6 +19,51 @@ export interface LintIssue {
   edgeId?: string;
 }
 
+/** Forma comum às duas famílias de lint (processo: elementId/edgeId; agente:
+ *  nodeId/remediation, P6/AG-3.6) — já resolvida para UM rótulo de referência. */
+interface DisplayLintIssue {
+  code: string;
+  severity: 'error' | 'warning';
+  message: string;
+  ref?: string;
+  remediation?: string;
+}
+
+/**
+ * Lista de rejeições/avisos — REJEIÇÃO sempre antes de AVISO, cor+RÓTULO nunca
+ * só cor (D19). Compartilhada por `PublishModal` (processo) e `AgentDeployModal`
+ * (agente, P6) — "mesma UI de rejeição", ao pé da letra.
+ */
+function LintIssuesList({ rejections, warnings }: { rejections: DisplayLintIssue[]; warnings: DisplayLintIssue[] }) {
+  if (rejections.length === 0 && warnings.length === 0) return null;
+  return (
+    <ul className="lint-list">
+      {rejections.map((i, n) => (
+        <li key={`e${n}`} className="lint-item" data-severity="error">
+          <span className="lint-badge" data-severity="error">
+            REJEIÇÃO
+          </span>
+          <span className="mono">{i.code}</span>
+          {i.ref && <span className="mono lint-ref">{i.ref}</span>}
+          <span>{i.message}</span>
+          {i.remediation && <span className="lint-remediation"> — {i.remediation}</span>}
+        </li>
+      ))}
+      {warnings.map((i, n) => (
+        <li key={`w${n}`} className="lint-item" data-severity="warning">
+          <span className="lint-badge" data-severity="warning">
+            AVISO
+          </span>
+          <span className="mono">{i.code}</span>
+          {i.ref && <span className="mono lint-ref">{i.ref}</span>}
+          <span>{i.message}</span>
+          {i.remediation && <span className="lint-remediation"> — {i.remediation}</span>}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 function starterDiagram(): BpmnDiagram {
   const d = createDiagram({ name: 'Reembolso de despesas' });
   d.nodes.start = createNode({ id: 'start', type: 'startEvent', label: 'Início', x: 0, y: 0 });
@@ -35,20 +80,30 @@ function starterDiagram(): BpmnDiagram {
 export function StudioRoute() {
   const [diagram, setDiagram] = useState<BpmnDiagram>(starterDiagram);
   const [publishing, setPublishing] = useState(false);
+  // P6 (deploy de agente, AG-3.6): sem editor visual nem ponte ?load= (fora de
+  // escopo enquanto P3/squad não decide) — só o mínimo para o cliente publicar
+  // sozinho, colando o JSON exportado do editor da lib.
+  const [deployingAgent, setDeployingAgent] = useState(false);
   return (
     <section className="route studio" aria-label="Estúdio">
       <div className="doc-bar">
         <h1>{diagram.name}</h1>
-        <Button intent="primary" onClick={() => setPublishing(true)}>
-          Publicar definição no registry…
-        </Button>
+        <div className="doc-bar-actions">
+          <Button intent="neutral" onClick={() => setDeployingAgent(true)}>
+            Publicar grafo de agente (colar JSON)…
+          </Button>
+          <Button intent="primary" onClick={() => setPublishing(true)}>
+            Publicar definição no registry…
+          </Button>
+        </div>
       </div>
-      <div className="studio-canvas" data-dimmed={publishing || undefined}>
+      <div className="studio-canvas" data-dimmed={publishing || deployingAgent || undefined}>
         <Suspense fallback={<NonIdeal kind="loading" title="Carregando o designer…" />}>
           <BpmnEditor diagram={diagram} onChange={setDiagram} />
         </Suspense>
       </div>
       {publishing && <PublishModal diagram={diagram} onClose={() => setPublishing(false)} />}
+      {deployingAgent && <AgentDeployModal onClose={() => setDeployingAgent(false)} />}
     </section>
   );
 }
@@ -146,28 +201,10 @@ export function PublishModal({ diagram, onClose }: { diagram: BpmnDiagram; onClo
                 <strong>0 rejeições · 0 avisos</strong> — definição dentro do escopo v1; pronta para publicar.
               </p>
             ) : (
-              <ul className="lint-list">
-                {rejections.map((i, n) => (
-                  <li key={`e${n}`} className="lint-item" data-severity="error">
-                    <span className="lint-badge" data-severity="error">
-                      REJEIÇÃO
-                    </span>
-                    <span className="mono">{i.code}</span>
-                    {i.elementId && <span className="mono lint-ref">{i.elementId}</span>}
-                    <span>{i.message}</span>
-                  </li>
-                ))}
-                {warnings.map((i, n) => (
-                  <li key={`w${n}`} className="lint-item" data-severity="warning">
-                    <span className="lint-badge" data-severity="warning">
-                      AVISO
-                    </span>
-                    <span className="mono">{i.code}</span>
-                    {i.elementId && <span className="mono lint-ref">{i.elementId}</span>}
-                    <span>{i.message}</span>
-                  </li>
-                ))}
-              </ul>
+              <LintIssuesList
+                rejections={rejections.map((i) => ({ ...i, ref: i.elementId ?? i.edgeId }))}
+                warnings={warnings.map((i) => ({ ...i, ref: i.elementId ?? i.edgeId }))}
+              />
             )}
           </div>
         )}
@@ -191,6 +228,160 @@ export function PublishModal({ diagram, onClose }: { diagram: BpmnDiagram; onClo
             >
               {rejections.length > 0 ? `Publicar (${rejections.length} rejeições)` : 'Publicar'}
             </Button>
+          )}
+        </footer>
+      </div>
+    </div>
+  );
+}
+
+interface AgentLintIssue {
+  code: string;
+  severity: 'error' | 'warning';
+  message: string;
+  nodeId?: string;
+  remediation?: string;
+}
+
+type AgentDeployState =
+  | { kind: 'idle' }
+  | { kind: 'parseError'; message: string }
+  | { kind: 'linting' }
+  | { kind: 'linted'; issues: AgentLintIssue[] }
+  | { kind: 'lintFailed'; message: string }
+  | { kind: 'published'; ref: string }
+  | { kind: 'publishError'; message: string };
+
+/**
+ * P6 (deploy de agente, AG-3.6, shape `ag3-6-shape-proposta-p6-agent-deploy.md`):
+ * sem editor visual nem ponte `?load=` (fora de escopo enquanto P3/squad não
+ * decide) — só o MÍNIMO para o cliente publicar sozinho, colando o JSON do
+ * grafo exportado do editor da lib. Decisão do dono: capacidade só-por-API é
+ * capacidade que só a equipe interna exerce (mesma lição do kill-switch por
+ * INSERT/export sem botão) — por isso esta tela, não uma rota nua. Lint ANTES
+ * do deploy, rejeição bloqueia, aviso não — MESMA disciplina D19, reusando
+ * `LintIssuesList`/`PublishModal`.
+ */
+export function AgentDeployModal({ onClose }: { onClose: () => void }) {
+  const [text, setText] = useState('');
+  const [state, setState] = useState<AgentDeployState>({ kind: 'idle' });
+
+  function parseGraph(): Record<string, unknown> | null {
+    try {
+      const parsed: unknown = JSON.parse(text);
+      if (!parsed || typeof parsed !== 'object') return null;
+      return parsed as Record<string, unknown>;
+    } catch {
+      return null;
+    }
+  }
+
+  async function runLint() {
+    const graph = parseGraph();
+    if (!graph) {
+      setState({ kind: 'parseError', message: 'JSON inválido — cole o grafo exportado do editor da lib.' });
+      return;
+    }
+    setState({ kind: 'linting' });
+    const { data, error } = await api.POST('/v1/agent-definitions/lint', { body: { graph } });
+    if (error || !data) {
+      setState({ kind: 'lintFailed', message: problemMessage(error, 'Falha ao rodar o lint') });
+      return;
+    }
+    setState({ kind: 'linted', issues: (data.issues as AgentLintIssue[]) ?? [] });
+  }
+
+  async function publish() {
+    const graph = parseGraph();
+    if (!graph) return; // botão só habilita depois de um lint OK — grafo já validou como objeto
+    const { data, error, response } = await api.POST('/v1/agent-definitions', { body: { graph } });
+    if (error || !data) {
+      setState({ kind: 'publishError', message: problemMessage(error, `Falha ao publicar (HTTP ${response.status})`) });
+      return;
+    }
+    setState({ kind: 'published', ref: data.ref });
+  }
+
+  const issues = state.kind === 'linted' ? state.issues : [];
+  const rejections = issues.filter((i) => i.severity === 'error');
+  const warnings = issues.filter((i) => i.severity === 'warning');
+  const canPublish = state.kind === 'linted' && rejections.length === 0;
+
+  return (
+    <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label="Publicar grafo de agente">
+      <div className="modal publish-modal">
+        <header>
+          <h2>Publicar grafo de agente</h2>
+          <button type="button" className="modal-close" onClick={onClose} aria-label="Fechar">
+            ✕
+          </button>
+        </header>
+        <p className="d19-note">
+          Cole o JSON do grafo exportado do editor de agente (biblioteca). O lint roda antes do
+          deploy — grafo fora do escopo v1 é <strong>rejeitado, nunca ignorado</strong> (mesma
+          disciplina D19 do Estúdio).
+        </p>
+
+        <label className="field">
+          <span>Grafo (JSON)</span>
+          <textarea
+            rows={10}
+            className="mono agent-graph-textarea"
+            value={text}
+            onChange={(e) => {
+              setText(e.target.value);
+              setState({ kind: 'idle' });
+            }}
+            placeholder='{"id":"agnt-exemplo","version":"1.0.0", …}'
+          />
+        </label>
+
+        {state.kind === 'parseError' && (
+          <p className="publish-error" role="alert">
+            {state.message}
+          </p>
+        )}
+        {state.kind === 'lintFailed' && <NonIdeal kind="error" title="Não foi possível rodar o lint" technical={state.message} />}
+        {state.kind === 'published' && (
+          <p className="publish-ok" role="status" aria-live="polite">
+            Publicado como <span className="mono">{state.ref}</span>.
+          </p>
+        )}
+        {state.kind === 'publishError' && (
+          <p className="publish-error" role="alert">
+            {state.message}
+          </p>
+        )}
+        {state.kind === 'linted' &&
+          (rejections.length === 0 && warnings.length === 0 ? (
+            <p className="lint-clean" data-tone="success">
+              <strong>0 rejeições · 0 avisos</strong> — grafo dentro do escopo v1; pronto para publicar.
+            </p>
+          ) : (
+            <LintIssuesList
+              rejections={rejections.map((i) => ({ ...i, ref: i.nodeId }))}
+              warnings={warnings.map((i) => ({ ...i, ref: i.nodeId }))}
+            />
+          ))}
+
+        <footer className="modal-actions">
+          <Button intent="neutral" onClick={onClose}>
+            Fechar
+          </Button>
+          {state.kind !== 'published' && (
+            <>
+              <Button intent="neutral" onClick={runLint} disabled={!text.trim() || state.kind === 'linting'}>
+                Rodar lint
+              </Button>
+              <Button
+                intent="primary"
+                onClick={publish}
+                disabled={!canPublish}
+                title={!canPublish ? 'rode o lint sem rejeições antes de publicar' : undefined}
+              >
+                {rejections.length > 0 ? `Publicar (${rejections.length} rejeições)` : 'Publicar'}
+              </Button>
+            </>
           )}
         </footer>
       </div>

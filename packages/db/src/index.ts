@@ -323,6 +323,7 @@ export {
   compareSemver,
   deployAgentDefinition,
   getAgentDefinitionByRef,
+  lintAgentGraph,
   listAgentDefinitions,
   resolveAgentRef,
   resolveAgentRefTx,
