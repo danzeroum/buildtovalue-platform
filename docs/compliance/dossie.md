@@ -216,6 +216,35 @@ como LOG estruturado (o 403 já existe e é testado; falta o evento de log).
   de erro explícito que **bloqueia** a publicação (sem o lint não se afirma o escopo v1).
   Teste de máquina cobre a falha do lint e a falha do deploy.
 
+- **AG-3.4 (P5) — `tenant_tools.enabled` ganha enforcement em DOIS pontos (era coluna
+  sem leitura nenhuma).** Deploy que referencia tool desabilitada é **recusado no lint**
+  (`EXEC_TOOL_DISABLED`, `registry/store.ts`); tool desabilitada **no meio** de uma
+  instância em voo faz o próximo efeito parar **honestamente** (`agentToolDisabled`,
+  âmbar — ação deliberada do tenant, não incidente vermelho), no MESMO checkpoint de
+  execução que já verifica staleness (`gateFio.ts`). D31 continua ortogonal: `enabled`
+  liga/desliga; `effect`/`authorization` (imutáveis) nunca mudam pelo toggle.
+- **AG-3.4 — VARREDURA de colunas de controle/estado sem leitura, pedido do dono junto
+  com o P5 (mesma classe do achado acima).** Varredura completa de colunas de controle
+  em todo o schema (18 migrações lidas na íntegra) — **3 achados endereçados, resto
+  verificado coluna a coluna** (`docs/pendencias.md` §2.31):
+  1. **`variable_search_keys`** (tabela inteira, schema/RLS/índice desde a `0003`, zero
+     producer/consumer) — **REMOVIDA** (migração `0019`). Schema morto é dívida que
+     mente por existir; se busca por variável virar requisito real, projeta-se do zero.
+  2. **`agent_definitions.autonomy_level`** — a regra "autonomia exige gate" já era
+     aplicada corretamente (contra o grafo em memória no lint), mas a COLUNA persistida
+     não tinha garantia estrutural de refletir `graph.autonomyLevel`. Migração `0020`
+     converte para **`GENERATED ALWAYS ... STORED`** — divergir é agora estruturalmente
+     impossível (Postgres recusa qualquer INSERT que tente setá-la direto). O catálogo
+     de agentes que a exibiria é **F4 nomeado**.
+  3. **`process_definitions.bpmn_version`** — grava `'1'` fixo, nunca comparado/exposto;
+     deixado como está (reservado para quando existir uma 2ª versão do dialeto BPMN),
+     mas registrado como **inerte hoje** para ninguém assumir que valida algo.
+  - **Nota:** `tool_definitions.data_scope` aparece no card de gate como rótulo
+    informativo — **não filtra nem controla acesso**; é apresentação, não um controle.
+    Registrado para não confundir leitura futura do schema.
+  Evidência para o Gate de Piloto: o schema não tem mais alavancas decorativas além
+  destas três, e as três têm destino decidido.
+
 ---
 
 ## Coexistências transitórias sob gate (rastreabilidade)
@@ -227,6 +256,8 @@ como LOG estruturado (o 403 já existe e é testado; falta o evento de log).
 ---
 
 *Atualização deste dossiê é obrigatória a cada fechamento de fase (circuito do
-designer). Última: fechamento da AG-2.2 (gate de tool D31 ✅; limitação declarada
-D37 — laço com espera; a11y de navegador ✅; **auditoria de evidência** em
-`docs/reports/ag2-2.md` §4 — itens abertos rebaixados honestamente).*
+designer). Última: fechamento da AG-3.4 (P5 — enforcement de `tenant_tools.enabled`
+em dois pontos ✅; **varredura completa de colunas de controle** do schema, 3 achados
+endereçados — `variable_search_keys` removida, `agent_definitions.autonomy_level`
+estruturalmente à prova de divergência, `bpmn_version` documentado como inerte —
+resto verificado coluna a coluna, ver `docs/pendencias.md` §2.31).*

@@ -170,43 +170,66 @@
   **[ABERTO — GATILHO: inventário A3 (dev) → marcação do designer → código]**. Detalhe:
   `docs/handoff/ag3-4-shape-proposta-p5-tools.md` §5.
 - **§2.31 — VARREDURA de colunas de controle/estado sem leitura (pedido do dono, junto
-  com o P5 — mesma classe de achado que `tenant_tools.enabled`).** Li as 18 migrações na
-  íntegra e cruzei toda coluna candidata contra leitura real em `packages/db/src`,
-  `apps/api/src`, `apps/worker/src`, `apps/console/src`. Dois achados NOVOS confirmados,
-  um menor:
+  com o P5 — mesma classe de achado que `tenant_tools.enabled`). [RESOLVIDO — decisões
+  do dono, migração 0019+0020].** Li as 18 migrações na íntegra e cruzei toda coluna
+  candidata contra leitura real em `packages/db/src`, `apps/api/src`, `apps/worker/src`,
+  `apps/console/src`. Dois achados NOVOS confirmados, um menor — **os três com destino
+  decidido**:
   1. **`agent_definitions.autonomy_level`** — gravado a cada deploy (`agentStore.ts`),
      incluído em todo `SELECT` da tabela, mas **nunca relido de volta** por nenhum
      consumidor real: o worker (`apps/worker/src/main.ts`) só usa `def.graph` do agente
      resolvido, descartando o campo; não há catálogo de agentes exposto em
      `apps/api`/`apps/console` que o exiba. A regra "autonomia baixa exige gate"
-     (assinatura do F-AG, "autonomia como dial") **existe e é aplicada** — mas em
-     `packages/db/src/registry/lint.ts`, contra o `graph.autonomyLevel` **em memória**
-     do payload de deploy, não contra a coluna persistida. A coluna gravada no banco é
-     órfã: mudar o valor via SQL direto não mudaria nenhum comportamento observável.
+     (assinatura do F-AG, "autonomia como dial") **existe e é aplicada corretamente** —
+     mas em `packages/db/src/registry/lint.ts`, contra o `graph.autonomyLevel` **em
+     memória** do payload de deploy, não contra a coluna persistida. **DECISÃO: a regra
+     fica como está (não é como os outros achados); a COLUNA é que precisava fechar a
+     diferença agora.** **[RESOLVIDO]** — migração `0020` converte `autonomy_level` para
+     `GENERATED ALWAYS AS ((graph->>'autonomyLevel')::int) STORED`: divergir da fonte
+     única é agora estruturalmente impossível (Postgres recusa qualquer INSERT/UPDATE
+     que tente setá-la direto). Teste `agent-registry.test.ts` prova a recusa. **A
+     SUPERFÍCIE que lê a coluna (catálogo de agentes na UI) fica registrada como F4
+     nomeada** — `listAgentDefinitions` já existe em `packages/db/src/registry/
+     agentStore.ts`, sem rota nem tela.
   2. **Tabela inteira `variable_search_keys`** (migração `0003`, "busca lateral D16r") —
      schema completo, índice dedicado (`variable_search_idx`) e RLS configurada, mas
      **zero INSERT e zero SELECT em qualquer lugar do código** fora do teste genérico de
-     isolamento de tenant (que só confere RLS, não a feature). É dead-on-arrival desde a
-     criação — nunca teve sequer uma tentativa de wiring dos dois lados (produtor
-     no worker, consumidor numa rota de busca).
+     isolamento de tenant (que só confere RLS, não a feature). Dead-on-arrival desde a
+     criação. **DECISÃO: REMOVER na v1** — schema morto é dívida que mente ("existe logo
+     faz algo") e infla superfície de segurança sem entregar nada; se busca por variável
+     virar requisito real, projeta-se do zero com o caso de uso. **[RESOLVIDO]** —
+     migração `0019` (`DROP TABLE`); `rls-isolation.test.ts` atualizado (20 tabelas, não 21).
   3. **Menor: `process_definitions.bpmn_version`** — sempre grava `'1'` fixo
      (`runtime/advance.ts`), aparece em `SELECT`s do registry mas nunca é comparado,
      validado ou exposto a ninguém (diferente de `state_schema_version`, que É
-     ativamente comparado em `advance.ts` para bloquear avanço incompatível).
+     ativamente comparado em `advance.ts` para bloquear avanço incompatível). **DECISÃO:
+     DEIXA como está** — reservado para quando existir uma 2ª versão do dialeto BPMN
+     (diferente de schema morto: este tem propósito futuro claro). **[RESOLVIDO —
+     registrado como inerte hoje, para ninguém assumir que valida algo]**.
   4. **Nota (não é finding pleno):** `tool_definitions.data_scope` é lido e EXIBIDO no
      card de gate (`GateDetail.tsx`), mas só como rótulo informativo — não é usado para
      nenhuma decisão real de acesso/filtragem. Soa como controle, é apresentação.
+     **Registrado no dossiê** (`docs/compliance/dossie.md`) para não confundir leitura
+     futura do schema.
   Confirmado por completude: `tenant_tools.requires_gate`/`scope` seguem vestigiais por
   decisão já documentada (§2.29), consistente com o código; TODO o resto do schema
   (jobs/outbox/timers/incidents, kill-switch, budget, claim/gate/pin, classification/
   cifragem, idempotency, ledger de âncoras) foi conferido coluna a coluna e está
-  efetivamente lido/enforçado em pelo menos um caminho de execução real. **Não corrigido
-  nesta fatia** — só mapeado, por pedido explícito do dono ("é muito mais barato achar
-  agora do que descobrir no Gate de Piloto que um item marcado 'pronto' não tem
-  dentes"). **[ABERTO — GATILHO: decisão do dono sobre o que entra na v1 — provável
-  candidatos: remover `variable_search_keys` se F3/F4 não for buscar por variável de
-  negócio, OU implementar o wiring; expor `autonomy_level` num catálogo de agentes se P5-
-  irmão (catálogo de agentes) entrar em escopo]**.
+  efetivamente lido/enforçado em pelo menos um caminho de execução real. Conclusão
+  registrada no dossiê: "varredura completa de colunas de controle, 3 achados
+  endereçados, resto verificado coluna a coluna" — evidência forte para o Gate de
+  Piloto de que o schema não tem mais alavancas decorativas além destas.
+  Detalhe: `packages/db/migrations/0019_drop_variable_search_keys.sql`,
+  `packages/db/migrations/0020_autonomy_level_generated.sql`,
+  `packages/db/src/registry/agentStore.ts`, `docs/compliance/dossie.md`.
+- **§2.32 — F4 nomeado: catálogo de agentes na UI (`listAgentDefinitions`).** A função
+  já existe em `packages/db/src/registry/agentStore.ts` (latest-per-name, mesmo padrão
+  do catálogo de tools do P5) mas não tem rota (`apps/api`) nem tela (`apps/console`) —
+  nascida da varredura §2.31 (achado 1), onde ficou decidido que a INTEGRIDADE da
+  coluna `autonomy_level` era urgente (fechada, migração `0020`), mas a SUPERFÍCIE que a
+  exibiria (o catálogo) é trabalho de UI genuíno, fora desta fatia. **[ABERTO —
+  GATILHO: decisão do dono sobre quando o catálogo de agentes entra em escopo —
+  provavelmente junto com A3 (catálogo de tools), mesmo rito inventário→marcação]**.
 
 ## §3 · Infra & ambiente (Gate de Piloto)
 

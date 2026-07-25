@@ -30,6 +30,8 @@ export interface AgentDefinitionRow {
   version: string;
   ref: string;
   name: string;
+  /** GENERATED ALWAYS de `graph.autonomyLevel` (migração 0020) — nunca gravável
+   *  diretamente; estruturalmente impossível divergir da fonte única. */
   autonomy_level: number;
   graph: AgentWorkflow;
   created_at: string;
@@ -75,11 +77,13 @@ export async function deployAgentDefinition(
 
   const ref = formatRef({ id: input.graph.id, version: input.graph.version });
   return withTenant(sql, tenantId, async (tx) => {
+    // autonomy_level é GENERATED ALWAYS (migração 0020) a partir de `graph` —
+    // NUNCA gravado diretamente (impossível divergir da fonte única do dial).
     const [row] = await tx<AgentDefinitionRow[]>`
       INSERT INTO agent_definitions
-        (tenant_id, agent_id, version, ref, name, autonomy_level, graph, created_by)
+        (tenant_id, agent_id, version, ref, name, graph, created_by)
       VALUES (${tenantId}, ${input.graph.id}, ${input.graph.version}, ${ref},
-              ${input.graph.name}, ${input.graph.autonomyLevel},
+              ${input.graph.name},
               ${tx.json(input.graph as never)}, ${input.createdBy ?? null})
       RETURNING id, agent_id, version, ref, name, autonomy_level, graph, created_at`;
     return { ok: true, definition: row, warnings: issues };

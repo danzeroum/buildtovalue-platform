@@ -99,13 +99,13 @@ describe('RLS — isolamento de tenants (migração 0001)', () => {
     );
   });
 
-  it('TODAS as 21 tabelas multi-tenant têm RLS FORÇADA (0001+0002+0003+0004+0006+0007+0008+0009+0010)', async () => {
+  it('TODAS as 20 tabelas multi-tenant têm RLS FORÇADA (0001+0002+0003+0004+0006+0007+0008+0009+0010; 0019 removeu variable_search_keys)', async () => {
     // Lista canônica: tabela nova sem entrar aqui + sem policy = este teste
     // ou o de vazamento abaixo ficam vermelhos.
     const tables = [
       'users', 'refresh_tokens',
       'instances', 'outbox', 'jobs',
-      'variables', 'variable_search_keys', 'timers', 'user_tasks',
+      'variables', 'timers', 'user_tasks',
       'incidents', 'history_events',
       'process_definitions', 'form_definitions', 'idempotency_keys',
       'tenant_audit_events', 'tenant_ai_config', 'tenant_tools', // 0006 (AG-2.1)
@@ -114,7 +114,7 @@ describe('RLS — isolamento de tenants (migração 0001)', () => {
       'tool_definitions', // 0009 (AG-2.2 etapa 5)
       'instance_gate_state', // 0010 (AG-2.2 etapa 5 slice 2)
     ];
-    expect(tables).toHaveLength(21); // cobertura declarada (AG-2.2 etapa 5 slice 2)
+    expect(tables).toHaveLength(20); // 21 - variable_search_keys (0019, tabela morta removida)
     const rows = await api`
       SELECT relname, relrowsecurity, relforcerowsecurity
       FROM pg_class
