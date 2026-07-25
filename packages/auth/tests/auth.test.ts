@@ -31,16 +31,16 @@ describe('password (scrypt)', () => {
 describe('JWT de acesso', () => {
   it('roundtrip preserva claims', async () => {
     const { accessToken } = await signAccessToken(
-      { sub: 'u1', tenantId: 't1', role: 'analyst' },
+      { sub: 'u1', tenantId: 't1', role: 'analyst', sid: 'rt1' },
       jwtOptions,
     );
     const claims = await verifyAccessToken(accessToken, jwtOptions);
-    expect(claims).toEqual({ sub: 'u1', tenantId: 't1', role: 'analyst' });
+    expect(claims).toEqual({ sub: 'u1', tenantId: 't1', role: 'analyst', sid: 'rt1' });
   });
 
   it('segredo errado é rejeitado', async () => {
     const { accessToken } = await signAccessToken(
-      { sub: 'u1', tenantId: 't1', role: 'admin' },
+      { sub: 'u1', tenantId: 't1', role: 'admin', sid: 'rt1' },
       jwtOptions,
     );
     await expect(
@@ -50,7 +50,7 @@ describe('JWT de acesso', () => {
 
   it('token adulterado é rejeitado', async () => {
     const { accessToken } = await signAccessToken(
-      { sub: 'u1', tenantId: 't1', role: 'admin' },
+      { sub: 'u1', tenantId: 't1', role: 'admin', sid: 'rt1' },
       jwtOptions,
     );
     await expect(verifyAccessToken(accessToken.slice(0, -3) + 'abc', jwtOptions)).rejects.toThrow(

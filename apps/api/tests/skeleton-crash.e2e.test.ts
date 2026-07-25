@@ -1,4 +1,4 @@
-import { hashPassword, signAccessToken } from '@platform/auth';
+import { signAccessToken } from '@platform/auth';
 import {
   createDb,
   createRefreshTokenRepository,
@@ -13,6 +13,7 @@ import postgres from 'postgres';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   createTestDatabase,
+  seedTestUser,
   type TestDatabase,
 } from '../../../packages/db/tests/helpers.js';
 import { buildApp, type ZodApp } from '../src/app.js';
@@ -47,10 +48,7 @@ describe('walking skeleton — 100 instâncias com crash e fencing (F1.8)', () =
     const migrator = postgres(db.migratorUrl, { max: 1, onnotice: () => {} });
     const [t] = await migrator`INSERT INTO tenants (slug, name) VALUES ('skel', 'Skeleton') RETURNING id`;
     tenant = t.id as string;
-    await withTenant(migrator, tenant, async (tx) => {
-      await tx`INSERT INTO users (tenant_id, email, password_hash, display_name, role)
-        VALUES (${tenant}, 'admin@skel.test', ${await hashPassword('x')}, 'Admin', 'admin')`;
-    });
+    const adminId = await seedTestUser(migrator, tenant, { email: 'admin@skel.test', displayName: 'Admin', role: 'admin' });
     await migrator.end();
 
     sql = createDb(db.apiUrl, { max: 6 });
@@ -66,7 +64,7 @@ describe('walking skeleton — 100 instâncias com crash e fencing (F1.8)', () =
     });
     await app.ready();
     ({ accessToken: token } = await signAccessToken(
-      { sub: 'admin', tenantId: tenant, role: 'admin' },
+      { sub: adminId, tenantId: tenant, role: 'admin', sid: 'test' },
       { secret: deps.config.JWT_SECRET, accessTtlSeconds: 900 },
     ));
   }, 60_000);

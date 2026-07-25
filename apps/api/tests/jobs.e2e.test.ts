@@ -1,16 +1,16 @@
-import { hashPassword, signAccessToken } from '@platform/auth';
+import { signAccessToken } from '@platform/auth';
 import {
   createDb,
   createRefreshTokenRepository,
   createRuntime,
   createUserRepository,
   dispatchOutboxOnce,
-  withTenant,
 } from '@platform/db';
 import postgres from 'postgres';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   createTestDatabase,
+  seedTestUser,
   type TestDatabase,
 } from '../../../packages/db/tests/helpers.js';
 import { buildApp, type ZodApp } from '../src/app.js';
@@ -33,10 +33,7 @@ describe('jobs â€” locks, completion/failure + aliases deprecados, list (shape Â
     const migrator = postgres(db.migratorUrl, { max: 1, onnotice: () => {} });
     const [t] = await migrator`INSERT INTO tenants (slug, name) VALUES ('jx', 'Jobs') RETURNING id`;
     tenant = t.id as string;
-    await withTenant(migrator, tenant, async (tx) => {
-      await tx`INSERT INTO users (tenant_id, email, password_hash, display_name, role)
-        VALUES (${tenant}, 'op@jx.test', ${await hashPassword('x')}, 'Op', 'admin')`;
-    });
+    const workerId = await seedTestUser(migrator, tenant, { email: 'op@jx.test', displayName: 'Op', role: 'admin' });
     await migrator.end();
 
     sql = createDb(db.apiUrl, { max: 4 });
@@ -50,7 +47,7 @@ describe('jobs â€” locks, completion/failure + aliases deprecados, list (shape Â
     });
     await app.ready();
     ({ accessToken: token } = await signAccessToken(
-      { sub: 'worker-e2e', tenantId: tenant, role: 'admin' },
+      { sub: workerId, tenantId: tenant, role: 'admin', sid: 'test' },
       { secret: deps.config.JWT_SECRET, accessTtlSeconds: 900 },
     ));
   }, 60_000);

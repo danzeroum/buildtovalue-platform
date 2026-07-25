@@ -9,7 +9,7 @@ import {
 } from '@platform/db';
 import postgres from 'postgres';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { createTestDatabase, type TestDatabase } from '../../../packages/db/tests/helpers.js';
+import { createTestDatabase, seedTestUser, type TestDatabase } from '../../../packages/db/tests/helpers.js';
 import { buildApp, type ZodApp } from '../src/app.js';
 import { fakeDeps } from '../src/testing/fakes.js';
 
@@ -34,6 +34,7 @@ describe('AG-3.2 · rotas de inteligência + kill-switch', () => {
   let auditorTok: string;
   let realAdminId: string;
   let realAdminTok: string;
+  let adminId: string;
 
   beforeAll(async () => {
     db = await createTestDatabase('ai_routes');
@@ -50,6 +51,9 @@ describe('AG-3.2 · rotas de inteligência + kill-switch', () => {
         VALUES (${tenant}, 'ana@aico.test', ${await hashPassword('x')}, 'Ana Ruiz', 'admin') RETURNING id`;
       realAdminId = u.id as string;
     });
+    adminId = await seedTestUser(migrator, tenant, { email: 'admin@ai.test', displayName: 'Admin', role: 'admin' });
+    const operatorId = await seedTestUser(migrator, tenant, { email: 'op@ai.test', displayName: 'Op', role: 'operator' });
+    const auditorId = await seedTestUser(migrator, tenant, { email: 'aud@ai.test', displayName: 'Aud', role: 'auditor' });
     await migrator.end();
 
     sql = createDb(db.apiUrl, { max: 4 });
@@ -63,10 +67,10 @@ describe('AG-3.2 · rotas de inteligência + kill-switch', () => {
     });
     await app.ready();
     const jwt = { secret: deps.config.JWT_SECRET, accessTtlSeconds: 900 };
-    ({ accessToken: adminTok } = await signAccessToken({ sub: 'admin', tenantId: tenant, role: 'admin' }, jwt));
-    ({ accessToken: operatorTok } = await signAccessToken({ sub: 'op', tenantId: tenant, role: 'operator' }, jwt));
-    ({ accessToken: auditorTok } = await signAccessToken({ sub: 'aud', tenantId: tenant, role: 'auditor' }, jwt));
-    ({ accessToken: realAdminTok } = await signAccessToken({ sub: realAdminId, tenantId: tenant, role: 'admin' }, jwt));
+    ({ accessToken: adminTok } = await signAccessToken({ sub: adminId, tenantId: tenant, role: 'admin', sid: 'test' }, jwt));
+    ({ accessToken: operatorTok } = await signAccessToken({ sub: operatorId, tenantId: tenant, role: 'operator', sid: 'test' }, jwt));
+    ({ accessToken: auditorTok } = await signAccessToken({ sub: auditorId, tenantId: tenant, role: 'auditor', sid: 'test' }, jwt));
+    ({ accessToken: realAdminTok } = await signAccessToken({ sub: realAdminId, tenantId: tenant, role: 'admin', sid: 'test' }, jwt));
   }, 60_000);
 
   afterAll(async () => {
@@ -97,18 +101,18 @@ describe('AG-3.2 · rotas de inteligência + kill-switch', () => {
       payload: { paused: true, reason: INCIDENT_REASON },
     });
     expect(on.statusCode).toBe(200);
-    expect(on.json()).toMatchObject({ state: 'paused', by: { type: 'user', id: 'admin' } });
+    expect(on.json()).toMatchObject({ state: 'paused', by: { type: 'user', id: adminId } });
     // o eco do POST também não devolve a razão
     expect(on.body).not.toContain('vazamento');
-    // degrade honesto: 'admin' é um sub SINTÉTICO (sem linha em `users`) — o
-    // resolvedor de nome nunca derruba a resposta, só devolve displayName null.
-    expect(on.json().by.displayName).toBeNull();
+    // AG-3.5: todo caller autenticado agora tem linha real em `users` (checagem
+    // de `active` no `authenticate`) — o resolvedor de nome resolve o nome real.
+    expect(on.json().by.displayName).toBe('Admin');
 
     // rota AMPLA (operator): vê o FATO (estado/ator/quando), NUNCA a razão
     const fato = await app.inject({ method: 'GET', url: '/v1/ai/kill-switch', headers: bearer(operatorTok) });
     expect(fato.statusCode).toBe(200);
     const body = fato.json();
-    expect(body).toMatchObject({ state: 'paused', by: { type: 'user', id: 'admin' } });
+    expect(body).toMatchObject({ state: 'paused', by: { type: 'user', id: adminId } });
     expect(body.since).toBeTruthy();
     expect('reason' in body).toBe(false);
     expect(fato.body).not.toContain('vazamento');

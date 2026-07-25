@@ -1,4 +1,4 @@
-import { hashPassword, signAccessToken } from '@platform/auth';
+import { signAccessToken } from '@platform/auth';
 import {
   createDb,
   createEnvKeyProvider,
@@ -16,6 +16,7 @@ import postgres from 'postgres';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   createTestDatabase,
+  seedTestUser,
   type TestDatabase,
 } from '../../../packages/db/tests/helpers.js';
 import { buildApp, type ZodApp } from '../src/app.js';
@@ -38,6 +39,9 @@ describe('user-tasks — claim D21 + fencing formal + assignment D24 (shape §6)
   let joao: string;
   let operator: string;
   let analyst: string;
+  let mariaId: string;
+  let joaoId: string;
+  let chefeId: string;
 
   async function makeApp(): Promise<ZodApp> {
     const built = await buildApp({
@@ -58,20 +62,20 @@ describe('user-tasks — claim D21 + fencing formal + assignment D24 (shape §6)
     const migrator = postgres(db.migratorUrl, { max: 1, onnotice: () => {} });
     const [t] = await migrator`INSERT INTO tenants (slug, name) VALUES ('tk', 'Tasks') RETURNING id`;
     tenant = t.id as string;
-    await withTenant(migrator, tenant, async (tx) => {
-      await tx`INSERT INTO users (tenant_id, email, password_hash, display_name, role)
-        VALUES (${tenant}, 'maria@tk.test', ${await hashPassword('x')}, 'Maria', 'business')`;
-    });
+    mariaId = await seedTestUser(migrator, tenant, { email: 'maria@tk.test', displayName: 'Maria', role: 'business' });
+    joaoId = await seedTestUser(migrator, tenant, { email: 'joao@tk.test', displayName: 'João', role: 'business' });
+    chefeId = await seedTestUser(migrator, tenant, { email: 'chefe@tk.test', displayName: 'Chefe', role: 'admin' });
+    const analistaId = await seedTestUser(migrator, tenant, { email: 'ana-lista@tk.test', displayName: 'Ana Lista', role: 'analyst' });
     await migrator.end();
 
     sql = createDb(db.apiUrl, { max: 4 });
     deps = fakeDeps({ RATE_LIMIT_MAX: 100_000 });
     app = await makeApp();
     const jwt = { secret: deps.config.JWT_SECRET, accessTtlSeconds: 900 };
-    ({ accessToken: maria } = await signAccessToken({ sub: 'maria', tenantId: tenant, role: 'business' }, jwt));
-    ({ accessToken: joao } = await signAccessToken({ sub: 'joao', tenantId: tenant, role: 'business' }, jwt));
-    ({ accessToken: operator } = await signAccessToken({ sub: 'chefe', tenantId: tenant, role: 'admin' }, jwt));
-    ({ accessToken: analyst } = await signAccessToken({ sub: 'ana-lista', tenantId: tenant, role: 'analyst' }, jwt));
+    ({ accessToken: maria } = await signAccessToken({ sub: mariaId, tenantId: tenant, role: 'business', sid: 'test' }, jwt));
+    ({ accessToken: joao } = await signAccessToken({ sub: joaoId, tenantId: tenant, role: 'business', sid: 'test' }, jwt));
+    ({ accessToken: operator } = await signAccessToken({ sub: chefeId, tenantId: tenant, role: 'admin', sid: 'test' }, jwt));
+    ({ accessToken: analyst } = await signAccessToken({ sub: analistaId, tenantId: tenant, role: 'analyst', sid: 'test' }, jwt));
 
     // deploy REAL: form pinado + processo com candidateRoles ['business']
     const schema: FormSchema = {
@@ -141,7 +145,7 @@ describe('user-tasks — claim D21 + fencing formal + assignment D24 (shape §6)
     // João tenta → 409 com HOLDER para a UI ("com maria desde …")
     const held = await app.inject({ method: 'POST', url: `/v1/user-tasks/${taskId}/claim`, headers: auth(joao) });
     expect(held.statusCode).toBe(409);
-    expect(held.json().holder).toMatchObject({ user: 'maria' });
+    expect(held.json().holder).toMatchObject({ user: mariaId });
     expect(held.json().holder.since).toBeTruthy();
 
     // Re-claim da PRÓPRIA Maria ROTACIONA (decisão 10.b): T2 mata T1
@@ -204,7 +208,7 @@ describe('user-tasks — claim D21 + fencing formal + assignment D24 (shape §6)
       method: 'POST',
       url: `/v1/user-tasks/${taskId}/assignment`,
       headers: auth(operator),
-      payload: { assignee: 'joao', reason: 'Maria de férias' },
+      payload: { assignee: joaoId, reason: 'Maria de férias' },
     });
     expect(assigned.statusCode).toBe(200);
 
@@ -213,7 +217,7 @@ describe('user-tasks — claim D21 + fencing formal + assignment D24 (shape §6)
       tx`SELECT payload FROM history_events
          WHERE instance_id = ${instanceId} AND kind = 'taskReassigned'`);
     expect(audit.payload).toMatchObject({
-      from: 'maria', to: 'joao', actor: 'chefe', reason: 'Maria de férias',
+      from: mariaId, to: joaoId, actor: chefeId, reason: 'Maria de férias',
     });
 
     // token da Maria MORREU com a reatribuição

@@ -20,6 +20,20 @@ import {
   type TenantToolCatalogItem,
 } from '../registry/toolStore.js';
 import {
+  changeOwnPassword,
+  listMembers,
+  resetMemberPassword,
+  setMemberActive,
+  updateMemberRole,
+  updatePreferences,
+  type ChangePasswordOutcome,
+  type MemberRow,
+  type ResetPasswordOutcome,
+  type SetActiveOutcome,
+  type UpdateRoleOutcome,
+} from '../admin/members.js';
+import type { UserRole } from '../repositories/users.js';
+import {
   exportAudit as exportAuditRow,
   verifyAudit as verifyAuditRow,
   type AuditExportFilters,
@@ -286,6 +300,43 @@ export interface PlatformRuntime {
       motivo: string,
     ): Promise<SetTenantToolEnabledOutcome>;
   };
+  /** AG-3.5 (ADENDO-04 §5): administração básica — membros/papéis/desativar/reset
+   *  (A4) + perfil próprio (A5) + senha temporária (A6-A). Lockout do último admin
+   *  é invariante sobre o RESULTADO (nunca zero admins ativos), não sobre quem
+   *  pediu. Desativar desatribui tarefas E gates abertos na mesma tx. */
+  admin: {
+    listMembers(tenantId: string): Promise<MemberRow[]>;
+    updateMemberRole(
+      tenantId: string,
+      targetUserId: string,
+      role: UserRole,
+      actor: AuditActor,
+      reason: string,
+    ): Promise<UpdateRoleOutcome>;
+    setMemberActive(
+      tenantId: string,
+      targetUserId: string,
+      active: boolean,
+      actor: AuditActor,
+      reason: string,
+    ): Promise<SetActiveOutcome>;
+    resetMemberPassword(
+      tenantId: string,
+      targetUserId: string,
+      actor: AuditActor,
+      reason: string,
+    ): Promise<ResetPasswordOutcome>;
+    changeOwnPassword(
+      tenantId: string,
+      userId: string,
+      input: { currentPassword: string; newPassword: string; sid: string },
+    ): Promise<ChangePasswordOutcome>;
+    updatePreferences(
+      tenantId: string,
+      userId: string,
+      prefs: { timezone: string; dateFormat: string },
+    ): Promise<void>;
+  };
 }
 
 export type PauseOutcome =
@@ -359,6 +410,17 @@ export function createRuntime(
       list: (tenantId) => listTenantTools(sql, tenantId),
       setEnabled: (tenantId, toolId, enabled, actor, motivo) =>
         setTenantToolEnabled(sql, tenantId, toolId, enabled, actor, motivo),
+    },
+    admin: {
+      listMembers: (tenantId) => listMembers(sql, tenantId),
+      updateMemberRole: (tenantId, targetUserId, role, actor, reason) =>
+        updateMemberRole(sql, tenantId, targetUserId, role, actor, reason),
+      setMemberActive: (tenantId, targetUserId, active, actor, reason) =>
+        setMemberActive(sql, tenantId, targetUserId, active, actor, reason),
+      resetMemberPassword: (tenantId, targetUserId, actor, reason) =>
+        resetMemberPassword(sql, tenantId, targetUserId, actor, reason),
+      changeOwnPassword: (tenantId, userId, input) => changeOwnPassword(sql, tenantId, userId, input),
+      updatePreferences: (tenantId, userId, prefs) => updatePreferences(sql, tenantId, userId, prefs),
     },
     cancel(tenantId, instanceId, reason) {
       // O engine emite CancelJob/CancelTimer/CloseUserTask para TODAS as

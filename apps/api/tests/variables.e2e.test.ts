@@ -1,4 +1,4 @@
-import { hashPassword, signAccessToken } from '@platform/auth';
+import { signAccessToken } from '@platform/auth';
 import {
   createDb,
   createEnvKeyProvider,
@@ -14,6 +14,7 @@ import postgres from 'postgres';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   createTestDatabase,
+  seedTestUser,
   type TestDatabase,
 } from '../../../packages/db/tests/helpers.js';
 import { buildApp, type ZodApp } from '../src/app.js';
@@ -36,6 +37,7 @@ describe('variables — máscara, reveal auditado e PATCH (shape §4)', () => {
   let tokenB: string;
   let tokenBusiness: string;
   let instanceId: string;
+  let operadorAnaId: string;
 
   beforeAll(async () => {
     db = await createTestDatabase('variables_api');
@@ -44,10 +46,9 @@ describe('variables — máscara, reveal auditado e PATCH (shape §4)', () => {
     const [b] = await migrator`INSERT INTO tenants (slug, name) VALUES ('vb', 'VarB') RETURNING id`;
     tenant = a.id as string;
     tenantB = b.id as string;
-    await withTenant(migrator, tenant, async (tx) => {
-      await tx`INSERT INTO users (tenant_id, email, password_hash, display_name, role)
-        VALUES (${tenant}, 'op@va.test', ${await hashPassword('x')}, 'Op', 'admin')`;
-    });
+    operadorAnaId = await seedTestUser(migrator, tenant, { email: 'op@va.test', displayName: 'Op', role: 'admin' });
+    const intrusoId = await seedTestUser(migrator, tenantB, { email: 'intruso@vb.test', displayName: 'Intruso', role: 'admin' });
+    const bizId = await seedTestUser(migrator, tenant, { email: 'biz@va.test', displayName: 'Biz', role: 'business' });
     await migrator.end();
 
     sql = createDb(db.apiUrl, { max: 4 });
@@ -63,9 +64,9 @@ describe('variables — máscara, reveal auditado e PATCH (shape §4)', () => {
     });
     await app.ready();
     const jwt = { secret: deps.config.JWT_SECRET, accessTtlSeconds: 900 };
-    ({ accessToken: token } = await signAccessToken({ sub: 'operador-ana', tenantId: tenant, role: 'admin' }, jwt));
-    ({ accessToken: tokenB } = await signAccessToken({ sub: 'intruso', tenantId: tenantB, role: 'admin' }, jwt));
-    ({ accessToken: tokenBusiness } = await signAccessToken({ sub: 'biz', tenantId: tenant, role: 'business' }, jwt));
+    ({ accessToken: token } = await signAccessToken({ sub: operadorAnaId, tenantId: tenant, role: 'admin', sid: 'test' }, jwt));
+    ({ accessToken: tokenB } = await signAccessToken({ sub: intrusoId, tenantId: tenantB, role: 'admin', sid: 'test' }, jwt));
+    ({ accessToken: tokenBusiness } = await signAccessToken({ sub: bizId, tenantId: tenant, role: 'business', sid: 'test' }, jwt));
 
     const started = await app.inject({
       method: 'POST',
@@ -115,7 +116,7 @@ describe('variables — máscara, reveal auditado e PATCH (shape §4)', () => {
     const [audit] = await withTenant(sql, tenant, (tx) =>
       tx`SELECT payload FROM history_events
          WHERE instance_id = ${instanceId} AND kind = 'variablesUpdated'`);
-    expect(audit.payload).toMatchObject({ actor: 'operador-ana', names: ['cpf', 'nota'] });
+    expect(audit.payload).toMatchObject({ actor: operadorAnaId, names: ['cpf', 'nota'] });
     expect(JSON.stringify(audit.payload)).not.toContain(CPF);
   });
 
@@ -158,7 +159,7 @@ describe('variables — máscara, reveal auditado e PATCH (shape §4)', () => {
          WHERE instance_id = ${instanceId} AND kind = 'sensitiveRevealed'`);
     expect(audit.payload).toMatchObject({
       name: 'cpf',
-      actor: 'operador-ana',
+      actor: operadorAnaId,
       reason: 'verificação cadastral solicitada pelo titular',
     });
     expect(JSON.stringify(audit.payload)).not.toContain(CPF); // valor NUNCA

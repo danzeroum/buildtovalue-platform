@@ -12,7 +12,7 @@ import {
 } from '@platform/db';
 import postgres from 'postgres';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { createTestDatabase, type TestDatabase } from '../../../packages/db/tests/helpers.js';
+import { createTestDatabase, seedTestUser, type TestDatabase } from '../../../packages/db/tests/helpers.js';
 import { buildApp, type ZodApp } from '../src/app.js';
 import { fakeDeps } from '../src/testing/fakes.js';
 
@@ -46,6 +46,10 @@ describe('AG-3.3 · custo do agente no histórico da API — RBAC operate:read',
     const migrator = postgres(db.migratorUrl, { max: 1, onnotice: () => {} });
     const [t] = await migrator`INSERT INTO tenants (slug, name) VALUES ('acapi', 'AgentCostApi') RETURNING id`;
     tenant = t.id as string;
+    const bizId = await seedTestUser(migrator, tenant, { email: 'biz@acapi.test', displayName: 'Biz', role: 'business' });
+    const analystId = await seedTestUser(migrator, tenant, { email: 'an@acapi.test', displayName: 'An', role: 'analyst' });
+    const operatorId = await seedTestUser(migrator, tenant, { email: 'op@acapi.test', displayName: 'Op', role: 'operator' });
+    const adminId = await seedTestUser(migrator, tenant, { email: 'admin@acapi.test', displayName: 'Admin', role: 'admin' });
     instanceId = await withTenant(migrator, tenant, async (tx) => {
       const [row] = await tx`
         INSERT INTO instances (tenant_id, definition_ref, engine_version, state_schema_version, state, status)
@@ -86,10 +90,10 @@ describe('AG-3.3 · custo do agente no histórico da API — RBAC operate:read',
     });
     await app.ready();
     const jwt = { secret: deps.config.JWT_SECRET, accessTtlSeconds: 900 };
-    ({ accessToken: businessTok } = await signAccessToken({ sub: 'biz', tenantId: tenant, role: 'business' }, jwt));
-    ({ accessToken: analystTok } = await signAccessToken({ sub: 'an', tenantId: tenant, role: 'analyst' }, jwt));
-    ({ accessToken: operatorTok } = await signAccessToken({ sub: 'op', tenantId: tenant, role: 'operator' }, jwt));
-    ({ accessToken: adminTok } = await signAccessToken({ sub: 'admin', tenantId: tenant, role: 'admin' }, jwt));
+    ({ accessToken: businessTok } = await signAccessToken({ sub: bizId, tenantId: tenant, role: 'business', sid: 'test' }, jwt));
+    ({ accessToken: analystTok } = await signAccessToken({ sub: analystId, tenantId: tenant, role: 'analyst', sid: 'test' }, jwt));
+    ({ accessToken: operatorTok } = await signAccessToken({ sub: operatorId, tenantId: tenant, role: 'operator', sid: 'test' }, jwt));
+    ({ accessToken: adminTok } = await signAccessToken({ sub: adminId, tenantId: tenant, role: 'admin', sid: 'test' }, jwt));
   }, 60_000);
 
   afterAll(async () => {

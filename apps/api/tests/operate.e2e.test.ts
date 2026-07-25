@@ -1,4 +1,4 @@
-import { hashPassword, signAccessToken } from '@platform/auth';
+import { signAccessToken } from '@platform/auth';
 import {
   createDb,
   createRefreshTokenRepository,
@@ -12,6 +12,7 @@ import postgres from 'postgres';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   createTestDatabase,
+  seedTestUser,
   type TestDatabase,
 } from '../../../packages/db/tests/helpers.js';
 import { buildApp, type ZodApp } from '../src/app.js';
@@ -29,16 +30,14 @@ describe('operate — timers e incidents retry/resolution (shape §6b/§7)', () 
   let app: ZodApp;
   let tenant: string;
   let token: string;
+  let operadorId: string;
 
   beforeAll(async () => {
     db = await createTestDatabase('operate_api');
     const migrator = postgres(db.migratorUrl, { max: 1, onnotice: () => {} });
     const [t] = await migrator`INSERT INTO tenants (slug, name) VALUES ('op', 'Operate') RETURNING id`;
     tenant = t.id as string;
-    await withTenant(migrator, tenant, async (tx) => {
-      await tx`INSERT INTO users (tenant_id, email, password_hash, display_name, role)
-        VALUES (${tenant}, 'op@op.test', ${await hashPassword('x')}, 'Op', 'admin')`;
-    });
+    operadorId = await seedTestUser(migrator, tenant, { email: 'op@op.test', displayName: 'Op', role: 'admin' });
     await migrator.end();
 
     sql = createDb(db.apiUrl, { max: 4 });
@@ -52,7 +51,7 @@ describe('operate — timers e incidents retry/resolution (shape §6b/§7)', () 
     });
     await app.ready();
     ({ accessToken: token } = await signAccessToken(
-      { sub: 'operador', tenantId: tenant, role: 'admin' },
+      { sub: operadorId, tenantId: tenant, role: 'admin', sid: 'test' },
       { secret: deps.config.JWT_SECRET, accessTtlSeconds: 900 },
     ));
   }, 60_000);
@@ -151,7 +150,7 @@ describe('operate — timers e incidents retry/resolution (shape §6b/§7)', () 
     expect(rearmed).toMatchObject({ status: 'available', retries_left: 3, error: null });
     const [auditRetry] = await withTenant(sql, tenant, (tx) =>
       tx`SELECT payload FROM history_events WHERE instance_id = ${id} AND kind = 'incidentRetried'`);
-    expect(auditRetry.payload).toMatchObject({ actor: 'operador', rearmedJobs: 1 });
+    expect(auditRetry.payload).toMatchObject({ actor: operadorId, rearmedJobs: 1 });
 
     // segundo retry do MESMO incidente: não está mais 'open' → 409
     const retryAgain = await app.inject({
@@ -206,7 +205,7 @@ describe('operate — timers e incidents retry/resolution (shape §6b/§7)', () 
     const [auditResolve] = await withTenant(sql, tenant, (tx) =>
       tx`SELECT payload FROM history_events WHERE instance_id = ${id} AND kind = 'incidentResolved'`);
     expect(auditResolve.payload).toMatchObject({
-      actor: 'operador',
+      actor: operadorId,
       reason: 'falha de integração externa reconhecida',
     });
   });

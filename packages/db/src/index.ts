@@ -3,7 +3,9 @@ export { migrate, type MigrationResult } from './migrate.js';
 export { withTenant } from './tenancy.js';
 export {
   createUserRepository,
+  type DateFormat,
   type TenantRow,
+  type UserAuthState,
   type UserRepository,
   type UserRole,
   type UserRow,
@@ -13,6 +15,19 @@ export {
   type RefreshTokenRepository,
   type RefreshTokenRow,
 } from './repositories/refreshTokens.js';
+export {
+  changeOwnPassword,
+  listMembers,
+  resetMemberPassword,
+  setMemberActive,
+  updateMemberRole,
+  updatePreferences,
+  type ChangePasswordOutcome,
+  type MemberRow,
+  type ResetPasswordOutcome,
+  type SetActiveOutcome,
+  type UpdateRoleOutcome,
+} from './admin/members.js';
 export { effectKey } from './runtime/effectKey.js';
 export {
   classificationsFor,

@@ -33,6 +33,7 @@ import { registerUserTaskRoutes } from './routes/userTasks.js';
 import { registerAuditRoutes } from './routes/audit.js';
 import { registerAiRoutes } from './routes/ai.js';
 import { registerToolRoutes } from './routes/tools.js';
+import { registerAdminRoutes } from './routes/admin.js';
 
 /**
  * Dependências injetadas (DIP, G-COD-1): a API depende de interfaces de
@@ -130,6 +131,11 @@ export async function buildApp(deps: ApiDeps): Promise<ZodApp> {
     transform: jsonSchemaTransform,
   });
 
+  // AG-3.5 (ADENDO-04 §5): as duas únicas rotas que funcionam com uma senha
+  // temporária ainda não trocada — qualquer outra autenticada devolve 403
+  // explícito (nunca genérico) enquanto `must_change_password` estiver ativo.
+  const MUST_CHANGE_ALLOWLIST = new Set(['/v1/me', '/v1/me/password']);
+
   // Autenticação Bearer (decorators consumidos pelas rotas /v1 protegidas).
   app.decorate('authenticate', async (req: FastifyRequest, reply: FastifyReply) => {
     const header = req.headers.authorization;
@@ -156,6 +162,29 @@ export async function buildApp(deps: ApiDeps): Promise<ZodApp> {
         });
       }
       throw error;
+    }
+
+    // AG-3.5 §1.1: a checagem MAIS BARATA possível (SELECT por PK, sem join) — só
+    // roda DEPOIS do JWT já validado (nunca paga o custo de banco para um token
+    // forjado/expirado). Cinto e suspensório com o revoke-all de refresh tokens:
+    // isto fecha a janela de até `JWT_ACCESS_TTL_SECONDS` de um access token já
+    // emitido antes da desativação.
+    const authState = await deps.users.getAuthState(req.auth.tenantId, req.auth.sub);
+    if (!authState || !authState.active) {
+      return problem(reply, {
+        type: PROBLEM_TYPES.unauthorized,
+        title: 'Conta desativada',
+        status: 401,
+        requestId: String(req.id),
+      });
+    }
+    if (authState.mustChangePassword && !MUST_CHANGE_ALLOWLIST.has(req.routeOptions?.url ?? req.url)) {
+      return problem(reply, {
+        type: PROBLEM_TYPES.forbidden,
+        title: 'Senha temporária — troque antes de continuar',
+        status: 403,
+        requestId: String(req.id),
+      });
     }
   });
 
@@ -221,6 +250,7 @@ export async function buildApp(deps: ApiDeps): Promise<ZodApp> {
   registerAuditRoutes(app, deps);
   registerAiRoutes(app, deps);
   registerToolRoutes(app, deps);
+  registerAdminRoutes(app, deps);
 
   app.get('/v1/openapi.json', { schema: { hide: true } }, async () => app.swagger());
 

@@ -53,6 +53,17 @@ describe('capabilities — espelho do RBAC v1', () => {
       expect(can(role, 'tools:configure')).toBe(false);
     }
   });
+
+  it('AG-3.5 (admin básica): members:* só admin; me:write é universal (todo papel troca a própria senha)', () => {
+    expect(can('admin', 'members:read')).toBe(true);
+    expect(can('admin', 'members:manage')).toBe(true);
+    for (const role of ['analyst', 'business', 'operator', 'auditor'] as const) {
+      expect(can(role, 'members:read')).toBe(false);
+      expect(can(role, 'members:manage')).toBe(false);
+      expect(can(role, 'me:write')).toBe(true);
+    }
+    expect(can('admin', 'me:write')).toBe(true);
+  });
 });
 
 /**

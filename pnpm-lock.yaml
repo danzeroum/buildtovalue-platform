@@ -227,6 +227,9 @@ importers:
       '@buildtovalue/forms':
         specifier: 1.0.0-next.1
         version: 1.0.0-next.1
+      '@platform/auth':
+        specifier: workspace:*
+        version: link:../auth
       postgres:
         specifier: ^3.4.7
         version: 3.4.9

@@ -39,6 +39,12 @@ export const PERMISSIONS = [
   // só o operador que TEM `tools:configure` liga/desliga (D31 ortogonal, §1.2).
   'tools:read',
   'tools:configure',
+  // AG-3.5 (ADENDO-04 §5 — administração básica). `members:*` é gestão de
+  // TERCEIROS (A4, admin do tenant apenas); `me:write` é universal — todo
+  // usuário troca a própria senha/preferências (A5), mesma régua de `me:read`.
+  'members:read',
+  'members:manage',
+  'me:write',
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 
@@ -49,6 +55,7 @@ const GRANTS: Record<Role, readonly Permission[]> = {
   // configurar continuam só no admin.
   analyst: [
     'me:read',
+    'me:write',
     'definitions:read',
     'definitions:deploy',
     'instances:read',
@@ -56,9 +63,18 @@ const GRANTS: Record<Role, readonly Permission[]> = {
     'tasks:read',
     'ai:read-state',
   ],
-  business: ['me:read', 'instances:read', 'instances:start', 'tasks:read', 'tasks:work', 'ai:read-state'],
+  business: [
+    'me:read',
+    'me:write',
+    'instances:read',
+    'instances:start',
+    'tasks:read',
+    'tasks:work',
+    'ai:read-state',
+  ],
   operator: [
     'me:read',
+    'me:write',
     'definitions:read',
     'instances:read',
     'instances:cancel',
@@ -81,6 +97,7 @@ const GRANTS: Record<Role, readonly Permission[]> = {
   // superfície de risco do tenant) — sem `tools:configure` (não liga/desliga).
   auditor: [
     'me:read',
+    'me:write',
     'definitions:read',
     'instances:read',
     'tasks:read',

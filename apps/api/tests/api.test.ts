@@ -16,6 +16,10 @@ async function seed(state: FakeState): Promise<void> {
     password_hash: await hashPassword('senha-forte-1'),
     display_name: 'Ana',
     role: 'analyst',
+    active: true,
+    must_change_password: false,
+    timezone: 'America/Sao_Paulo',
+    date_format: 'DD/MM/YYYY',
   });
 }
 

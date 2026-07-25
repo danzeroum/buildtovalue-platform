@@ -182,7 +182,10 @@ logger.info(
 async function machineToken(tenantId: string): Promise<string> {
   // Token de máquina restrito a jobs (plano §6): papel operator via RBAC.
   const { accessToken } = await signAccessToken(
-    { sub: workerId, tenantId, role: 'operator' },
+    // 'machine' — token de máquina não tem linha `refresh_tokens` (sem sessão de
+    // usuário); o claim existe só para o revoke-all (AG-3.5) saber qual sessão
+    // preservar, o que nunca se aplica aqui.
+    { sub: workerId, tenantId, role: 'operator', sid: 'machine' },
     { secret: config.JWT_SECRET, accessTtlSeconds: config.JWT_ACCESS_TTL_SECONDS },
   );
   return accessToken;

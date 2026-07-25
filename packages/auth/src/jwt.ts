@@ -12,6 +12,10 @@ export interface AccessClaims {
   sub: string;
   tenantId: string;
   role: Role;
+  /** id da linha `refresh_tokens` desta sessão (AG-3.5) — o servidor identifica QUAL
+   *  sessão preservar num revoke-all (`PATCH /v1/me/password`) pelo próprio access
+   *  token que autenticou o request, sem o cliente reenviar o refresh token. */
+  sid: string;
 }
 
 export interface TokenPair {
@@ -38,7 +42,7 @@ export async function signAccessToken(
   claims: AccessClaims,
   options: JwtOptions,
 ): Promise<TokenPair> {
-  const accessToken = await new SignJWT({ tenantId: claims.tenantId, role: claims.role })
+  const accessToken = await new SignJWT({ tenantId: claims.tenantId, role: claims.role, sid: claims.sid })
     .setProtectedHeader({ alg: 'HS256' })
     .setSubject(claims.sub)
     .setIssuer(options.issuer ?? 'buildtovalue')
@@ -59,11 +63,12 @@ export async function verifyAccessToken(
     if (
       typeof payload.sub !== 'string' ||
       typeof payload.tenantId !== 'string' ||
-      typeof payload.role !== 'string'
+      typeof payload.role !== 'string' ||
+      typeof payload.sid !== 'string'
     ) {
       throw new InvalidTokenError('claims obrigatórios ausentes');
     }
-    return { sub: payload.sub, tenantId: payload.tenantId, role: payload.role as Role };
+    return { sub: payload.sub, tenantId: payload.tenantId, role: payload.role as Role, sid: payload.sid };
   } catch (error) {
     if (error instanceof InvalidTokenError) throw error;
     throw new InvalidTokenError(`token inválido: ${(error as Error).message}`);
