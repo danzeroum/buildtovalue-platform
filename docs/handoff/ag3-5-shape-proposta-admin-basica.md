@@ -83,11 +83,40 @@ novo método):
   usuário (A5) — em ambos os casos a senha mudou, então toda sessão baseada na senha antiga
   deve morrer.
 
-**A ressalva "você continua conectado só aqui" (A5) exige um detalhe de contrato:** para a
-API saber QUAL sessão preservar, o cliente precisa mandar o PRÓPRIO refresh token no corpo de
-`PATCH /v1/me/password` — a rota revoga TODOS os refresh tokens do usuário **exceto** o que
-veio no corpo. Sem isso, "encerrar as outras" e "continuar só aqui" são indistinguíveis para
-o servidor. Documentado em §2.3.
+**Correção pós-triagem do dono:** a versão original pedia o refresh token no CORPO do
+`PATCH /v1/me/password` para o servidor saber qual sessão preservar — o dono apontou a
+sutileza certa: fazer o cliente devolver o refresh token por JS é o padrão que o httpOnly
+cookie existe para evitar, e pedir isso no corpo é pior do que necessário quando o servidor
+já tem outro jeito de saber. **Opção (a) adotada:** o servidor identifica a sessão atual pelo
+PRÓPRIO access token que já autenticou a requisição — sem o cliente reenviar nada.
+
+Isso exige uma linha nova nos claims do access token: **`sid`** (o `id` da linha de
+`refresh_tokens` que originou esta sessão), gravado no login e a cada rotação do refresh:
+
+```ts
+// packages/auth/src/jwt.ts — AccessClaims ganha sid (mesmo tratamento de tenantId/role):
+export interface AccessClaims {
+  sub: string;
+  tenantId: string;
+  role: Role;
+  sid: string; // NOVO — id da linha refresh_tokens desta sessão
+}
+```
+
+`RefreshTokenRepository.create` passa a devolver o `id` gerado (hoje é `Promise<void>`):
+```ts
+create(tenantId: string, userId: string, tokenHash: string, expiresAt: Date): Promise<string>; // RETURNING id
+```
+Login e refresh (`apps/api/src/routes/auth.ts`) capturam esse `id` e o passam para
+`signAccessToken({..., sid: refreshRow.id}, jwtOptions)`. `PATCH /v1/me/password` lê
+`req.auth.sid` (já disponível — `authenticate` já decodificou o token) e chama:
+```ts
+revokeAllForUser(tenantId: string, userId: string, exceptId?: string): Promise<void>;
+```
+com `exceptId = req.auth.sid` — revoga TODOS os refresh tokens do usuário exceto o desta
+sessão. **O corpo de `PATCH /v1/me/password` não carrega refresh token nenhum** (§2.2,
+atualizado). Nota: sessões já emitidas ANTES desta mudança não têm `sid` — sem usuários reais
+em produção ainda, não precisa de tratamento de transição; a próxima rotação/login já grava.
 
 ### 1.2 · Desatribuição de tarefas E gates ao desativar, com trilha de auditoria
 
@@ -170,13 +199,13 @@ terceiro, o invariante é sobre o RESULTADO, não sobre quem pediu.
 
 ```
 PATCH /v1/me/password
-  body: { "currentPassword": "…", "newPassword": "…", "refreshToken": "…" }     → 200
+  body: { "currentPassword": "…", "newPassword": "…" }                         → 200
 ```
 RBAC: nenhuma permissão nova além de estar autenticado — `me:write` (novo, concedido a
 TODO papel, mesmo padrão universal de `me:read`). `currentPassword` verificado com
 `verifyPassword` (funciona igual para senha normal ou temporária — é sempre o hash atual).
-`refreshToken` no corpo é o que permite "revoga todas as outras, mantém esta" (§1.1) — 422
-se o token não bater com uma sessão do próprio usuário.
+**Sem `refreshToken` no corpo** (correção pós-triagem, §1.1) — o servidor identifica a
+sessão a preservar pelo `sid` do PRÓPRIO access token que autenticou a requisição.
 
 ```
 PATCH /v1/me/preferences   body: { "timezone": "…", "dateFormat": "…" }         → 200
@@ -244,19 +273,32 @@ vista). Recuperação autoatendimento (A6-B, e-mail transacional). Nenhum dos do
 ## 6 · Ordem de código (quando o gate abrir)
 
 1. Migração `0021`.
-2. `UserRepository`: `getAuthState`, `list`, `updateRole`, `setActive`, `resetPassword`,
+2. `packages/auth`: `AccessClaims` ganha `sid`; `signAccessToken`/`verifyAccessToken`
+   passam o claim através (§1.1, correção pós-triagem).
+3. `RefreshTokenRepository.create` passa a devolver o `id` gerado (`RETURNING id`);
+   `revokeAllForUser(tenantId, userId, exceptId?)` novo.
+4. `UserRepository`: `getAuthState`, `list`, `updateRole`, `setActive`, `resetPassword`,
    `changePassword`, `updatePreferences` (+ `UserRow.role` ganha `'auditor'`); espelhar o
    fake de `apps/api/src/testing/fakes.ts`.
-3. `RefreshTokenRepository.revokeAllForUser` (+ variante "exceto um token").
-4. `app.authenticate` ganha as duas checagens (§1.1); `MUST_CHANGE_ALLOWLIST`.
-5. Desatribuição de tarefas/gates na desativação (§1.2), dentro da tx de `setActive(false)`.
-6. Rotas `apps/api/src/routes/admin.ts` (membros) + extensão de `routes/auth.ts` (`/v1/me/
+5. `apps/api/src/routes/auth.ts`: login e refresh capturam o `id` do `create` e o passam a
+   `signAccessToken` como `sid`.
+6. `app.authenticate` ganha as duas checagens (§1.1); `MUST_CHANGE_ALLOWLIST`.
+7. Desatribuição de tarefas/gates na desativação (§1.2), dentro da tx de `setActive(false)`.
+8. Rotas `apps/api/src/routes/admin.ts` (membros) + extensão de `routes/auth.ts` (`/v1/me/
    password`, `/v1/me/preferences`, campos novos em `/v1/me` e `loginResponseSchema`).
-7. RBAC (`members:read`/`members:manage`/`me:write`) + espelho `capabilities.ts` + parity test.
-8. Testes: os 5 aceites do ADENDO-04 §8 relevantes a esta fatia (2, 4) + lockout do último
-   admin + desatribuição de gate (não só tarefa comum) + `must_change_password` bloqueando
-   tudo exceto as duas rotas + revoke-all nos dois pontos + "continua conectado só aqui"
-   (refresh token preservado).
+9. RBAC (`members:read`/`members:manage`/`me:write`) + espelho `capabilities.ts` + parity test.
+10. Testes — os 5 aceites do ADENDO-04 §8 relevantes a esta fatia (2, 4) mais os do dono
+    nesta triagem:
+    - lockout do último admin nos TRÊS caminhos (auto-desativação, auto-rebaixe, e
+      desativação/rebaixe do último admin feita por outro) — todos rejeitados com a
+      mensagem clara, prova de que é sobre o RESULTADO, não sobre quem pediu;
+    - access token AINDA VÁLIDO de um usuário recém-desativado é barrado na PRÓXIMA
+      request (a checagem de `active` fazendo o trabalho, não só o revoke de refresh);
+    - gate órfão volta para a fila do papel ao desativar quem o detinha, e a instância
+      NÃO trava (não só tarefa comum — o cenário que motivou o achado);
+    - `must_change_password` bloqueando tudo exceto as duas rotas do allowlist;
+    - revoke-all nos dois pontos (desativação e troca de senha);
+    - "continua conectado só aqui" — a sessão do `sid` sobrevive, as demais morrem.
 
 UI (A4/A5/A6-A) fica para depois deste gate fechar — a marcação já existe
 (`ag3-marcacao-administracao.md` §2-4), então não é preciso um novo G-UX-3 de design antes
