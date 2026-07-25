@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
+import { can } from './capabilities.js';
 import { KillSwitchBannerContainer } from './killSwitchBanner.js';
 import { Button } from './ui/ui.js';
 import { clearSession, currentUser, login, refresh, storedRefreshToken, useSession } from './session.js';
@@ -45,6 +46,13 @@ export function AppShell() {
   }
   if (!user) return <LoginScreen />;
 
+  // A7 (marcação §3): "Administração" só existe para quem tem audit:export —
+  // AUSENTE para os demais (não desabilitado; botão inerte é affordance morta,
+  // mesma regra do "+ Adicionar pessoa" do ADENDO-04).
+  const nav = can(user.role, 'audit:export')
+    ? [...NAV, { to: '/admin', label: 'Administração', route: '/admin' }]
+    : NAV;
+
   return (
     <div className="shell">
       {/* G-UX-3 (marcação do banner §6): PRIMEIRO no DOM — antes da navegação —
@@ -56,7 +64,7 @@ export function AppShell() {
       <header className="shell-header">
         <span className="brand">BUILDTOVALUE</span>
         <nav aria-label="Navegação principal">
-          {NAV.map((item) => (
+          {nav.map((item) => (
             <NavLink key={item.to} to={item.to} className="nav-item">
               <span className="nav-label">{item.label}</span>
               <span className="nav-route">{item.route}</span>
