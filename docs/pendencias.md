@@ -126,7 +126,11 @@
   é barato; a história pagina até 100 linhas, cada uma podendo ter um ator humano
   DIFERENTE — resolver displayName por linha pede um `findByIds` em lote (não existe
   hoje; `UserRepository.findById` é 1-a-1), não um `resolveActor` chamado 100x por
-  página. **[ABERTO — GATILHO: decisão do dono sobre adicionar `findByIds` em lote +
+  página. **Cuidado registrado para a implementação (G-UX-3, revisão da timeline):** o
+  `findByIds` em lote precisa correr sob o MESMO RBAC do histórico (`instances:read`) —
+  nunca um caminho mais amplo só porque é "resolução de nome"; resolver displayName não
+  pode virar um jeito indireto de vazar identidade de usuário a quem não teria acesso à
+  linha. **[ABERTO — GATILHO: decisão do dono sobre adicionar `findByIds` em lote +
   resolução de displayName na rota de histórico]**. Detalhe:
   `packages/shared-ui/src/selo.tsx` (`ActorBadge`, pronto para receber `displayName`),
   `apps/api/src/routes/ai.ts` (`resolveActor`, o padrão de referência).
