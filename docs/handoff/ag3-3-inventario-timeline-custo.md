@@ -66,7 +66,7 @@ A linha da trilha (que o nó rodou, quando) é **idêntica** para os dois papéi
 `cost` desaparece. Isso é a régua para a marcação: **a ausência do campo não pode parecer
 um buraco/erro** — a linha inteira precisa fazer sentido sem ele.
 
-## 2 · Dois pontos que o dono já fechou (restrições, não perguntas)
+## 2 · Três pontos que o dono já fechou (restrições, não perguntas)
 
 1. **Agregado coerente com visibilidade** — citação: *"o total é a soma do que ESTÁ
    VISÍVEL para aquele papel — operator vê o total, business não vê custo algum (nem
@@ -76,10 +76,20 @@ um buraco/erro** — a linha inteira precisa fazer sentido sem ele.
    e nunca aparece um placeholder tipo "custo oculto" (isso já denunciaria a existência).
    Para business, o cabeçalho simplesmente **não tem a seção de custo**, do mesmo jeito
    que a linha não tem a chave.
+   - **Superado pela decisão 3 abaixo** — não há total na v1, então esta regra vale para
+     o dia em que um endpoint de agregação existir (pendência §2.23), não para agora.
 2. **Degrade honesto por passo** — citação: *"passo que não custou... não mostra
    'R$ 0,00' como se tivesse sido medido... mostra ausência de custo... distinta de
    custou zero."* Mesma disciplina do `processConsequence = null` no P1: nós não-`llm`
    (ou jobs não-agente) **não têm a linha/badge de custo**, nunca um zero.
+3. **SEM total agregado na v1 (decisão de produto, fecha a pergunta §3.3 anterior).**
+   Custo só **por linha, exato, por-passo**. Razão (citação): *"um total que soma só a
+   página de 100 eventos parece dizer 'quanto a instância custou' e não diz — é agregado
+   que mente sobre o próprio escopo, a família do 'nunca fingir'. Melhor ausência de total
+   que total enganoso."* Se "quanto esta instância gastou" virar requisito real de
+   cliente, vira **endpoint de agregação próprio** (soma no servidor, escopo — não
+   cálculo aproximado na tela) — registrado como possibilidade futura nomeada em
+   `docs/pendencias.md §2.23`.
 
 ## 3 · Perguntas abertas para a marcação (voz, tratamento visual, colocação)
 
@@ -90,29 +100,16 @@ um buraco/erro** — a linha inteira precisa fazer sentido sem ele.
    (ex.: `USD`) e `fxRate` presente: mostra só o valor final convertido, ou uma nota tipo
    "USD convertido @ 5,30"? (O dado bruto sempre carrega os dois — a pergunta é só o que
    aparece na tela.)
-3. **O agregado no cabeçalho do drill-down** (se marcado que existe) — rótulo exato
-   ("custo total da corrida"? "gasto do agente nesta instância"?), posição, tom de cor
-   (neutro, ou o violeta que já marca `agent`?). Ver restrição §2.1 sobre visibilidade.
-   - **Nota técnica para o dev, não para a marcação:** o agregado de v1 só pode somar o
-     que está **carregado na página atual** (`limit: 100` — o histórico é paginado por
-     cursor). Somar TODAS as páginas de uma instância exigiria buscar todo o histórico
-     ou um endpoint de agregação dedicado — fora do escopo aprovado na nota de shape
-     (§2, "sem requisito vivo de agregação"). Se a marcação quiser o total **exato** da
-     instância inteira (não só da página vista), isso é uma decisão de ESCOPO a levar
-     de volta à triagem, não uma escolha visual.
-4. **Ícone/glifo de custo** — existe um vocabulário monocromático (◆ agente, ⚖ gate, ⏸
+3. **Ícone/glifo de custo** — existe um vocabulário monocromático (◆ agente, ⚖ gate, ⏸
    kill-switch) que a marcação pode estender, ou o rótulo textual basta (a regra "nunca
    só cor" já é atendida por texto puro, mas a família de sinais visuais do produto
    sempre usou glifo+rótulo juntos)?
-5. **`usage` (tokens de entrada/saída)** — aparece na UI da v1, ou fica só no dado bruto
+4. **`usage` (tokens de entrada/saída)** — aparece na UI da v1, ou fica só no dado bruto
    (auditável via export, nunca renderizado nesta tela)?
-6. **Ator na timeline** (§0 — não é exclusivo de custo, mas a AG-3.3 é onde a "timeline
+5. **Ator na timeline** (§0 — não é exclusivo de custo, mas a AG-3.3 é onde a "timeline
    unificada" se materializa): mostra `ActorBadge` (já existe, shared-ui) por linha? Ou
    só para os fatos que custam (já que só `llm` chama um provider real)? `payload.actor`
    está em TODO fato de agente, não só nos que custam.
-7. **Acessibilidade do agregado** — se existir um total no cabeçalho, precisa de anúncio
-   especial (`role="status"`) quando muda ao trocar de instância, ou é texto normal na
-   ordem do DOM (sem urgência de emergência, diferente do banner de kill-switch)?
 
 ## 4 · Notas de sequência para o dev (depois da marcação)
 
