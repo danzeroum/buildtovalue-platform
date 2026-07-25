@@ -146,8 +146,8 @@ export interface PlatformRuntime {
       },
     ): Promise<{ items: UserTaskListItem[]; nextCursor: string | null }>;
     get(tenantId: string, taskId: string, viewer: TaskViewer): Promise<UserTaskDetail | undefined>;
-    claim(tenantId: string, taskId: string, user: string): Promise<ClaimOutcome>;
-    unclaim(tenantId: string, taskId: string, user: string): Promise<UnclaimOutcome>;
+    claim(tenantId: string, taskId: string, user: string, requestId?: string): Promise<ClaimOutcome>;
+    unclaim(tenantId: string, taskId: string, user: string, requestId?: string): Promise<UnclaimOutcome>;
     complete(
       tenantId: string,
       taskId: string,
@@ -158,6 +158,8 @@ export interface PlatformRuntime {
         decision?: string;
         expectedInstanceRevision?: number;
         requestId?: string;
+        /** AG-3.3 ponto 4: motivo da decisão de GATE — evidência (Art.14), ignorado fora de gate. */
+        reason?: string;
       },
     ): Promise<CompleteTaskOutcome>;
     assign(
@@ -306,8 +308,8 @@ export function createRuntime(
     userTasks: {
       list: (tenantId, viewer, options) => listUserTasks(sql, tenantId, viewer, options),
       get: (tenantId, taskId, viewer) => getUserTask(sql, tenantId, taskId, viewer),
-      claim: (tenantId, taskId, user) => claimUserTask(sql, tenantId, taskId, user),
-      unclaim: (tenantId, taskId, user) => unclaimUserTask(sql, tenantId, taskId, user),
+      claim: (tenantId, taskId, user, requestId) => claimUserTask(sql, tenantId, taskId, user, requestId),
+      unclaim: (tenantId, taskId, user, requestId) => unclaimUserTask(sql, tenantId, taskId, user, requestId),
       complete: (tenantId, taskId, input) =>
         completeUserTask(sql, tenantId, taskId, { ...input, now: clock() }, cipher),
       assign: (tenantId, taskId, input) => assignUserTask(sql, tenantId, taskId, input),

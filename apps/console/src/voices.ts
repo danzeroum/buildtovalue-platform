@@ -44,7 +44,12 @@ const HISTORY_LABELS: Record<string, string> = {
   'agent:parada': 'parada honesta',
   'agent:retomado': 'retomado',
   'agent:reproposta': 'reproposta (novo orçamento)',
-  taskDecision: 'decisão de tarefa (gate)',
+  // AG-3.3 (correção de dados, ponto 4): gate ganhou kind PRÓPRIO (gateDecision,
+  // mais abaixo) — taskDecision agora é só decisão de roteamento de negócio
+  // (não-gate). userTaskCompleted/gateDecision/taskClaimed/taskUnclaimed são
+  // kinds NOVOS ainda sem marcação de rótulo — caem no fallback (kind cru),
+  // honesto por enquanto; aguardam marcação própria do designer.
+  taskDecision: 'decisão de tarefa',
 };
 
 export function historyLabel(kind: string): string {

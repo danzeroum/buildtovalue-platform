@@ -258,14 +258,58 @@ describe('etapa 6 — completion: a decisão NUNCA é ignorada em silêncio (fim
       tx`SELECT value FROM variables WHERE instance_id = ${instanceId} AND name = 'decisao'`);
     expect(JSON.stringify(v.value)).toContain('aprovar');
 
-    // 2) history_events: evento taskDecision com quem decidiu o quê
+    // 2) history_events: evento taskDecision com quem decidiu o quê — ator no
+    // MESMO envelope {type,id,requestId} que os fatos de agente (AG-3.3 ponto 1).
     const [h] = await withTenant(api, tenant, (tx) =>
       tx`SELECT kind, payload FROM history_events WHERE instance_id = ${instanceId} AND kind = 'taskDecision'`);
     expect(h).toBeDefined();
-    expect(h.payload).toMatchObject({ decisionVar: 'decisao', decision: 'aprovar', actor: 'bruno' });
+    expect(h.payload).toMatchObject({
+      decisionVar: 'decisao',
+      decision: 'aprovar',
+      actor: { type: 'user', id: 'bruno' },
+    });
+
+    // 2b) AG-3.3 ponto 2: "quem concluiu, quando" é fato universal — sempre
+    // grava, mesmo quando a task também tem decisionVar/taskDecision.
+    const [completed] = await withTenant(api, tenant, (tx) =>
+      tx`SELECT payload FROM history_events WHERE instance_id = ${instanceId} AND kind = 'userTaskCompleted'`);
+    expect(completed).toBeDefined();
+    expect(completed.payload).toMatchObject({ actor: { type: 'user', id: 'bruno' } });
 
     // 3) roteou de fato: a instância completou pelo ramo aprovar
     const [inst] = await withTenant(api, tenant, (tx) => tx`SELECT status FROM instances WHERE id = ${instanceId}`);
     expect(inst.status).toBe('completed');
+  });
+
+  it('AG-3.3 ponto 2: conclusão SEM decisionVar agora grava userTaskCompleted (antes: zero linha)', async () => {
+    const { instanceId, taskId } = await startAndOpen('sem-decisao@1');
+    const claim = await runtime().userTasks.claim(tenant, taskId, 'carla');
+    if (!claim.ok) throw new Error('claim falhou');
+    const out = await completeUserTask(api, tenant, taskId, {
+      claimToken: claim.claimToken, submission: {}, user: 'carla', now: NOW(), requestId: 'req-carla',
+    });
+    expect(out.ok).toBe(true);
+    await drain();
+
+    // ANTES desta correção, esta consulta voltava VAZIA — silêncio numa tela de
+    // auditoria ("quem concluiu, quando" sem resposta), pior que erro. Agora o
+    // fato existe, com o MESMO envelope {type,id,requestId} dos fatos de agente,
+    // consultável pela mesma projeção `payload->'actor'->>'type'`.
+    const rows = await withTenant(api, tenant, (tx) =>
+      tx`SELECT payload FROM history_events WHERE instance_id = ${instanceId} AND kind = 'userTaskCompleted'`);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].payload).toMatchObject({
+      elementId: 'review',
+      actor: { type: 'user', id: 'carla', requestId: 'req-carla' },
+    });
+    const [byProjection] = await withTenant(api, tenant, (tx) =>
+      tx`SELECT payload->'actor'->>'type' AS actor_type FROM history_events
+         WHERE instance_id = ${instanceId} AND kind = 'userTaskCompleted'`);
+    expect(byProjection.actor_type).toBe('user');
+
+    // e NENHUM taskDecision — a task não declara decisionVar, não há decisão a gravar.
+    const decisions = await withTenant(api, tenant, (tx) =>
+      tx`SELECT 1 FROM history_events WHERE instance_id = ${instanceId} AND kind = 'taskDecision'`);
+    expect(decisions).toHaveLength(0);
   });
 });

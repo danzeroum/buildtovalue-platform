@@ -246,7 +246,7 @@ export function registerUserTaskRoutes(rawApp: ZodApp, deps: ApiDeps): void {
       },
     },
     async (req, reply) => {
-      const outcome = await runtime.userTasks.claim(req.auth!.tenantId, req.params.id, req.auth!.sub);
+      const outcome = await runtime.userTasks.claim(req.auth!.tenantId, req.params.id, req.auth!.sub, String(req.id));
       if (!outcome.ok) {
         if (outcome.reason === 'notFound') {
           return problem(reply, 404, PROBLEM_TYPES.notFound, 'Task não encontrada', String(req.id));
@@ -279,7 +279,7 @@ export function registerUserTaskRoutes(rawApp: ZodApp, deps: ApiDeps): void {
       },
     },
     async (req, reply) => {
-      const outcome = await runtime.userTasks.unclaim(req.auth!.tenantId, req.params.id, req.auth!.sub);
+      const outcome = await runtime.userTasks.unclaim(req.auth!.tenantId, req.params.id, req.auth!.sub, String(req.id));
       if (!outcome.ok) {
         if (outcome.reason === 'notFound') {
           return problem(reply, 404, PROBLEM_TYPES.notFound, 'Task não encontrada', String(req.id));
@@ -306,7 +306,10 @@ export function registerUserTaskRoutes(rawApp: ZodApp, deps: ApiDeps): void {
           'detalhe da task). O gateway a jusante o compara por IGUALDADE (semântica real do avaliador, ' +
           '§2.6). A decisão NUNCA é ignorada em silêncio: enviar `decision` sem `decisionVar` declarada, ' +
           'ou concluir sem `decision` quando declarada, respondem 422 (nunca aceitar-e-descartar). ' +
-          'A decisão flui para `variables` (sob a decisionVar) E para `history_events` (quem decidiu o quê).',
+          'A decisão flui para `variables` (sob a decisionVar) E para `history_events` (quem decidiu o quê). ' +
+          'AG-3.3: toda conclusão grava `userTaskCompleted` (quem/quando); um gate grava também ' +
+          '`gateDecision` (aprovar|reprovar) com `reason` como motivo — evidência de conformidade, não ' +
+          'reservado, aparece a quem enxerga o histórico.',
         security: [{ bearerAuth: [] }],
         params: z.object({ id: z.string().uuid() }),
         body: z.object({
@@ -318,6 +321,10 @@ export function registerUserTaskRoutes(rawApp: ZodApp, deps: ApiDeps): void {
           // etapa 5 (D28): SÓ o gate a usa — a revisão da instância que o cliente
           // viu ao carregar o world-delta. Divergiu da atual → 409 proposta expirada.
           expectedInstanceRevision: z.number().int().nonnegative().optional(),
+          // AG-3.3 ponto 4: motivo da decisão de GATE (aprovar OU reprovar) — só
+          // relevante quando a task é gate; ignorado nas demais. Opcional porque a
+          // UI do P1 (GateDetail.tsx) ainda não coleta — fica `null`, honesto.
+          reason: z.string().min(1).max(500).optional(),
         }),
         response: {
           200: z.object({ instanceStatus: z.string() }),
@@ -337,6 +344,7 @@ export function registerUserTaskRoutes(rawApp: ZodApp, deps: ApiDeps): void {
         ...(req.body.expectedInstanceRevision !== undefined
           ? { expectedInstanceRevision: req.body.expectedInstanceRevision }
           : {}),
+        ...(req.body.reason !== undefined ? { reason: req.body.reason } : {}),
       });
       if (!outcome.ok) {
         if ('errors' in outcome) {

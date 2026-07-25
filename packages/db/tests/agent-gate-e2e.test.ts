@@ -190,9 +190,20 @@ describe('AG-2.2 etapa 5 — ciclo do gate ponta a ponta pelas portas reais (D31
     const approved = await completeUserTask(api, tenant, gateTaskId, {
       claimToken: claim.claimToken, submission: {}, user: 'aprovador', now: NOW(),
       decision: 'aprovar', expectedInstanceRevision: gateRevision, requestId: 'req-aprova',
+      reason: 'destinatários conferidos, dentro da política',
     });
     expect(approved.ok).toBe(true);
     await drain(); // roteia ao serviceTask 'enviar' → CreateJob (com gatedBy injetado)
+
+    // AG-3.3 ponto 4: a decisão de gate é fato PRÓPRIO gravado NO MOMENTO da
+    // aprovação — não depende do efeito rodar depois. `motivo` é evidência
+    // (Art.14), não dado reservado.
+    const [gateDec] = await withTenant(api, tenant, (tx) =>
+      tx`SELECT payload FROM history_events WHERE instance_id = ${instanceId} AND kind = 'gateDecision'`);
+    expect(gateDec.payload).toMatchObject({
+      gateId: 'gate', decision: 'aprovar', motivo: 'destinatários conferidos, dentro da política',
+      actor: { type: 'user', id: 'aprovador', requestId: 'req-aprova' },
+    });
 
     // EFEITO pelo despacho normal: lock + SELO (staleness ok) + conclusão.
     const [effectJob] = await lockJobs(api, tenant, 'w-eff', { limit: 10, types: ['send-email'] });
@@ -243,6 +254,18 @@ describe('AG-2.2 etapa 5 — ciclo do gate ponta a ponta pelas portas reais (D31
     const effAcao = await withTenant(api, tenant, (tx) =>
       tx`SELECT 1 FROM history_events WHERE effect_key = ${`host:gate-effect:${instanceId}:gate`}`);
     expect(effAcao).toHaveLength(0);
+
+    // AG-3.3 ponto 4: ANTES desta correção, reprovar não deixava NENHUM envelope
+    // no ledger (nenhum efeito roda a jusante para carregar o selo). Agora a
+    // DECISÃO é fato próprio, gravado no momento — reprovação com evidência
+    // (Art.14): ator + motivo consultáveis mesmo sem efeito nenhum.
+    const [gateDec] = await withTenant(api, tenant, (tx) =>
+      tx`SELECT payload FROM history_events WHERE instance_id = ${instanceId} AND kind = 'gateDecision'`);
+    expect(gateDec).toBeDefined();
+    expect(gateDec.payload).toMatchObject({
+      gateId: 'gate', decision: 'reprovar', motivo: null,
+      actor: { type: 'user', id: 'aprovador' },
+    });
   });
 
   it('NEGATIVO staleness: tool alterada entre aprovar e executar → agentToolStale, efeito não executa, gate aprovado na trilha', async () => {
@@ -283,9 +306,13 @@ describe('AG-2.2 etapa 5 — ciclo do gate ponta a ponta pelas portas reais (D31
     expect(effAcao).toHaveLength(0);
 
     // o GATE APROVADO permanece visível na trilha (o humano aprovou de boa-fé).
+    // AG-3.3 ponto 4: gate grava 'gateDecision' (não o 'taskDecision' genérico).
     const [dec] = await withTenant(api, tenant, (tx) =>
       tx`SELECT payload FROM history_events
-         WHERE instance_id = ${instanceId} AND kind = 'taskDecision'`);
-    expect(dec.payload).toMatchObject({ elementId: 'gate', decision: 'aprovar' });
+         WHERE instance_id = ${instanceId} AND kind = 'gateDecision'`);
+    expect(dec.payload).toMatchObject({
+      gateId: 'gate', decision: 'aprovar',
+      actor: { type: 'user', id: 'aprovador', requestId: 'req-stale' },
+    });
   });
 });
