@@ -21,23 +21,31 @@
 
 Nav lateral "Administração" com item "Auditoria" selecionado. Corpo: grade de 4 filtros (Período, Formato, Ator, Tipo de evento) → botão "Exportar com recibo" → seção "Verificar integridade" (arrastar arquivo OU informar `export_id`). Coluna direita: cartão escuro do recibo (`export_id`, período, eventos, resumo sha256, "ancorado · bloco #4903 · 14:22:10", solicitado por) + botões "Baixar arquivo"/"Copiar recibo" + checklist "O que o auditor confere".
 
-## 2 · Onde o protótipo diverge do dado real (achados do dev — decisão do design, não do dev)
+## 2 · Onde o protótipo divergia do dado real — DECISÕES DO DONO (fecham a 4ª rodada do mesmo rito: "o protótipo promete mais que o sistema tem", depois de P1/kill-switch/timeline)
 
-**2.1 — `export_id` não existe.** O recibo real (`auditReceiptSchema`) não tem esse campo — nem a rota gera um identificador de export. Não há `GET /v1/audit/exports/:id` para buscar por ele depois. O protótipo mostra `exp_2026-07-24_a91f` como se fosse recuperável mais tarde; hoje não é. Opções reais: (a) o "id" visível é o `digest` truncado (o único identificador estável que existe), (b) não mostrar um "id" — o recibo inteiro (JSON) é a prova, não um ponteiro para ela.
+**A — recibo: CORRIGIR para a garantia real (não é opcional, é requisito de conteúdo).**
+O cartão do recibo passa a mostrar `assurance: 'self-recorded'` com a nota legível ("digest
+registrado na própria trilha; sem notarização externa"), o `anchorRef` real (digest +
+intervalo, nas DUAS trilhas separadas tenant/instância) e a **contagem de linhas
+não-ancoradas** (`unanchoredCount`). **Nunca "bloco #N" sequencial — não existe.** Gatilho
+nomeado para o futuro: quando a ancoragem externa existir (WAL imutável, infra do Gate de
+Piloto), o campo de garantia vira `'externally-anchored'` e o cartão muda de novo — não
+antes. Registrado em `docs/pendencias.md` (ver §2.28).
 
-**2.2 — a ancoragem NÃO é "bloco #4903 · 14:22:10".** Isso implica notarização externa (blockchain/bloco sequencial) que o sistema não tem. O real é `anchorRef` = uma string **self-recorded** (`{digest};from=...;to=...`) — o mesmo desenho que o `EvidenceSeal` (shared-ui) já expõe como estado `ancoravel`, com a nota obrigatória "self-recorded", **nunca "verificado"** (D30). Além disso a cobertura de ancoragem é **em DUAS trilhas separadas** (`coverage.perTrail.tenant` e `.instance`, cada uma com `throughXid`/`throughTime` PRÓPRIOS) + `unanchoredCount` (quantas linhas deste export ainda não estão dentro da fronteira ancorada) + uma `note` textual. Exemplo real (`packages/db/src/audit/export.ts:344-346`): `"todas as linhas deste export estão dentro da cobertura ancorada"` ou `"3 linha(s) deste export ainda NÃO ancorada(s) (além da fronteira de digest)"`.
+**B — verificar: SEM lookup por `export_id`.** A tela oferece só o fluxo real: colar/carregar
+o recibo completo (digest+filtros) e verificar contra o export. Nada de "informe o id" — não
+existe rota que o resolva.
 
-**2.3 — `assurance`/`assuranceNote` estão AUSENTES do cartão do protótipo — é o achado mais importante.** O recibo real sempre carrega `assurance: 'self-recorded'` + a nota literal: *"Digest e âncora gravados pela própria plataforma no evento `audit.export`; ainda não há notarização externa/WAL imutável (infra do Gate de Piloto)."* O cartão escuro do protótipo, do jeito que está desenhado (visual de cofre/prova), **sugere uma garantia que o sistema explicitamente não tem** — a mesma família de "nunca fingir" que já corrigiu o P1, o kill-switch e a timeline. Sem esse aviso, o cartão superprometeria.
+**C — as três menores, JÁ FECHADAS, entram direto (não pedem nova marcação):**
+- **Ator = DOIS campos** (`actorType` dropdown + `actorId` texto) — mantém a consistência do envelope `{type,id}` do resto do produto, em vez de um "Ator: todos ▾" único.
+- **`resourceType`/`resourceId` SIM na v1** — a rota já os devolve; é filtro útil ao auditor e não custa nada a mais.
+- **`generatedBy` via `ActorBadge`** — mesma linguagem da timeline (AG-3.3); o export foi gerado por alguém e o auditor quer ver quem, não um texto solto misturando papel com nome de permissão.
 
-**2.4 — verificar por `export_id` não é possível.** Não existe lookup por id — `POST /v1/audit/verify` pede `expectedDigest` + `filters` (os dois vêm de dentro do recibo que a exportação devolveu, seja no corpo JSON, seja no header `X-Audit-Receipt` do CSV). O fluxo real é "cole/envie o recibo que você já tem", não "digite um id e eu busco".
+**D — `export_id` (identificador) não existe — nem para exibir, nem para buscar depois.** O
+"id" visível, se houver algum, é o `digest` (truncado) — não um ponteiro recuperável.
 
-**2.5 — "Ator: todos ▾"** — a API tem DOIS filtros distintos: `actorType` (enum `user|system|agent`) e `actorId` (texto livre, um id específico). O protótipo não distingue os dois. Precisa de marcação: um campo só (com `actorType` como dropdown) ou dois?
-
-**2.6 — filtros que a grade do protótipo não mostra**: `resourceType`/`resourceId` existem na API (ex. filtrar só eventos de uma instância específica) mas não aparecem nos 4 campos desenhados. Adicionar agora ou deixar de fora da v1 (arquivo/CSV já traz tudo, filtro é só conveniência)?
-
-**2.7 — "solicitado por: DPO · audit:export"** — o dado real é `generatedBy: {type,id,requestId}` (o mesmo envelope D33 do resto do produto). O protótipo mistura um papel (DPO) com o nome de uma permissão (`audit:export`) num texto só — provavelmente renderiza melhor como `ActorBadge` (shared-ui), consistente com a timeline (AG-3.3) e o P1.
-
-**2.8 — "Período: últimos 30 dias ▾"** é preset; a API só aceita `from`/`to` ISO exatos. Tradução preset→datas é implementação, não pede marcação — só registro de que os presets (30 dias, 7 dias, etc.) são invenção da tela, não da API.
+**E — "Período: últimos 30 dias ▾"** continua sendo preset de UI (a API só aceita `from`/`to`
+ISO exatos) — tradução preset→datas é implementação, não pede marcação.
 
 ## 3 · Campos reais (exemplos de teste, `packages/db/tests/audit-export.test.ts`)
 
@@ -75,14 +83,11 @@ Verify: `{ matches: boolean, expectedDigest, actualDigest, count, anchorRef }` �
 - **`matches:false` no verify** — precisa de voz PRÓPRIA (âmbar/atenção, não vermelho de erro): "a trilha mudou desde este export" é informação, não falha do sistema.
 - **CSV vs JSON**: o recibo do CSV vem no header, não no corpo — a tela precisa mostrá-lo do mesmo jeito (a fonte muda, a apresentação não deveria).
 
-## 5 · Perguntas abertas para a marcação
+## 5 · Perguntas abertas para a marcação (rótulo, voz, tratamento visual — do design)
 
-1. §2.1–2.3 resolvidas pela marcação: como o cartão do recibo representa `assurance`/`assuranceNote` (achado mais importante — sem isso o cartão superpromete) e a cobertura em duas trilhas + `unanchoredCount` (sem inventar "bloco #NNNN").
-2. §2.4: como fica a UI de "verificar" sem lookup por id — upload do arquivo exportado (client extrai digest+filters do JSON) e/ou colar o recibo?
-3. §2.5: `actorType` (dropdown) e `actorId` (texto) — um campo ou dois?
-4. §2.6: incluir `resourceType`/`resourceId` na v1 ou deixar de fora?
-5. §2.7: ator (`generatedBy`) via `ActorBadge` (consistente com a timeline) ou texto próprio desta tela?
-6. Onde a tela mora na navegação — precisa de uma seção "Administração" nova no `shell.tsx` (hoje só tasks/forms/operate/studio), visível a quem tem `audit:export` (admin + auditor)?
+1. **Voz do cartão do recibo corrigido** (decisão A do §2): como nomear/desenhar `assurance`/`assuranceNote` (mesma família do `EvidenceSeal` — reusar o estado `ancoravel` com nota "self-recorded", ou tratamento próprio da tela?), como apresentar as duas trilhas (tenant/instância) + `unanchoredCount` sem virar uma lista técnica ilegível.
+2. **Voz do fluxo de verificar sem lookup por id** (decisão B do §2): colar o JSON do recibo (textarea), fazer upload do arquivo exportado (o client extrai digest+filters), ou os dois?
+3. Onde a tela mora na navegação — precisa de uma seção "Administração" nova no `shell.tsx` (hoje só tasks/forms/operate/studio), visível a quem tem `audit:export` (admin + auditor)?
 
 ## 6 · Notas de sequência para o dev
 
