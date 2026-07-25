@@ -61,6 +61,16 @@
   atualizarem sua dependência de `minimatch`). **[ABERTO — GATILHO: revisão de 60 dias
   (2026-09-22) OU nova major de `eslint`/`@vitest/coverage-v8` OU advisory novo]**.
   Detalhe: `docs/security/audit-exceptions.md`.
+- **§2.23 — Endpoint de agregação de custo por instância (decisão do dono, timeline
+  AG-3.3).** A v1 da timeline mostra custo **só por linha** (exato, por-passo) — SEM total
+  agregado no cabeçalho do drill-down. Razão registrada: o histórico é paginado
+  (`limit: 100`); um "total" que soma só a página carregada mentiria sobre o próprio
+  escopo ("quanto a instância custou" sem realmente somar a instância inteira) — pior que
+  não ter total. Se "quanto esta instância gastou" virar requisito real de cliente, a
+  resposta correta é um **endpoint de agregação próprio** (soma no servidor, sobre TODA a
+  trilha da instância, não sobre uma página) — não um cálculo aproximado no cliente.
+  **[ABERTO — GATILHO: requisito de cliente nomeado para "custo total por instância"]**.
+  Detalhe: `docs/handoff/ag3-3-inventario-timeline-custo.md` §3.3.
 
 ## §3 · Infra & ambiente (Gate de Piloto)
 
