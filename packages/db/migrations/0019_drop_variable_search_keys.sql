@@ -1,0 +1,15 @@
+-- Migração 0019 — remove `variable_search_keys` (varredura de colunas de
+-- controle/estado sem leitura, AG-3.4 §2.31; decisão do dono).
+--
+-- A tabela foi criada na 0003 para uma "busca lateral por variável de
+-- negócio" (D16r) que NUNCA teve producer nem consumidor: zero INSERT, zero
+-- SELECT em qualquer caminho de código desde a criação — só o teste genérico
+-- de isolamento RLS a enumerava, sem exercitar a feature. Schema morto infla
+-- superfície de segurança (RLS, índice, grants) sem entregar nada — dívida
+-- que MENTE por existir ("parece que faz algo"). Se busca por variável
+-- declarada virar requisito real, projeta-se do zero com o caso de uso; não
+-- se ressuscita uma tabela que nunca teve os dois lados ligados.
+--
+-- Forward-only (D16r): sem dado a preservar (a tabela está vazia em produção
+-- — nenhum código jamais gravou nela).
+DROP TABLE variable_search_keys;

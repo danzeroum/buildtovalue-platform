@@ -117,6 +117,26 @@ describe('AgentRegistry — deploy imutável + pin + resolução (AG-2.2 etapa 3
     expect(new Set(list.map((d) => d.agent_id)).size).toBe(list.length);
   });
 
+  it('INTEGRIDADE (varredura AG-3.4 §2.31, migração 0020): autonomy_level é GENERATED — impossível divergir de graph.autonomyLevel', async () => {
+    const graph = graphAt('agnt-dial', '1.0.0', (g) => {
+      g.autonomyLevel = 2;
+    });
+    const out = await deployAgentDefinition(api, tenant, { graph });
+    expect(out.ok).toBe(true);
+    if (out.ok) expect(out.definition.autonomy_level).toBe(2);
+    // ESTRUTURAL: um INSERT bruto tentando setar autonomy_level (mesmo com um
+    // valor DIFERENTE do grafo) é recusado pelo Postgres — a coluna nunca é
+    // gravável diretamente, só derivada de `graph`. Prova que não dá para
+    // divergir, não só que hoje bate.
+    await expect(
+      api.unsafe(
+        `INSERT INTO agent_definitions (tenant_id, agent_id, version, ref, name, autonomy_level, graph)
+         VALUES ($1, 'agnt-divergente', '1.0.0', 'agnt-divergente@1.0.0', 'x', 9, '{"autonomyLevel":0}'::jsonb)`,
+        [tenant],
+      ),
+    ).rejects.toThrow(/non-DEFAULT value into column "autonomy_level"/i);
+  });
+
   it('IMUTABILIDADE por permissão: app_api não faz UPDATE/DELETE em agent_definitions', async () => {
     await expect(
       api.unsafe(`UPDATE agent_definitions SET name = name WHERE false`),
