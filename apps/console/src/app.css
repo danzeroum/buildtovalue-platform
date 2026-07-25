@@ -350,3 +350,32 @@ body {
   border-radius: 999px; padding: 0.1rem 0.5rem; }
 /* piso de 44px nos controles do gate (alvo de toque — WCAG 2.5.5) */
 .gate-card .ui-btn, .gate-pii .ui-btn { min-height: 2.75rem; }
+
+/* ============ A7 · Administração / export de auditoria ============ */
+.route.admin { max-width: 760px; display: flex; flex-direction: column; gap: var(--ui-space-calm-block); }
+.route.admin h1 { font-family: var(--ui-font-serif); font-size: 1.4rem; margin: 0; }
+.field select { font-family: var(--ui-font-sans); font-size: var(--ui-font-size-body); border: 1px solid var(--ui-surface-border);
+  border-radius: 6px; padding: 0.35rem 0.5rem; background: var(--ui-surface-card); min-height: 2.75rem; }
+.audit-filters { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem var(--ui-space-calm-gutter); align-items: end; margin-bottom: var(--ui-space-calm-row); }
+.audit-resolved-range { font-size: var(--ui-font-size-label); color: var(--ui-ink-muted); align-self: center; }
+.audit-receipt-download { margin-top: var(--ui-space-calm-row); }
+.audit-receipt-card { background: var(--ui-surface-raised); border: 1px solid var(--ui-surface-border); border-radius: 0.5rem;
+  padding: var(--ui-space-calm-block); margin-top: var(--ui-space-calm-row); display: flex; flex-direction: column; gap: 0.6rem; }
+.audit-receipt-assurance { display: flex; align-items: center; gap: 0.5rem; }
+.audit-receipt-sentence { font-size: var(--ui-font-size-label); margin: 0; color: var(--ui-ink-base); }
+.audit-receipt-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem 1rem; margin: 0; font-size: var(--ui-font-size-label); }
+.audit-receipt-fields dt { color: var(--ui-ink-muted); font-size: var(--ui-font-size-meta); }
+.audit-receipt-fields dd { margin: 0; }
+.audit-receipt-detail summary { cursor: pointer; color: var(--ui-role-info-fg); font-size: var(--ui-font-size-meta); }
+.audit-receipt-detail dl { margin: 0.4rem 0 0; display: flex; flex-direction: column; gap: 0.25rem; font-size: var(--ui-font-size-meta); }
+.audit-receipt-actions { display: flex; gap: var(--ui-space-dense-gutter); }
+.audit-coverage { display: flex; flex-direction: column; gap: 0.3rem; }
+.audit-trails { list-style: none; margin: 0; padding: 0; font-size: var(--ui-font-size-label); color: var(--ui-ink-muted); display: flex; flex-direction: column; gap: 0.15rem; }
+/* veredito de cobertura + verificação: verde = ok, âmbar = atenção (NUNCA vermelho — não é falha, D30). */
+.audit-verdict { display: flex; align-items: center; gap: 0.4rem; font-size: var(--ui-font-size-label); color: var(--ui-role-success-fg); margin: 0; }
+.audit-verdict-warn { color: var(--ui-role-warning-fg); flex-direction: column; align-items: flex-start; gap: 0.3rem; }
+.audit-verify { margin-top: var(--ui-space-calm-block); display: flex; flex-direction: column; gap: 0.6rem; }
+.audit-verify-drop { border: 1px dashed var(--ui-surface-border); border-radius: 0.5rem; padding: var(--ui-space-calm-block); text-align: center; background: var(--ui-surface-sunken); }
+.audit-verify-drop p { font-size: var(--ui-font-size-label); margin: 0 0 0.5rem; }
+.audit-verify-paste summary { cursor: pointer; color: var(--ui-role-info-fg); font-size: var(--ui-font-size-label); }
+.audit-verify-paste textarea { width: 100%; box-sizing: border-box; margin: 0.5rem 0; border: 1px solid var(--ui-surface-border); border-radius: 6px; padding: 0.5rem; }

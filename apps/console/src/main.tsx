@@ -5,6 +5,7 @@ import '@platform/shared-ui/tokens.css';
 import '@platform/shared-ui/selo.css';
 import './app.css';
 import { AppShell } from './shell.js';
+import { AdministrationRoute } from './routes/Administration.js';
 import { FormsRoute } from './routes/forms.js';
 import { StudioRoute } from './routes/studio.js';
 import { TasksRoute } from './routes/tasks.js';
@@ -24,6 +25,7 @@ const router = createBrowserRouter([
       { path: 'forms', element: <FormsRoute /> },
       { path: 'operate', element: <OperateRoute /> },
       { path: 'studio', element: <StudioRoute /> },
+      { path: 'admin', element: <AdministrationRoute /> },
     ],
   },
 ]);
