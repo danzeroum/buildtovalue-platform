@@ -26,7 +26,29 @@ const INST = {
 };
 const now = new Date('2026-07-22T00:00:00Z').toISOString();
 
+/** Recibo default (P7, AG-3.6) — self-recorded, coberto, uma linha. */
+const RECEIPT = {
+  digest: `sha256:${'a'.repeat(64)}`,
+  algorithm: 'sha256' as const,
+  count: 1,
+  filters: { resourceType: 'instance', resourceId: INST.id, source: 'instance' },
+  anchorRef: `sha256:${'a'.repeat(64)};from=;to=${now}`,
+  assurance: 'self-recorded' as const,
+  assuranceNote: 'Digest e âncora gravados pela própria plataforma; ainda não há notarização externa.',
+  coverage: {
+    perTrail: {
+      tenant: { throughXid: null, throughTime: null },
+      instance: { throughXid: '10:1', throughTime: now },
+    },
+    unanchoredCount: 0,
+    note: 'todas as linhas deste export estão dentro da cobertura ancorada',
+  },
+  generatedAt: now,
+  generatedBy: { type: 'user' as const, id: 'op1', requestId: 'req-eb' },
+};
+
 function seedDetail(overrides: Record<string, () => ReturnType<typeof ok>> = {}) {
+  route('GET /v1/instances/{id}/evidence-bundle', () => ok({ receipt: RECEIPT, records: [] }));
   route('GET /v1/instances', () => ok({ items: [{ ...INST }], nextCursor: null }));
   route('GET /v1/instances/{id}', () => ok({ ...INST, currentElements: ['aprovar_reembolso'] }));
   // diagrama falha de propósito → PositionSection cai no fallback textual (sem viewer pesado nos testes)
@@ -46,9 +68,10 @@ function seedDetail(overrides: Record<string, () => ReturnType<typeof ok>> = {})
 }
 
 async function openDetail() {
-  render(<OperateRoute />);
+  const result = render(<OperateRoute />);
   await userEvent.click(await screen.findByRole('button', { name: /RB-2026-0142/ }));
   await screen.findByRole('tab', { name: 'Variáveis' });
+  return result;
 }
 
 beforeEach(() => {
@@ -176,8 +199,9 @@ describe('OperateRoute — F3.5', () => {
 
 describe('HistoryTab — AG-3.3 (custo + ator humano+agente + paginação, marcação ag3-3-marcacao-timeline-custo.md)', () => {
   async function openHistory() {
-    await openDetail();
+    const result = await openDetail();
     await userEvent.click(screen.getByRole('tab', { name: 'Histórico' }));
+    return result;
   }
 
   it('custo por linha (chip), SEM total; ator humano e agente na mesma timeline; sem cicatriz onde não há custo', async () => {
@@ -208,18 +232,21 @@ describe('HistoryTab — AG-3.3 (custo + ator humano+agente + paginação, marca
           nextCursor: null,
         }),
     });
-    await openHistory();
+    const { container } = await openHistory();
+    // escopado à lista: o recibo do P7 (topo da mesma aba) também tem um selo
+    // de ator ("Pessoa", de quem gerou o recibo) — sem escopo, colidiria.
+    const list = within(container.querySelector('.history-list')!);
 
     // custo aparece exatamente onde o payload carrega `cost` — nunca "R$ 0,00".
-    expect(await screen.findByText('R$ 3,42')).toBeInTheDocument();
-    expect(screen.queryByText(/R\$\s*0,00/)).not.toBeInTheDocument();
+    expect(await list.findByText('R$ 3,42')).toBeInTheDocument();
+    expect(list.queryByText(/R\$\s*0,00/)).not.toBeInTheDocument();
 
     // ator: agente, humano E motor (sem `actor`) na MESMA timeline — "unificada" de verdade.
-    expect(screen.getByText('Agente')).toBeInTheDocument();
-    expect(screen.getByText('Pessoa')).toBeInTheDocument();
-    expect(screen.getByText('Motor')).toBeInTheDocument();
-    expect(screen.getByText('agnt-aprova@1.0.0')).toBeInTheDocument();
-    expect(screen.getByText('carla')).toBeInTheDocument();
+    expect(list.getByText('Agente')).toBeInTheDocument();
+    expect(list.getByText('Pessoa')).toBeInTheDocument();
+    expect(list.getByText('Motor')).toBeInTheDocument();
+    expect(list.getByText('agnt-aprova@1.0.0')).toBeInTheDocument();
+    expect(list.getByText('carla')).toBeInTheDocument();
 
     // usage/fxRate/tabela vivem no <details> progressivo (§4), não na linha —
     // fecham por padrão (jsdom não recolhe o conteúdo do <details>, mas o
@@ -297,5 +324,26 @@ describe('HistoryTab — AG-3.3 (custo + ator humano+agente + paginação, marca
     await userEvent.click(await screen.findByRole('tab', { name: 'Histórico' }));
     await screen.findByText('R$ 1,00');
     await expectNoSeriousAxe(container);
+  });
+
+  it('P7 (AG-3.6): recibo aparece no TOPO do histórico — self-recorded, nunca notarização externa', async () => {
+    seedDetail();
+    await openHistory();
+    expect(await screen.findByText('Registro próprio')).toBeInTheDocument();
+    expect(screen.getByText(/Não há notarização externa/)).toBeInTheDocument();
+  });
+
+  it('P7: sem operate:read (403) — a seção some, o histórico segue normal (mesma régua do reveal do P1)', async () => {
+    seedDetail({ 'GET /v1/instances/{id}/evidence-bundle': () => fail(403, { title: 'sem permissão' }) as ReturnType<typeof ok> });
+    await openHistory();
+    expect(await screen.findByText('incident.raised')).toBeInTheDocument();
+    expect(screen.queryByText('Registro próprio')).not.toBeInTheDocument();
+  });
+
+  it('P7: falha ao carregar a evidência é ISOLADA — não derruba o histórico ao lado', async () => {
+    seedDetail({ 'GET /v1/instances/{id}/evidence-bundle': () => fail(500, { title: 'evidência indisponível' }) as ReturnType<typeof ok> });
+    await openHistory();
+    expect(await screen.findByText('evidência indisponível')).toBeInTheDocument();
+    expect(screen.getByText('incident.raised')).toBeInTheDocument();
   });
 });

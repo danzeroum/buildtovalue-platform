@@ -14,6 +14,7 @@ import type {
 } from '../api/types.js';
 import { can } from '../capabilities.js';
 import { formatMoney, relativeTime, shortId } from '../format.js';
+import { ReceiptCard, type AuditReceipt } from '../receiptCard.js';
 import { useSession } from '../shell.js';
 import { Button, NonIdeal, StatusPill, Tag } from '../ui/ui.js';
 import { historyLabel, voiceOf } from '../voices.js';
@@ -735,6 +736,72 @@ type HistoryState =
   | { kind: 'error'; message: string }
   | { kind: 'ready'; items: HistoryEvent[]; nextCursor: string | null };
 
+type BundleState =
+  | { kind: 'loading' }
+  | { kind: 'forbidden' }
+  | { kind: 'error'; message: string }
+  | { kind: 'ready'; receipt: AuditReceipt };
+
+/**
+ * P7 (Evidence Bundle, AG-3.6): seção compacta no TOPO da aba Histórico — o
+ * bundle é a PROVA da história que a mesma aba mostra abaixo, não um assunto
+ * à parte (decisão do dono: nada de aba nova). Reaproveita o MESMO
+ * componente/voz do A7 (`ReceiptCard`) — inclusive a lição mais séria dele:
+ * `assurance: 'self-recorded'`, nunca notarização externa que não existe.
+ */
+function EvidenceBundleSection({ instanceId }: { instanceId: string }) {
+  const [state, setState] = useState<BundleState>({ kind: 'loading' });
+  const [nonce, setNonce] = useState(0);
+
+  useEffect(() => {
+    const ctrl = new AbortController();
+    let alive = true;
+    setState({ kind: 'loading' });
+    void (async () => {
+      const { data, error, response } = await api.GET('/v1/instances/{id}/evidence-bundle', {
+        params: { path: { id: instanceId } },
+        signal: ctrl.signal,
+      });
+      if (!alive) return;
+      if (error || !data) {
+        // sem operate:read: a seção some (mesma régua do reveal do P1 — nunca
+        // promete uma ação que o servidor recusaria).
+        if (response.status === 403) {
+          setState({ kind: 'forbidden' });
+          return;
+        }
+        setState({ kind: 'error', message: problemMessage(error, `Não foi possível carregar a evidência (HTTP ${response.status}).`) });
+        return;
+      }
+      setState({ kind: 'ready', receipt: data.receipt as AuditReceipt });
+    })();
+    return () => {
+      alive = false;
+      ctrl.abort();
+    };
+  }, [instanceId, nonce]);
+
+  if (state.kind === 'forbidden') return null;
+  if (state.kind === 'loading') {
+    return (
+      <p className="evidence-bundle-loading" aria-live="polite">
+        Carregando evidência…
+      </p>
+    );
+  }
+  if (state.kind === 'error') {
+    return (
+      <p className="inline-banner tone-danger" role="alert">
+        {state.message}{' '}
+        <Button intent="neutral" onClick={() => setNonce((n) => n + 1)}>
+          Tentar novamente
+        </Button>
+      </p>
+    );
+  }
+  return <ReceiptCard receipt={state.receipt} />;
+}
+
 function HistoryTab({ instanceId }: { instanceId: string }) {
   const [state, setState] = useState<HistoryState>({ kind: 'loading' });
   const [nonce, setNonce] = useState(0);
@@ -779,23 +846,49 @@ function HistoryTab({ instanceId }: { instanceId: string }) {
     );
   }
 
-  if (state.kind === 'loading') return <NonIdeal kind="loading" title="Carregando histórico…" />;
-  if (state.kind === 'forbidden') return <NonIdeal kind="forbidden" title="Sem acesso" detail={state.detail} />;
+  // o bundle é a PROVA desta história — mostra independente do estado da
+  // lista abaixo (ela pode falhar/estar vazia sem que a evidência suma).
+  const bundle = <EvidenceBundleSection instanceId={instanceId} />;
+
+  if (state.kind === 'loading')
+    return (
+      <>
+        {bundle}
+        <NonIdeal kind="loading" title="Carregando histórico…" />
+      </>
+    );
+  if (state.kind === 'forbidden')
+    return (
+      <>
+        {bundle}
+        <NonIdeal kind="forbidden" title="Sem acesso" detail={state.detail} />
+      </>
+    );
   if (state.kind === 'error')
     return (
-      <NonIdeal
-        kind="error"
-        title="Falha ao carregar"
-        detail={state.message}
-        action={<Button onClick={() => setNonce((n) => n + 1)}>Tentar novamente</Button>}
-      />
+      <>
+        {bundle}
+        <NonIdeal
+          kind="error"
+          title="Falha ao carregar"
+          detail={state.message}
+          action={<Button onClick={() => setNonce((n) => n + 1)}>Tentar novamente</Button>}
+        />
+      </>
     );
   const { items, nextCursor } = state;
   // vazio REAL (instância recém-criada) tem voz própria — nunca a mesma tela
   // de erro, e nunca "nada aconteceu" por acidente de uma falha silenciosa.
-  if (items.length === 0) return <NonIdeal kind="empty" title="Nenhum evento ainda." />;
+  if (items.length === 0)
+    return (
+      <>
+        {bundle}
+        <NonIdeal kind="empty" title="Nenhum evento ainda." />
+      </>
+    );
   return (
     <>
+      {bundle}
       <ol className="history-list mono">
         {items.map((e) => {
           const label = historyLabel(e.kind);

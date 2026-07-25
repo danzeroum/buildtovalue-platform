@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { PROBLEM_TYPES, problemSchema } from '@platform/api-contracts';
+import { auditExportResponseSchema, PROBLEM_TYPES, problemSchema } from '@platform/api-contracts';
 import { hasPermission } from '@platform/auth';
 import type { FastifyReply } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
@@ -193,6 +193,35 @@ export function registerRuntimeRoutes(rawApp: ZodApp, deps: ApiDeps): void {
         })),
         nextCursor: page.nextCursor,
       };
+    },
+  );
+
+  app.get(
+    '/v1/instances/:id/evidence-bundle',
+    {
+      preHandler: [app.authenticate, app.requirePermission('operate:read')],
+      schema: {
+        tags: ['instances'],
+        summary: 'Recibo de evidência (digest + âncora + cobertura) escopado a ESTA instância (P7, AG-3.6)',
+        description:
+          'Reaproveita o export de auditoria (AG-2.3) com filtros TRAVADOS a esta instância — ' +
+          'nunca a trilha inteira do tenant. Menor privilégio: quem já vê a instância no Operate ' +
+          '(operate:read) vê a evidência dela, sem precisar de audit:export (admin/auditor).',
+        security: [{ bearerAuth: [] }],
+        params: z.object({ id: z.string().uuid() }),
+        response: { 200: auditExportResponseSchema, 401: problemSchema, 403: problemSchema, 404: problemSchema },
+      },
+    },
+    async (req, reply) => {
+      const row = await runtime.get(req.auth!.tenantId, req.params.id);
+      if (!row) {
+        return problem(reply, 404, PROBLEM_TYPES.notFound, 'Instância não encontrada', String(req.id));
+      }
+      return runtime.audit.export(
+        req.auth!.tenantId,
+        { resourceType: 'instance', resourceId: req.params.id, source: 'instance' },
+        { type: 'user', id: req.auth!.sub, requestId: String(req.id) },
+      );
     },
   );
 
