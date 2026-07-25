@@ -172,10 +172,11 @@ export async function claimUserTask(
   tenantId: string,
   taskId: string,
   user: string,
+  requestId?: string,
 ): Promise<ClaimOutcome> {
   return withTenant(sql, tenantId, async (tx) => {
     const [task] = await tx`
-      SELECT id, status, assignee, claimed_at FROM user_tasks
+      SELECT id, instance_id, element_id, status, assignee, claimed_at FROM user_tasks
       WHERE id = ${taskId} FOR UPDATE`;
     if (!task) return { ok: false, reason: 'notFound', message: 'task não existe' };
     if (task.status !== 'open') {
@@ -195,6 +196,12 @@ export async function claimUserTask(
       SET assignee = ${user}, claim_token = ${claimToken},
           claimed_at = COALESCE(claimed_at, now())
       WHERE id = ${taskId}`;
+    // AG-3.3 ponto 3: claim SEM rastro era o buraco — fato próprio, envelope no
+    // MESMO formato dos fatos de agente (payload->'actor'->>'type').
+    await insertAuditEvent(tx, tenantId, String(task.instance_id), 'taskClaimed', {
+      elementId: String(task.element_id),
+      actor: { type: 'user', id: user, ...(requestId ? { requestId } : {}) },
+    });
     return { ok: true, claimToken };
   });
 }
@@ -208,10 +215,11 @@ export async function unclaimUserTask(
   tenantId: string,
   taskId: string,
   user: string,
+  requestId?: string,
 ): Promise<UnclaimOutcome> {
   return withTenant(sql, tenantId, async (tx) => {
     const [task] = await tx`
-      SELECT assignee FROM user_tasks WHERE id = ${taskId} FOR UPDATE`;
+      SELECT instance_id, element_id, assignee FROM user_tasks WHERE id = ${taskId} FOR UPDATE`;
     if (!task) return { ok: false, reason: 'notFound', message: 'task não existe' };
     if (task.assignee !== user) {
       return { ok: false, reason: 'notOwner', message: 'só o dono do claim pode desfazê-lo (operador usa /assignment)' };
@@ -219,6 +227,10 @@ export async function unclaimUserTask(
     await tx`UPDATE user_tasks
       SET assignee = NULL, claim_token = NULL, claimed_at = NULL
       WHERE id = ${taskId}`;
+    await insertAuditEvent(tx, tenantId, String(task.instance_id), 'taskUnclaimed', {
+      elementId: String(task.element_id),
+      actor: { type: 'user', id: user, ...(requestId ? { requestId } : {}) },
+    });
     return { ok: true };
   });
 }
@@ -259,6 +271,12 @@ export async function completeUserTask(
     expectedInstanceRevision?: number;
     /** envelope de ator (D33): requestId de correlação do aval (vai para o selo). */
     requestId?: string;
+    /** AG-3.3 ponto 4: motivo da decisão de GATE (aprovar OU reprovar) — evidência
+     *  de conformidade (Art.14 EU AI Act), não dado reservado (segue o RBAC do
+     *  histórico, sem dois níveis). Ignorado fora de gate. Ausente hoje na UI do
+     *  P1 (`GateDetail.tsx` não coleta) — fica `null`, ausência honesta, não
+     *  inventada, até uma marcação própria adicionar o campo. */
+    reason?: string;
   },
   cipher?: FieldCipher,
 ): Promise<CompleteTaskOutcome> {
@@ -386,9 +404,11 @@ export async function completeUserTask(
       values,
       decisionVar: decisionVar ?? null,
       decision: decision ?? null,
+      isGate,
     };
   });
   if (!fenced.ok) return fenced;
+  const actor = { type: 'user' as const, id: input.user, ...(input.requestId ? { requestId: input.requestId } : {}) };
   const advanced = await advanceInstance(
     sql,
     tenantId,
@@ -402,19 +422,36 @@ export async function completeUserTask(
     },
     {
       cipher,
-      // etapa 6: a decisão vai TAMBÉM para history_events (Operate + XES mostram
-      // quem decidiu o quê), na MESMA tx do avanço — atômica com a variável.
-      onApplied:
-        fenced.decisionVar && fenced.decision
-          ? async (tx) => {
-              await insertAuditEvent(tx, tenantId, fenced.instanceId, 'taskDecision', {
-                elementId: fenced.elementId,
-                decisionVar: fenced.decisionVar,
-                decision: fenced.decision,
-                actor: input.user,
-              });
-            }
-          : undefined,
+      // AG-3.3 ponto 2: "quem concluiu, quando" é FATO universal — antes disto,
+      // uma conclusão sem decisionVar não deixava NENHUMA linha (silêncio numa
+      // tela de auditoria, pior que erro). Sempre grava, na MESMA tx do avanço.
+      onApplied: async (tx) => {
+        await insertAuditEvent(tx, tenantId, fenced.instanceId, 'userTaskCompleted', {
+          elementId: fenced.elementId,
+          actor,
+        });
+        if (fenced.isGate) {
+          // AG-3.3 ponto 4: decisão de GATE é fato PRÓPRIO, gravado NO MOMENTO da
+          // decisão (aprovar OU reprovar) — nunca depende de um efeito rodar
+          // depois. `motivo` segue o RBAC do histórico (evidência de Art.14, não
+          // dado reservado) — sem dois níveis, ao contrário do kill-switch.
+          await insertAuditEvent(tx, tenantId, fenced.instanceId, 'gateDecision', {
+            gateId: fenced.elementId,
+            decision: fenced.decision,
+            motivo: input.reason ?? null,
+            actor,
+          });
+        } else if (fenced.decisionVar && fenced.decision) {
+          // etapa 6: a decisão vai TAMBÉM para history_events (Operate + XES
+          // mostram quem decidiu o quê), na MESMA tx do avanço.
+          await insertAuditEvent(tx, tenantId, fenced.instanceId, 'taskDecision', {
+            elementId: fenced.elementId,
+            decisionVar: fenced.decisionVar,
+            decision: fenced.decision,
+            actor,
+          });
+        }
+      },
     },
   );
   if (!advanced.ok) return { ok: false, reason: advanced.reason, message: advanced.message };

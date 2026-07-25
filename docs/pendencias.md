@@ -71,6 +71,49 @@
   trilha da instância, não sobre uma página) — não um cálculo aproximado no cliente.
   **[ABERTO — GATILHO: requisito de cliente nomeado para "custo total por instância"]**.
   Detalhe: `docs/handoff/ag3-3-inventario-timeline-custo.md` §3.3.
+- **§2.24 — Ator humano em `history_events` (correção de dados, AG-3.3 ponto 4).**
+  Verificação pedida pelo dono antes da UI da timeline: os eventos HUMANOS (conclusão de
+  user task, decisão de gate, claim/unclaim) não gravavam ator consultável no MESMO
+  envelope `{type,id,requestId}` dos fatos de agente — em três dos quatro casos não
+  gravavam NADA (conclusão sem `decisionVar` = zero linha; claim/unclaim = zero linha;
+  reprovação de gate = nenhum efeito roda, logo nenhum envelope chega à trilha). Corrigido
+  sem migração (payload jsonb livre): `userTaskCompleted` (fato universal de conclusão,
+  incondicional), `taskClaimed`/`taskUnclaimed` (novos), e **`gateDecision`** (kind
+  PRÓPRIO, substituindo o `taskDecision` genérico para gates) — gravado NO MOMENTO da
+  decisão do gate (aprovar OU reprovar), nunca dependente do efeito a jusante rodar.
+  Refinamento do limite D13/D32 ("auditoria ≠ execução"): a fronteira protege é-lida-para-
+  executar — `instance_gate_state`/`approved_actor` seguem sendo o estado MUTÁVEL que o
+  efeito lê para selar; nenhum dos dois (decisão nem efeito) lê a TRILHA para agir. A
+  DECISÃO humana ganhar seu próprio fato imutável não viola isso — é o que a trilha existe
+  para guardar. `motivo` da decisão de gate segue o RBAC do histórico (evidência de Art.14
+  EU AI Act, não dado reservado — SEM os dois níveis do kill-switch). **[RESOLVIDO]**
+  (PR da correção de dados, AG-3.3, antes da UI da timeline).
+  Detalhe: `packages/db/src/runtime/userTasks.ts`, testes `decision.test.ts`,
+  `agent-gate-e2e.test.ts`, `human-actor-trail.test.ts`.
+- **§2.25 — Rótulos/voz para os 4 kinds novos de `history_events` (AG-3.3 ponto 4).**
+  `userTaskCompleted`, `gateDecision`, `taskClaimed`, `taskUnclaimed` são kinds NOVOS
+  (não existiam quando `ag3-3-marcacao-timeline-custo.md` foi marcada — aquela marcação
+  cobre só os campos de custo em `agent:acao`). Hoje caem no fallback honesto de
+  `historyLabel`/`voiceOf` (mostram o `kind` cru, nunca escondem) — mas a timeline
+  "unificada humano+agente" fica mais legível com rótulo humano para os quatro. **[ABERTO
+  — GATILHO: marcação da timeline de custo (ag3-3-marcacao-timeline-custo.md) OU uma
+  marcação própria destes 4 kinds]**. Detalhe: `apps/console/src/voices.ts`.
+- **§2.26 — REQUISITO NOMEADO, ligado ao P1: `GateDetail.tsx` precisa coletar `motivo` da
+  decisão de gate (conformidade real, não só técnica).** A API já aceita `reason` opcional
+  em `POST /v1/user-tasks/:id/completion` (§2.24, `gateDecision.motivo`) — mas a UI do P1
+  não tem CAMPO NENHUM para digitá-lo. Sem esse campo, `motivo` nasce sempre `null`:
+  **conformidade no papel, não na prática** — a decisão A do dono (motivo da reprovação é
+  evidência do Art.14 EU AI Act) só se cumpre quando o motivo é de fato capturado no
+  momento da decisão. Não bloqueia a v1 (o fato `gateDecision` com ator+decisão já fecha o
+  buraco de auditoria mais grave); mas é dívida de conformidade em aberto, não frouxidão de
+  produto. **Escopo do campo**: motivo **obrigatório no reprovar**, opcional no aprovar
+  (razão: reprovação sem justificativa é a lacuna que o Art.14 mais teme; aprovação já tem
+  o world-delta como evidência do quê foi aprovado). **NÃO inventar voz/rótulo/posição do
+  campo aqui** — mesma regra que gerou o P1 original: rótulo e tratamento são do design.
+  **[ABERTO — GATILHO: marcação do designer para o campo de motivo no P1 (`GateDetail.tsx`,
+  aprovar/reprovar) — aguardando, junto com §2.25, a próxima marcação do designer]**.
+  Detalhe: `packages/db/src/runtime/userTasks.ts` (`reason` já aceito, ignorado sem UI),
+  `apps/console/src/routes/GateDetail.tsx` (tela a alterar).
 
 ## §3 · Infra & ambiente (Gate de Piloto)
 
