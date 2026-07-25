@@ -70,18 +70,30 @@ export interface HistoryPage {
   nextCursor: string | null;
 }
 
-/** GET /v1/instances/{id}/history (shape §3): ordenado por seq, cursor = seq. */
+/**
+ * GET /v1/instances/{id}/history (shape §3): ordenado por seq, cursor = seq.
+ *
+ * AG-3.3 (triagem do dono): o fato `agent:acao` pode carregar `payload.cost`
+ * (custo REAL da chamada llm) — dado NÃO-pessoal, mas operacional sensível do
+ * tenant. `canSeeCost` (RBAC `operate:read`, decidido na rota) impõe a reserva
+ * NA PROJEÇÃO DO SQL — `payload - 'cost'` remove a chave ANTES de sair do banco,
+ * o mesmo padrão do `getKillSwitchState` (nunca seleciona a razão): quem não
+ * tem a permissão não recebe o campo, não é só "omitido depois" no app.
+ */
 export async function listInstanceHistory(
   sql: Sql,
   tenantId: string,
   instanceId: string,
-  options: { cursor?: string; limit?: number } = {},
+  options: { cursor?: string; limit?: number; canSeeCost?: boolean } = {},
 ): Promise<HistoryPage> {
   const limit = Math.min(Math.max(options.limit ?? 50, 1), 100);
   const afterSeq = options.cursor ? Number(options.cursor) : -1;
+  const canSeeCost = options.canSeeCost ?? false; // fail-closed: sem permissão explícita, reserva.
   return withTenant(sql, tenantId, async (tx) => {
     const rows = await tx`
-      SELECT seq, kind, payload, engine_version, occurred_at
+      SELECT seq, kind,
+             CASE WHEN ${canSeeCost} THEN payload ELSE payload - 'cost' END AS payload,
+             engine_version, occurred_at
       FROM history_events
       WHERE instance_id = ${instanceId} AND seq > ${Number.isFinite(afterSeq) ? afterSeq : -1}
       ORDER BY seq

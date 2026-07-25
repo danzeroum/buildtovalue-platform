@@ -88,12 +88,28 @@ registry.register('agent', async (job) => {
     const instance = await getInstance(sql, job.tenantId, job.instanceId);
     if (instance) {
       const classifications = await classificationsForRef(sql, job.tenantId, instance.definition_ref);
+      // AG-3.3: custo REAL por nó (só existe no realWalker; simulateWalker/CI não
+      // gasta) — grava a versão da tabela de preço + câmbio JUNTO do valor, nunca
+      // só os centavos (reconciliar depois é reler a linha, não recalcular).
+      const costByNode = Object.fromEntries(
+        (outcome.walk.cost?.calls ?? []).map((c) => [
+          c.nodeId,
+          {
+            cents: c.costCents,
+            currency: c.costCurrency ?? 'BRL',
+            priceTableVersion: c.priceTableVersion ?? null,
+            fxRate: c.fxRate ?? null,
+            ...(c.usage ? { usage: c.usage } : {}),
+          },
+        ]),
+      );
       const facts = buildAgentFacts({
         io: { output: outcome.walk.output ?? {} },
         visitedNodes: outcome.walk.visitedNodes,
         complete: outcome.walk.complete,
         stopReason: outcome.ok ? undefined : outcome.message,
         decisions: outcome.walk.decisions,
+        costByNode,
       });
       await withTenant(sql, job.tenantId, (tx) =>
         persistAgentTrail(tx, {
