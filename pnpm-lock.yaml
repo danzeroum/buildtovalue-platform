@@ -115,6 +115,9 @@ importers:
         specifier: ^7.18.1
         version: 7.18.1(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
     devDependencies:
+      '@platform/api':
+        specifier: workspace:*
+        version: link:../api
       '@platform/auth':
         specifier: workspace:*
         version: link:../../packages/auth
@@ -227,6 +230,9 @@ importers:
       '@buildtovalue/forms':
         specifier: 1.0.0-next.1
         version: 1.0.0-next.1
+      '@platform/auth':
+        specifier: workspace:*
+        version: link:../auth
       postgres:
         specifier: ^3.4.7
         version: 3.4.9

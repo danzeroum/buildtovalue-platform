@@ -1,4 +1,4 @@
-export { hashPassword, verifyPassword } from './password.js';
+export { generateTemporaryPassword, hashPassword, verifyPassword } from './password.js';
 export { hasPermission, PERMISSIONS, ROLES, type Permission, type Role } from './rbac.js';
 export {
   InvalidTokenError,

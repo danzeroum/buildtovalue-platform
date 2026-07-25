@@ -8,7 +8,7 @@ import {
 } from '@platform/db';
 import postgres from 'postgres';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { createTestDatabase, type TestDatabase } from '../../../packages/db/tests/helpers.js';
+import { createTestDatabase, seedTestUser, type TestDatabase } from '../../../packages/db/tests/helpers.js';
 import { buildApp, type ZodApp } from '../src/app.js';
 import { fakeDeps } from '../src/testing/fakes.js';
 
@@ -47,6 +47,9 @@ describe('AG-3.4 (P5) · rotas do catálogo de tools por tenant', () => {
     const migrator = postgres(db.migratorUrl, { max: 1, onnotice: () => {} });
     const [t] = await migrator`INSERT INTO tenants (slug, name) VALUES ('tl', 'ToolCo') RETURNING id`;
     tenant = t.id as string;
+    const adminId = await seedTestUser(migrator, tenant, { email: 'admin@tl.test', displayName: 'Admin', role: 'admin' });
+    const auditorId = await seedTestUser(migrator, tenant, { email: 'aud@tl.test', displayName: 'Aud', role: 'auditor' });
+    const operatorId = await seedTestUser(migrator, tenant, { email: 'op@tl.test', displayName: 'Op', role: 'operator' });
     await migrator.end();
 
     sql = createDb(db.apiUrl, { max: 4 });
@@ -63,9 +66,9 @@ describe('AG-3.4 (P5) · rotas do catálogo de tools por tenant', () => {
     });
     await app.ready();
     const jwt = { secret: deps.config.JWT_SECRET, accessTtlSeconds: 900 };
-    ({ accessToken: adminTok } = await signAccessToken({ sub: 'admin', tenantId: tenant, role: 'admin' }, jwt));
-    ({ accessToken: auditorTok } = await signAccessToken({ sub: 'aud', tenantId: tenant, role: 'auditor' }, jwt));
-    ({ accessToken: operatorTok } = await signAccessToken({ sub: 'op', tenantId: tenant, role: 'operator' }, jwt));
+    ({ accessToken: adminTok } = await signAccessToken({ sub: adminId, tenantId: tenant, role: 'admin', sid: 'test' }, jwt));
+    ({ accessToken: auditorTok } = await signAccessToken({ sub: auditorId, tenantId: tenant, role: 'auditor', sid: 'test' }, jwt));
+    ({ accessToken: operatorTok } = await signAccessToken({ sub: operatorId, tenantId: tenant, role: 'operator', sid: 'test' }, jwt));
   }, 60_000);
 
   afterAll(async () => {

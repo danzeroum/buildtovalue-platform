@@ -1,4 +1,4 @@
-import { hashPassword, signAccessToken } from '@platform/auth';
+import { signAccessToken } from '@platform/auth';
 import {
   createDb,
   createEnvKeyProvider,
@@ -14,7 +14,7 @@ import { createDiagram, createEdge, createNode, type BpmnDiagram } from '@buildt
 import type { FormSchema } from '@buildtovalue/forms';
 import postgres from 'postgres';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { createTestDatabase, type TestDatabase } from '../../../packages/db/tests/helpers.js';
+import { createTestDatabase, seedTestUser, type TestDatabase } from '../../../packages/db/tests/helpers.js';
 import { buildApp, type ZodApp } from '../src/app.js';
 import { fakeDeps } from '../src/testing/fakes.js';
 
@@ -70,10 +70,8 @@ describe('user-tasks completion — decision × decisionVar (etapa 6)', () => {
     const migrator = postgres(db.migratorUrl, { max: 1, onnotice: () => {} });
     const [t] = await migrator`INSERT INTO tenants (slug, name) VALUES ('dx', 'DecX') RETURNING id`;
     tenant = t.id as string;
-    await withTenant(migrator, tenant, async (tx) => {
-      await tx`INSERT INTO users (tenant_id, email, password_hash, display_name, role)
-        VALUES (${tenant}, 'b@dx.test', ${await hashPassword('x')}, 'Bea', 'business')`;
-    });
+    const beaId = await seedTestUser(migrator, tenant, { email: 'b@dx.test', displayName: 'Bea', role: 'business' });
+    const admId = await seedTestUser(migrator, tenant, { email: 'adm@dx.test', displayName: 'Admin', role: 'admin' });
     await migrator.end();
 
     sql = createDb(db.apiUrl, { max: 4 });
@@ -87,8 +85,8 @@ describe('user-tasks completion — decision × decisionVar (etapa 6)', () => {
     });
     await app.ready();
     const jwt = { secret: deps.config.JWT_SECRET, accessTtlSeconds: 900 };
-    ({ accessToken: biz } = await signAccessToken({ sub: 'bea', tenantId: tenant, role: 'business' }, jwt));
-    ({ accessToken: admin } = await signAccessToken({ sub: 'adm', tenantId: tenant, role: 'admin' }, jwt));
+    ({ accessToken: biz } = await signAccessToken({ sub: beaId, tenantId: tenant, role: 'business', sid: 'test' }, jwt));
+    ({ accessToken: admin } = await signAccessToken({ sub: admId, tenantId: tenant, role: 'admin', sid: 'test' }, jwt));
 
     await deployFormDefinition(sql, tenant, { formId: 'df', schema: dfForm });
     await deployProcessDefinition(sql, tenant, { name: 'dec', diagram: decisionDiagram(true), engineVersion: 'e2e' });

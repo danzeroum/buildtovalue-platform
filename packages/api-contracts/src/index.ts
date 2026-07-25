@@ -1,5 +1,6 @@
 export { PROBLEM_TYPES, problemSchema, type Problem } from './problem.js';
 export {
+  dateFormatSchema,
   loginRequestSchema,
   loginResponseSchema,
   meResponseSchema,

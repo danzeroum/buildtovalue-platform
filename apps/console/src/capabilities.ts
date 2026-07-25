@@ -30,7 +30,12 @@ export type Permission =
   | 'ai:configure'
   // AG-3.4 (P5): catálogo de tools por tenant — ler admin+auditor, ligar/desligar admin.
   | 'tools:read'
-  | 'tools:configure';
+  | 'tools:configure'
+  // AG-3.5 (admin básica): members:* é gestão de terceiros (admin do tenant); me:write
+  // é universal — todo usuário troca a própria senha/preferências.
+  | 'members:read'
+  | 'members:manage'
+  | 'me:write';
 
 const ALL: Permission[] = [
   'me:read',
@@ -51,6 +56,9 @@ const ALL: Permission[] = [
   'ai:configure',
   'tools:read',
   'tools:configure',
+  'members:read',
+  'members:manage',
+  'me:write',
 ];
 
 /** Exportado só para o teste de paridade (`capabilities.test.ts`) — nunca
@@ -61,6 +69,7 @@ export const GRANTS: Record<Role, readonly Permission[]> = {
   // emergência (vive fora da Admin). Acionar/configurar continuam só no admin.
   analyst: [
     'me:read',
+    'me:write',
     'definitions:read',
     'definitions:deploy',
     'instances:read',
@@ -68,9 +77,18 @@ export const GRANTS: Record<Role, readonly Permission[]> = {
     'tasks:read',
     'ai:read-state',
   ],
-  business: ['me:read', 'instances:read', 'instances:start', 'tasks:read', 'tasks:work', 'ai:read-state'],
+  business: [
+    'me:read',
+    'me:write',
+    'instances:read',
+    'instances:start',
+    'tasks:read',
+    'tasks:work',
+    'ai:read-state',
+  ],
   operator: [
     'me:read',
+    'me:write',
     'definitions:read',
     'instances:read',
     'instances:cancel',
@@ -87,6 +105,7 @@ export const GRANTS: Record<Role, readonly Permission[]> = {
   // aqui é o mesmo bug que faltar o papel inteiro (teste de paridade cobre).
   auditor: [
     'me:read',
+    'me:write',
     'definitions:read',
     'instances:read',
     'tasks:read',

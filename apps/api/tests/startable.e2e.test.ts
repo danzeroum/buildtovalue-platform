@@ -9,7 +9,7 @@ import {
 } from '@platform/db';
 import postgres from 'postgres';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { createTestDatabase, type TestDatabase } from '../../../packages/db/tests/helpers.js';
+import { createTestDatabase, seedTestUser, type TestDatabase } from '../../../packages/db/tests/helpers.js';
 import { buildApp, type ZodApp } from '../src/app.js';
 import { fakeDeps } from '../src/testing/fakes.js';
 
@@ -42,9 +42,16 @@ describe('GET /v1/startable-definitions (etapa 5, escopo instances:start puro)',
     return d;
   }
 
+  const userIdByRole = new Map<Role, string>();
+
   async function tokenFor(role: Role): Promise<string> {
+    let userId = userIdByRole.get(role);
+    if (!userId) {
+      userId = await seedTestUser(sql, tenant, { email: `${role}@st.test`, displayName: role, role });
+      userIdByRole.set(role, userId);
+    }
     const { accessToken } = await signAccessToken(
-      { sub: `${role}-user`, tenantId: tenant, role },
+      { sub: userId, tenantId: tenant, role, sid: 'test' },
       { secret, accessTtlSeconds: 900 },
     );
     return accessToken;

@@ -9,7 +9,7 @@ import {
 } from '@platform/db';
 import postgres from 'postgres';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { createTestDatabase, type TestDatabase } from '../../../packages/db/tests/helpers.js';
+import { createTestDatabase, seedTestUser, type TestDatabase } from '../../../packages/db/tests/helpers.js';
 import { buildApp, type ZodApp } from '../src/app.js';
 import { fakeDeps } from '../src/testing/fakes.js';
 
@@ -42,12 +42,15 @@ describe('gate world-delta na API — máscara no detalhe + reveal auditado/RBAC
   let token: string; // admin — tem variables:reveal-sensitive
   let tokenBusiness: string; // business — NÃO tem
   let gateTaskId: string;
+  let aprovadorId: string;
 
   beforeAll(async () => {
     db = await createTestDatabase('gate_reveal_api');
     const migrator = postgres(db.migratorUrl, { max: 1, onnotice: () => {} });
     const [a] = await migrator`INSERT INTO tenants (slug, name) VALUES ('gr', 'GateReveal') RETURNING id`;
     tenant = a.id as string;
+    aprovadorId = await seedTestUser(migrator, tenant, { email: 'aprovador@gr.test', displayName: 'Aprovador', role: 'admin' });
+    const bizId = await seedTestUser(migrator, tenant, { email: 'biz@gr.test', displayName: 'Biz', role: 'business' });
     // instância + tarefa de GATE com world-delta SENSÍVEL (inserção direta — o fio
     // de construção já é provado em gate-pii.test.ts; aqui prova-se a rota).
     await withTenant(migrator, tenant, async (tx) => {
@@ -73,8 +76,8 @@ describe('gate world-delta na API — máscara no detalhe + reveal auditado/RBAC
     });
     await app.ready();
     const jwt = { secret: deps.config.JWT_SECRET, accessTtlSeconds: 900 };
-    ({ accessToken: token } = await signAccessToken({ sub: 'aprovador', tenantId: tenant, role: 'admin' }, jwt));
-    ({ accessToken: tokenBusiness } = await signAccessToken({ sub: 'biz', tenantId: tenant, role: 'business' }, jwt));
+    ({ accessToken: token } = await signAccessToken({ sub: aprovadorId, tenantId: tenant, role: 'admin', sid: 'test' }, jwt));
+    ({ accessToken: tokenBusiness } = await signAccessToken({ sub: bizId, tenantId: tenant, role: 'business', sid: 'test' }, jwt));
   }, 60_000);
 
   afterAll(async () => {
@@ -122,7 +125,7 @@ describe('gate world-delta na API — máscara no detalhe + reveal auditado/RBAC
     // auditoria: nomes SIM, conteúdo NUNCA
     const [ev] = await withTenant(sql, tenant, (tx) =>
       tx`SELECT payload FROM history_events WHERE kind = 'gateWorldDeltaRevealed'`);
-    expect(ev.payload).toMatchObject({ gateId: 'gate', actor: 'aprovador', fields: ['to', 'corpo'] });
+    expect(ev.payload).toMatchObject({ gateId: 'gate', actor: aprovadorId, fields: ['to', 'corpo'] });
     expect(JSON.stringify(ev.payload)).not.toContain(PII_TO);
   });
 

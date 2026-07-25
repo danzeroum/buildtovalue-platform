@@ -1,4 +1,4 @@
-import { hashPassword, signAccessToken } from '@platform/auth';
+import { signAccessToken } from '@platform/auth';
 import {
   createDb,
   createRefreshTokenRepository,
@@ -12,6 +12,7 @@ import postgres from 'postgres';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   createTestDatabase,
+  seedTestUser,
   type TestDatabase,
 } from '../../../packages/db/tests/helpers.js';
 import { buildApp, type ZodApp } from '../src/app.js';
@@ -34,10 +35,7 @@ describe('instances — list/history/export/Idempotency-Key (shape §3)', () => 
     const migrator = postgres(db.migratorUrl, { max: 1, onnotice: () => {} });
     const [t] = await migrator`INSERT INTO tenants (slug, name) VALUES ('ix', 'Instances') RETURNING id`;
     tenant = t.id as string;
-    await withTenant(migrator, tenant, async (tx) => {
-      await tx`INSERT INTO users (tenant_id, email, password_hash, display_name, role)
-        VALUES (${tenant}, 'op@ix.test', ${await hashPassword('x')}, 'Op', 'admin')`;
-    });
+    const opId = await seedTestUser(migrator, tenant, { email: 'op@ix.test', displayName: 'Op', role: 'admin' });
     await migrator.end();
 
     sql = createDb(db.apiUrl, { max: 4 });
@@ -51,7 +49,7 @@ describe('instances — list/history/export/Idempotency-Key (shape §3)', () => 
     });
     await app.ready();
     ({ accessToken: token } = await signAccessToken(
-      { sub: 'op', tenantId: tenant, role: 'admin' },
+      { sub: opId, tenantId: tenant, role: 'admin', sid: 'test' },
       { secret: deps.config.JWT_SECRET, accessTtlSeconds: 900 },
     ));
   }, 60_000);

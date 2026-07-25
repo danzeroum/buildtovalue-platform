@@ -17,6 +17,8 @@ export const loginResponseSchema = z.object({
     email: z.string(),
     role: z.enum(['admin', 'analyst', 'business', 'operator', 'auditor']),
   }),
+  // AG-3.5 (A6-A): o console abre a tela obrigatória de troca sem round-trip extra.
+  mustChangePassword: z.boolean(),
 });
 export type LoginResponse = z.infer<typeof loginResponseSchema>;
 
@@ -25,11 +27,17 @@ export const refreshRequestSchema = z.object({
 });
 export type RefreshRequest = z.infer<typeof refreshRequestSchema>;
 
+export const dateFormatSchema = z.enum(['DD/MM/YYYY', 'MM/DD/YYYY', 'YYYY-MM-DD']);
+
 export const meResponseSchema = z.object({
   id: z.string().uuid(),
   tenantId: z.string().uuid(),
   displayName: z.string(),
   email: z.string(),
   role: z.enum(['admin', 'analyst', 'business', 'operator', 'auditor']),
+  // AG-3.5 (A5/A6-A).
+  mustChangePassword: z.boolean(),
+  timezone: z.string(),
+  dateFormat: dateFormatSchema,
 });
 export type MeResponse = z.infer<typeof meResponseSchema>;

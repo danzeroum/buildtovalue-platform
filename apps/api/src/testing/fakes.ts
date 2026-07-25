@@ -3,6 +3,7 @@ import type {
   RefreshTokenRepository,
   RefreshTokenRow,
   TenantRow,
+  UserAuthState,
   UserRepository,
   UserRow,
 } from '@platform/db';
@@ -34,12 +35,17 @@ export function fakeDeps(overrides: Partial<AppConfig> = {}): ApiDeps & { state:
     async findById(tenantId, id) {
       return state.users.find((u) => u.tenant_id === tenantId && u.id === id);
     },
+    async getAuthState(tenantId, id): Promise<UserAuthState | undefined> {
+      const user = state.users.find((u) => u.tenant_id === tenantId && u.id === id);
+      return user ? { active: user.active, mustChangePassword: user.must_change_password } : undefined;
+    },
   };
 
   const refreshTokens: RefreshTokenRepository = {
     async create(tenantId, userId, tokenHash, expiresAt) {
+      const id = `rt-${state.refreshTokens.length + 1}`;
       state.refreshTokens.push({
-        id: `rt-${state.refreshTokens.length + 1}`,
+        id,
         tenant_id: tenantId,
         user_id: userId,
         token_hash: tokenHash,
@@ -47,6 +53,7 @@ export function fakeDeps(overrides: Partial<AppConfig> = {}): ApiDeps & { state:
         revoked_at: null,
         revoked: false,
       });
+      return id;
     },
     async findByHash(tenantId, tokenHash) {
       return state.refreshTokens.find(
@@ -58,6 +65,14 @@ export function fakeDeps(overrides: Partial<AppConfig> = {}): ApiDeps & { state:
       if (row) {
         row.revoked = true;
         row.revoked_at = new Date();
+      }
+    },
+    async revokeAllForUser(tenantId, userId, exceptId) {
+      for (const row of state.refreshTokens) {
+        if (row.tenant_id === tenantId && row.user_id === userId && !row.revoked && row.id !== exceptId) {
+          row.revoked = true;
+          row.revoked_at = new Date();
+        }
       }
     },
   };

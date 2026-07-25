@@ -2,6 +2,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import postgres from 'postgres';
 import { migrate } from '../src/migrate.js';
+import { withTenant } from '../src/tenancy.js';
 
 /**
  * Infra dos testes de integração: cria um database descartável, roda as
@@ -83,4 +84,27 @@ export async function createTestDatabase(
       }
     },
   };
+}
+
+/**
+ * AG-3.5: `app.authenticate` agora consulta `users` por `id` a cada request
+ * (checagem de `active`) — um access token cujo `sub` não corresponde a uma
+ * linha REAL em `users` falha (id não-uuid nem chega a resolver; uuid
+ * inexistente vira "conta desativada", 401). Testes que antes mintavam um JWT
+ * com um `sub` sintético (`'admin'`, `'op'`, …) sem linha correspondente
+ * precisam de uma linha real — este helper cria uma e devolve o `id` (uuid)
+ * gerado, que passa a ser o `sub` do token assinado no teste.
+ */
+export async function seedTestUser(
+  sql: postgres.Sql,
+  tenantId: string,
+  input: { email: string; role: string; displayName?: string },
+): Promise<string> {
+  return withTenant(sql, tenantId, async (tx) => {
+    const [row] = await tx`
+      INSERT INTO users (tenant_id, email, password_hash, display_name, role)
+      VALUES (${tenantId}, ${input.email}, 'x', ${input.displayName ?? input.email}, ${input.role})
+      RETURNING id`;
+    return row.id as string;
+  });
 }

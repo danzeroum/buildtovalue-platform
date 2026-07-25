@@ -1,4 +1,4 @@
-import { hashPassword, signAccessToken } from '@platform/auth';
+import { signAccessToken } from '@platform/auth';
 import {
   createDb,
   createRefreshTokenRepository,
@@ -9,7 +9,7 @@ import {
 } from '@platform/db';
 import postgres from 'postgres';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { createTestDatabase, type TestDatabase } from '../../../packages/db/tests/helpers.js';
+import { createTestDatabase, seedTestUser, type TestDatabase } from '../../../packages/db/tests/helpers.js';
 import { buildApp, type ZodApp } from '../src/app.js';
 import { fakeDeps } from '../src/testing/fakes.js';
 
@@ -27,6 +27,7 @@ describe('audit export/verify via /v1 + auditor não escreve nada (D)', () => {
   let instanceId: string;
   let auditorToken: string;
   let adminToken: string;
+  let operatorToken: string;
   let jwtSecret: string;
 
   beforeAll(async () => {
@@ -34,9 +35,10 @@ describe('audit export/verify via /v1 + auditor não escreve nada (D)', () => {
     const migrator = postgres(db.migratorUrl, { max: 1, onnotice: () => {} });
     const [t] = await migrator`INSERT INTO tenants (slug, name) VALUES ('aud', 'Aud') RETURNING id`;
     tenant = t.id as string;
+    const auditorId = await seedTestUser(migrator, tenant, { email: 'aud@aud.test', displayName: 'Aud', role: 'auditor' });
+    const adminId = await seedTestUser(migrator, tenant, { email: 'admin@aud.test', displayName: 'Admin', role: 'admin' });
+    const operatorId = await seedTestUser(migrator, tenant, { email: 'op@aud.test', displayName: 'Op', role: 'operator' });
     await withTenant(migrator, tenant, async (tx) => {
-      await tx`INSERT INTO users (tenant_id, email, password_hash, display_name, role)
-        VALUES (${tenant}, 'aud@aud.test', ${await hashPassword('x')}, 'Aud', 'auditor')`;
       const [inst] = await tx`
         INSERT INTO instances (tenant_id, definition_ref, engine_version, state_schema_version, state, status)
         VALUES (${tenant}, 'proc@1', '1.1.0', 1, '{}'::jsonb, 'active') RETURNING id`;
@@ -61,11 +63,15 @@ describe('audit export/verify via /v1 + auditor não escreve nada (D)', () => {
     });
     await app.ready();
     ({ accessToken: auditorToken } = await signAccessToken(
-      { sub: 'aud', tenantId: tenant, role: 'auditor' },
+      { sub: auditorId, tenantId: tenant, role: 'auditor', sid: 'test' },
       { secret: jwtSecret, accessTtlSeconds: 900 },
     ));
     ({ accessToken: adminToken } = await signAccessToken(
-      { sub: 'admin', tenantId: tenant, role: 'admin' },
+      { sub: adminId, tenantId: tenant, role: 'admin', sid: 'test' },
+      { secret: jwtSecret, accessTtlSeconds: 900 },
+    ));
+    ({ accessToken: operatorToken } = await signAccessToken(
+      { sub: operatorId, tenantId: tenant, role: 'operator', sid: 'test' },
       { secret: jwtSecret, accessTtlSeconds: 900 },
     ));
   }, 60_000);
@@ -166,11 +172,7 @@ describe('audit export/verify via /v1 + auditor não escreve nada (D)', () => {
   });
 
   it('sem audit:export (ex.: operator) → 403 no export', async () => {
-    const { accessToken: opTok } = await signAccessToken(
-      { sub: 'op', tenantId: tenant, role: 'operator' },
-      { secret: jwtSecret, accessTtlSeconds: 900 },
-    );
-    const res = await app.inject({ method: 'GET', url: '/v1/audit/export', headers: bearer(opTok) });
+    const res = await app.inject({ method: 'GET', url: '/v1/audit/export', headers: bearer(operatorToken) });
     expect(res.statusCode).toBe(403);
   });
 });

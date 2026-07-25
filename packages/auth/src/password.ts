@@ -1,4 +1,4 @@
-import { randomBytes, scrypt, timingSafeEqual, type ScryptOptions } from 'node:crypto';
+import { randomBytes, randomInt, scrypt, timingSafeEqual, type ScryptOptions } from 'node:crypto';
 
 function scryptAsync(
   password: string,
@@ -28,6 +28,19 @@ export async function hashPassword(password: string): Promise<string> {
     maxmem: 128 * 1024 * 1024,
   });
   return `scrypt$${N}$${salt.toString('base64')}$${derived.toString('base64')}`;
+}
+
+// Alfabeto sem caracteres ambíguos (0/O, 1/l/I) — a senha é lida em voz alta/copiada
+// manualmente na entrega humana da A6-A (sem e-mail transacional nesta fase).
+const TEMP_PASSWORD_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+
+/** Senha temporária aleatória (A6-A) — 16 chars, alfabeto sem ambiguidade visual. */
+export function generateTemporaryPassword(): string {
+  let out = '';
+  for (let i = 0; i < 16; i++) {
+    out += TEMP_PASSWORD_ALPHABET[randomInt(TEMP_PASSWORD_ALPHABET.length)];
+  }
+  return out;
 }
 
 export async function verifyPassword(password: string, stored: string): Promise<boolean> {
