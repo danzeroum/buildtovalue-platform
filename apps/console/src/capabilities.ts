@@ -21,6 +21,8 @@ export type Permission =
   | 'operate:read'
   | 'operate:act'
   | 'variables:reveal-sensitive'
+  // AG-2.3 — export de auditoria (ISO 42001 / EU AI Act), separação de deveres.
+  | 'audit:export'
   // AG-3.2 (P4): ler-estado amplo · ler-config admin+auditor · acionar/configurar admin.
   | 'ai:read-state'
   | 'ai:read-config'
@@ -39,13 +41,16 @@ const ALL: Permission[] = [
   'operate:read',
   'operate:act',
   'variables:reveal-sensitive',
+  'audit:export',
   'ai:read-state',
   'ai:read-config',
   'ai:operate',
   'ai:configure',
 ];
 
-const GRANTS: Record<Role, readonly Permission[]> = {
+/** Exportado só para o teste de paridade (`capabilities.test.ts`) — nunca
+ *  consumido por telas (elas usam `can`). */
+export const GRANTS: Record<Role, readonly Permission[]> = {
   admin: ALL,
   // `ai:read-state` é amplo: quem opera precisa VER o banner de kill-switch numa
   // emergência (vive fora da Admin). Acionar/configurar continuam só no admin.
@@ -70,6 +75,12 @@ const GRANTS: Record<Role, readonly Permission[]> = {
     'variables:reveal-sensitive',
     'ai:read-state',
   ],
+  // [GATE-D] papel `auditor` (AG-2.3): separação de deveres — SÓ leitura +
+  // `audit:export`, ZERO escrita (sem start/cancel/work/act/deploy) e sem
+  // `variables:reveal-sensitive` (evidência nunca é conteúdo). Espelho
+  // BYTE-A-BYTE de `GRANTS.auditor` em `packages/auth/src/rbac.ts` — divergir
+  // aqui é o mesmo bug que faltar o papel inteiro (teste de paridade cobre).
+  auditor: ['me:read', 'definitions:read', 'instances:read', 'tasks:read', 'operate:read', 'audit:export', 'ai:read-state', 'ai:read-config'],
 };
 
 /** Espelho de `hasPermission` do servidor — só para decidir o que renderizar. */
