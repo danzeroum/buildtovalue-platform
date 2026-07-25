@@ -27,7 +27,10 @@ export type Permission =
   | 'ai:read-state'
   | 'ai:read-config'
   | 'ai:operate'
-  | 'ai:configure';
+  | 'ai:configure'
+  // AG-3.4 (P5): catálogo de tools por tenant — ler admin+auditor, ligar/desligar admin.
+  | 'tools:read'
+  | 'tools:configure';
 
 const ALL: Permission[] = [
   'me:read',
@@ -46,6 +49,8 @@ const ALL: Permission[] = [
   'ai:read-config',
   'ai:operate',
   'ai:configure',
+  'tools:read',
+  'tools:configure',
 ];
 
 /** Exportado só para o teste de paridade (`capabilities.test.ts`) — nunca
@@ -80,7 +85,17 @@ export const GRANTS: Record<Role, readonly Permission[]> = {
   // `variables:reveal-sensitive` (evidência nunca é conteúdo). Espelho
   // BYTE-A-BYTE de `GRANTS.auditor` em `packages/auth/src/rbac.ts` — divergir
   // aqui é o mesmo bug que faltar o papel inteiro (teste de paridade cobre).
-  auditor: ['me:read', 'definitions:read', 'instances:read', 'tasks:read', 'operate:read', 'audit:export', 'ai:read-state', 'ai:read-config'],
+  auditor: [
+    'me:read',
+    'definitions:read',
+    'instances:read',
+    'tasks:read',
+    'operate:read',
+    'audit:export',
+    'ai:read-state',
+    'ai:read-config',
+    'tools:read',
+  ],
 };
 
 /** Espelho de `hasPermission` do servidor — só para decidir o que renderizar. */

@@ -8,7 +8,7 @@ import { executeGatedEffectTx } from '../src/agent/gateFio.js';
 import { upsertTenantAiConfig } from '../src/agent/tenantAiConfig.js';
 import { deployAgentDefinition, getAgentDefinitionByRef } from '../src/registry/agentStore.js';
 import { classificationsForRef, deployProcessDefinition } from '../src/registry/store.js';
-import { deployToolDefinition } from '../src/registry/toolStore.js';
+import { deployToolDefinition, setTenantToolEnabled } from '../src/registry/toolStore.js';
 import { createRuntime } from '../src/runtime/facade.js';
 import { getInstance } from '../src/runtime/advance.js';
 import { completeUserTask } from '../src/runtime/userTasks.js';
@@ -101,6 +101,11 @@ describe('AG-2.2 etapa 5 — ciclo do gate ponta a ponta pelas portas reais (D31
     await deployAgentDefinition(api, tenant, { graph: agentAt('agnt-aprova', '1.0.0') });
     await deployToolDefinition(api, tenant, { contract: sendEmail('tool:send-email') });
     await deployToolDefinition(api, tenant, { contract: sendEmail('tool:stale-email') });
+    // P5 (AG-3.4): sem linha em `tenant_tools` = desabilitada — este e2e testa o
+    // FIO do gate (D31/staleness), não a disponibilidade da tool; habilita as
+    // duas para não confundir os dois lints/checagens.
+    await setTenantToolEnabled(api, tenant, 'tool:send-email', true, { type: 'system', id: 'test-setup' }, 'setup de teste');
+    await setTenantToolEnabled(api, tenant, 'tool:stale-email', true, { type: 'system', id: 'test-setup' }, 'setup de teste');
     const okDeploy = await deployProcessDefinition(api, tenant, {
       name: 'gate-proc', engineVersion: 'e', diagram: gateProcess('gate-proc', 'tool:send-email@2.0.1'),
     });

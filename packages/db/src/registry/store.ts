@@ -4,9 +4,9 @@ import { validateFormSchema, type FormSchema, type SchemaIssue } from '@buildtov
 import type { Sql, TransactionSql } from '../client.js';
 import { withTenant } from '../tenancy.js';
 import { conditionEvaluator } from '../runtime/definitions.js';
-import { effectRequiresGate } from '@buildtovalue/agentflow';
+import { effectRequiresGate, parseRef } from '@buildtovalue/agentflow';
 import { deriveDecisionRouting, isBtvGate, lintBlocks, lintDiagram, toolEffectGateViolations, type LintIssue } from './lint.js';
-import { toolEffectOfTx } from './toolStore.js';
+import { isToolEnabledForTenantTx, toolEffectOfTx } from './toolStore.js';
 
 /**
  * Registry de definições (F3.1, shape /v1 §1/§2b): deploy IMUTÁVEL com lint
@@ -114,6 +114,21 @@ export async function deployProcessDefinition(
       if (!toolRef) continue;
       const effect = await toolEffectOfTx(tx, toolRef);
       if (effect && effectRequiresGate(effect)) gatedElementIds.push(node.id);
+      // P5 (AG-3.4 §1.1): publicar contra uma tool desabilitada para o tenant é
+      // recusado — mesmo laço que já resolve o toolRef contra o registry.
+      try {
+        const toolId = parseRef(toolRef).ref.id;
+        if (!(await isToolEnabledForTenantTx(tx, tenantId, toolId))) {
+          issues.push({
+            code: 'EXEC_TOOL_DISABLED',
+            severity: 'error',
+            elementId: node.id,
+            message: `tool '${toolId}' não está habilitada para este tenant — habilite em Administração › Ferramentas antes de publicar`,
+          });
+        }
+      } catch {
+        // toolRef malformado — ausência de contrato já não soma a gatedElementIds acima.
+      }
     }
     issues.push(...toolEffectGateViolations(input.diagram, gatedElementIds));
 

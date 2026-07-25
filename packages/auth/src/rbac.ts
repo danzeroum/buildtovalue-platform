@@ -34,6 +34,11 @@ export const PERMISSIONS = [
   'ai:read-config',
   'ai:operate',
   'ai:configure',
+  // AG-3.4 (P5 — catálogo de tools por tenant). `enabled` liga/desliga; `effect`/
+  // `authorization` vêm do ToolContract (imutável), nunca editáveis pela tela —
+  // só o operador que TEM `tools:configure` liga/desliga (D31 ortogonal, §1.2).
+  'tools:read',
+  'tools:configure',
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 
@@ -72,6 +77,8 @@ const GRANTS: Record<Role, readonly Permission[]> = {
   // usa provedor X via cofre"): provider/model/base_url/keyRef ponteiro. Continua
   // SEM escrita (não aciona nem configura) e sem a chave. A RAZÃO do kill-switch
   // (nível 2) só é projetada a quem tem `ai:configure` — o auditor a vê como null.
+  // + AG-3.4: o auditor LÊ o catálogo de tools habilitadas (evidência de
+  // superfície de risco do tenant) — sem `tools:configure` (não liga/desliga).
   auditor: [
     'me:read',
     'definitions:read',
@@ -81,6 +88,7 @@ const GRANTS: Record<Role, readonly Permission[]> = {
     'audit:export',
     'ai:read-state',
     'ai:read-config',
+    'tools:read',
   ],
 };
 

@@ -1,7 +1,8 @@
 import type { BpmnDiagram } from '@buildtovalue/core';
 import type { Sql, TransactionSql } from '../client.js';
 import { withTenant } from '../tenancy.js';
-import { getToolDefinitionByRefTx } from '../registry/toolStore.js';
+import { getToolDefinitionByRefTx, isToolEnabledForTenantTx } from '../registry/toolStore.js';
+import { parseRef } from '@buildtovalue/agentflow';
 import type { AgentActor } from './agentTrail.js';
 import type { DataClassification } from '../runtime/definitions.js';
 import { insertAuditEvent } from '../runtime/audit.js';
@@ -131,15 +132,20 @@ export async function revealGateForTask(
 
 export type SealOutcome =
   | { executed: true; selo: EffectSelo }
-  | { executed: false; reason: 'tool-stale' };
+  | { executed: false; reason: 'tool-stale' }
+  | { executed: false; reason: 'tool-disabled' };
 
 /**
  * Sela e executa o efeito sob gate. A STALENESS (adição 2 do designer, D31) é a
  * porta: a tool aprovada precisa AINDA existir/valer no momento da execução.
  *  · fresca  → grava a linha `agent:acao` do efeito com o SELO {gateId, tool,
  *    effectClass, actor, approvedAt} — procedência, não conteúdo. É a prova D31.
- *  · stale   → incidente `agentToolStale` (vermelho — distinto de budget/kill-switch
- *    âmbar), o efeito NÃO roda; o gate aprovado (fato anterior) permanece visível.
+ *  · stale   → incidente `agentToolStale` (vermelho — mudança inesperada do
+ *    registry), o efeito NÃO roda; o gate aprovado (fato anterior) permanece visível.
+ *  · desabilitada (P5, AG-3.4 §1.1) → incidente `agentToolDisabled` (âmbar —
+ *    parada honesta, ação DELIBERADA do tenant, não surpresa); mesmo checkpoint
+ *    de execução cobre "desabilitada NO MEIO de uma instância em voo" de graça,
+ *    sem precisar de um fix de cancelamento de lease em separado.
  * Append-only: effect_key determinístico por (instância, gate) → idempotente.
  */
 export async function sealGatedEffectTx(
@@ -164,6 +170,17 @@ export async function sealGatedEffectTx(
               ${tx.json({ toolRef: args.toolRef, gateId: args.gateElementId, actor: args.actor, approvedAt: args.approvedAt } as never)})
       ON CONFLICT (effect_key) DO NOTHING`;
     return { executed: false, reason: 'tool-stale' };
+  }
+  const toolId = parseRef(args.toolRef).ref.id;
+  const enabled = await isToolEnabledForTenantTx(tx, args.tenantId, toolId);
+  if (!enabled) {
+    await tx`INSERT INTO incidents (tenant_id, instance_id, kind, message, effect_key, payload)
+      VALUES (${args.tenantId}, ${args.instanceId}, 'agentToolDisabled',
+              ${`efeito não executado — a tool ${args.toolRef} foi desabilitada para este tenant`},
+              ${`host:gate-disabled:${args.instanceId}:${args.gateElementId}`},
+              ${tx.json({ toolRef: args.toolRef, gateId: args.gateElementId, actor: args.actor, approvedAt: args.approvedAt } as never)})
+      ON CONFLICT (effect_key) DO NOTHING`;
+    return { executed: false, reason: 'tool-disabled' };
   }
   const tool = await getToolDefinitionByRefTx(tx, args.toolRef);
   const selo = effectSelo({

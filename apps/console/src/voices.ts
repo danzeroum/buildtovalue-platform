@@ -18,6 +18,7 @@ const VOICES: Record<string, Voice> = {
   'kill-switch': { label: 'Parada honesta — kill-switch', family: 'amber', icon: '⏸' },
   'aguardando-gate': { label: 'Aguardando gate humano', family: 'amber', icon: '⏳' },
   agentProposalExpired: { label: 'Proposta expirada — reavaliar', family: 'amber', icon: '↻' },
+  agentToolDisabled: { label: 'Parada honesta — tool desabilitada para o tenant', family: 'amber', icon: '⏸' },
   // VERMELHO — incidentes (exigem intervenção).
   agentToolStale: { label: 'Efeito não executado — a tool mudou desde a aprovação', family: 'red', icon: '⚠' },
   'no-config': { label: 'Sem inteligência configurada', family: 'red', icon: '⚠' },

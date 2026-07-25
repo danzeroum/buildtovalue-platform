@@ -16,28 +16,96 @@
 - **`tool_definitions`** (migração `0009`, catálogo IMUTÁVEL — só `SELECT+INSERT`, sem `UPDATE`/`DELETE`): cada versão publicada de uma tool carrega `effect` (`ToolEffect`) e `authz`/`authorization` (`ToolAuthorization`: `automatica|gate|proibida`) como **campos próprios do contrato**, nunca inferidos. O deploy já recusa (`validateToolContract`, `TOOL_EFFECT_AUTOMATICA_GATED`) um efeito que exige gate (`write-irreversible`/`external-commitment`) declarado como `automatica` — **este é "o lint que já existe"** que o dono citou.
 - **Runtime já verifica staleness** (`checkToolFresh`, `gate.ts`) — se a tool ainda existe no registry no momento de executar um efeito sob gate. Não verifica `tenant_tools.enabled` (achado da §1 abaixo).
 
-## 1 · ACHADO que muda o escopo: `tenant_tools.enabled` não é lido em NENHUM lugar hoje
+## 1 · ACHADO + DECISÃO DO DONO: `tenant_tools.enabled` não é lido em NENHUM lugar hoje — o enforcement ENTRA nesta fatia, em DOIS pontos
 
 Busquei `tenant_tools` em todo `packages/db/src` e `apps/api/src` — **zero ocorrências fora
-da própria migração e do teste de isolamento RLS**. Ou seja: mesmo que a tela ligasse/
-desligasse uma tool hoje, **nada no runtime consultaria esse estado** — nem o gate
-(`gateFio.ts`), nem o dispatcher, nem o lint de deploy do processo. O toggle seria **decoração
-sem efeito**, o oposto de "controle real" — a mesma classe de achado da AG-3.3 (uma coluna que
-existe mas ninguém lê).
+da própria migração e do teste de isolamento RLS**. Mesmo que a tela ligasse/desligasse uma
+tool hoje, **nada no runtime consultaria esse estado**. O toggle seria decoração sem efeito —
+a mesma classe de achado da correção de dados da AG-3.3 (uma coluna que existe mas ninguém lê).
 
-**Isso significa que o shape de P5 tem DUAS peças, não uma:**
-- **(a) Superfície administrativa** — rotas de listar/ligar/desligar (o que o dono pediu).
-- **(b) Enforcement** — ALGUÉM no caminho de execução precisa recusar um efeito de uma tool
-  `enabled:false` para o tenant. Candidatos ao ponto de checagem: no lint de DEPLOY do
-  processo (recusa publicar um processo que referencia uma tool desabilitada) e/ou no
-  `gateFio.ts` no momento de executar o efeito (mesmo lugar do `checkToolFresh`, mesma
-  família de checagem "ainda vale?").
+**Decisão do dono: o enforcement (b) ENTRA nesta fatia — tela sem dentes não entra.** Desabilitar
+uma tool é decisão de segurança do tenant (integração comprometida, tool que vazou); um toggle
+decorativo mentiria sobre ter controle, o que é pior que não ter a tela.
 
-**Decisão que preciso do dono**: (b) entra nesta fatia (P5 fecha com dentes de verdade) ou é
-nomeado como pendência separada e P5 nesta fatia é só a superfície (com o risco explícito de
-"toggle sem efeito" registrado, não escondido)? Minha recomendação: **(b) entra**, porque uma
-tela de "desligar tool" que não desliga nada é pior que não ter a tela — é a mesma lição do
-kill-switch (achei e corrigi o mesmo tipo de buraco na correção de dados da AG-3.3).
+### 1.1 · Os DOIS pontos (complementares, não um OU outro)
+
+**(1) LINT DE DEPLOY — preventivo.** Publicar um processo que referencia (`toolRef`) uma tool
+`enabled:false` para o tenant é **recusado no deploy**, mensagem clara. Mesmo lugar onde o
+efeito já é resolvido hoje contra o registry — `packages/db/src/registry/store.ts:106-118`
+(`deployProcessDefinition`), o laço que já chama `toolEffectOfTx(tx, toolRef)` por elemento
+com `toolRef` e empurra `issues` que `lintBlocks` (linha 120) já bloqueia. A checagem nova
+entra no MESMO laço:
+```ts
+const effect = await toolEffectOfTx(tx, toolRef);
+if (effect && effectRequiresGate(effect)) gatedElementIds.push(node.id);
+// NOVO:
+const toolId = parseRef(toolRef).id;                 // tool_id sem versão (decisão 2, §4)
+if (!(await isToolEnabledForTenantTx(tx, tenantId, toolId))) {
+  issues.push({
+    code: 'EXEC_TOOL_DISABLED', severity: 'error', elementId: node.id,
+    message: `tool '${toolId}' não está habilitada para este tenant — habilite em Administração › Ferramentas antes de publicar`,
+  });
+}
+```
+
+**(2) RUNTIME em `gateFio.ts` — definitivo, pega o que o deploy não pega.** Um processo pode
+já estar PUBLICADO e RODANDO quando a tool é desabilitada depois — só o runtime intercepta
+esse caso. `sealGatedEffectTx` (`packages/db/src/agent/gateFio.ts:145-167`) já verifica
+`checkToolFresh` no MOMENTO de executar o efeito (não no deploy, não na aprovação) — é o
+checkpoint certo, e cobre "desabilitada NO MEIO de uma instância em voo" de graça: o próximo
+`executeGatedEffectTx` daquele gate roda essa verificação de novo, então uma tool desabilitada
+depois do aval humano recusa no próximo passo, sem precisar cancelar lease de job em separado
+(diferente do buraco do kill-switch, que precisou de um fix à parte porque só bloqueava LOCKS
+novos — aqui a checagem já mora no ponto de EXECUÇÃO, não no de lock).
+```ts
+export type SealOutcome =
+  | { executed: true; selo: EffectSelo }
+  | { executed: false; reason: 'tool-stale' }
+  | { executed: false; reason: 'tool-disabled' };   // NOVO
+
+// dentro de sealGatedEffectTx, depois do checkToolFresh:
+const toolId = parseRef(args.toolRef).id;
+const enabled = await isToolEnabledForTenantTx(tx, args.tenantId, toolId);
+if (!enabled) {
+  await tx`INSERT INTO incidents (tenant_id, instance_id, kind, message, effect_key, payload)
+    VALUES (${args.tenantId}, ${args.instanceId}, 'agentToolDisabled',
+            ${`efeito não executado — a tool ${args.toolRef} foi desabilitada para este tenant`},
+            ${`host:gate-disabled:${args.instanceId}:${args.gateElementId}`},
+            ${tx.json({ toolRef: args.toolRef, gateId: args.gateElementId, actor: args.actor, approvedAt: args.approvedAt } as never)})
+    ON CONFLICT (effect_key) DO NOTHING`;
+  return { executed: false, reason: 'tool-disabled' };
+}
+```
+**Por que `kind: 'agentToolDisabled'` PRÓPRIO, não reaproveitar `agentToolStale`:** o dono
+pediu parada honesta (âmbar), não erro opaco — `agentToolStale` hoje é vermelho (mudança
+inesperada do registry). Desabilitar é ação DELIBERADA do tenant, não uma surpresa; a mesma
+distinção que o produto já faz para `agentProposalExpired` (também um `incidents.kind`, e
+também âmbar — a prova de que "estar na tabela `incidents`" não obriga vermelho). Um par de
+linhas em `apps/console/src/voices.ts`:
+```ts
+agentToolDisabled: { label: 'Parada honesta — tool desabilitada para o tenant', family: 'amber', icon: '⏸' },
+```
+Continua **retryable pelo mecanismo de incidente já existente** (`/v1/incidents/:id/retry`) —
+quando o tenant reabilita a tool, repetir o efeito passa na checagem. *(Nota: o retry de
+`agentToolStale` hoje não tem um teste e2e provando reavaliação completa — o mesmo gap, se
+existir, é herdado aqui igualmente; não é uma lacuna NOVA desta fatia.)*
+
+### 1.2 · D31 continua ortogonal (as duas checagens NÃO se confundem)
+
+- `enabled` (`tenant_tools`) responde **"a tool está disponível para este tenant?"** —
+  liga/desliga tudo, sem gradação.
+- `effect`/`authorization` (`tool_definitions`, imutável) respondem **"o que ela pode fazer
+  sem gate?"** — não muda com o toggle.
+
+Uma tool `enabled:true` continua respeitando seu `authorization` (`gate` continua exigindo
+gate humano; `proibida` nunca liga, ponto — §2.2 abaixo). Uma tool `enabled:false` não roda,
+independente do que seu `authorization` diga. Os dois eixos nunca se substituem.
+
+### 1.3 · Aceite nomeado (verbatim do dono)
+
+- Deploy que referencia uma tool desabilitada para o tenant → **recusado** (lint, `EXEC_TOOL_DISABLED`).
+- Tool desabilitada **NO MEIO** de uma instância em voo → o **próximo efeito dela para
+  honestamente** (`agentToolDisabled`, âmbar, nunca vermelho, nunca silencioso).
 
 ## 2 · Rotas propostas
 
@@ -89,9 +157,10 @@ toda a Operação precise ver (habilitar/desabilitar tool é decisão administra
 emergência que afeta o trabalho corrente de quem opera). *Confirmar se este corte está certo,
 ou se operador/analyst também deveriam LER (não configurar) o catálogo.*
 
-## 4 · Decisões que o gate fecha (a confirmar)
+## 4 · Decisões que o gate fecha
 
-1. **§1 — enforcement entra nesta fatia ou fica nomeado à parte?** (recomendação: entra).
+1. ~~§1 — enforcement entra nesta fatia ou fica nomeado à parte?~~ → **FECHADA: entra, nos
+   dois pontos (lint de deploy + runtime em `sealGatedEffectTx`)** — decisão do dono.
 2. **`tenant_tools.tool` é `tool_id` (bare, ex. `send_email`) ou `ref` versionado
    (`send_email@2.0.1`)?** Proposta-default: **`tool_id`** — habilitar é por tool, não por
    versão (uma tool nova versão não deveria exigir re-habilitar; `CLAUDE.md` chama P5 de
@@ -116,9 +185,17 @@ anteriores).
 
 Sem migração nova SALVO se a decisão 3 (§4) pedir remover `requires_gate` — nesse caso
 migração leve (`ALTER TABLE ... DROP COLUMN`), própria, com `[GATE+MIGRAÇÃO]` no título.
-`GET /v1/tools` (join `tool_definitions` × `tenant_tools`) → `PATCH /v1/tools/:toolId` →
-enforcement (se a decisão 1 entrar: checagem em `gateFio.ts` e/ou no lint de deploy) → GRANTS +
-espelho `capabilities.ts` → testes: catálogo com `enabled:false` honesto sem linha em
-`tenant_tools`; 422 ao tentar editar `effect`/`authorization`; 422 ao ligar tool `proibida`;
-motivo obrigatório nas duas direções; (se entrar) efeito de tool desabilitada recusado no
-runtime, não só na tela.
+
+1. `isToolEnabledForTenantTx` (novo, ao lado de `toolEffectOfTx` em `registry/toolStore.ts`).
+2. **Enforcement (1) — lint de deploy**: `EXEC_TOOL_DISABLED` no laço de `deployProcessDefinition` (`registry/store.ts:106-118`).
+3. **Enforcement (2) — runtime**: `sealGatedEffectTx` ganha o novo ramo `tool-disabled` +
+   `kind:'agentToolDisabled'` (âmbar) em `gateFio.ts`; `apps/console/src/voices.ts` ganha a
+   linha do rótulo.
+4. `GET /v1/tools` (join `tool_definitions` × `tenant_tools`) → `PATCH /v1/tools/:toolId`.
+5. GRANTS (`tools:read`/`tools:configure`) + espelho `capabilities.ts` + teste de paridade
+   (mesmo padrão do `auditor`, PR #62 — todo papel novo é pego automaticamente).
+6. Testes: deploy recusado por `EXEC_TOOL_DISABLED`; catálogo com `enabled:false` honesto sem
+   linha em `tenant_tools`; 422 ao tentar editar `effect`/`authorization`; 422 ao ligar tool
+   `proibida`; motivo obrigatório nas duas direções; **efeito de tool desabilitada DEPOIS do
+   aval humano recusa no runtime** (`agentToolDisabled`, âmbar, sem efeito, gate aprovado
+   permanece na trilha — mesmo padrão do teste de staleness já existente).

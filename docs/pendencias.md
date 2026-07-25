@@ -146,6 +146,68 @@
   `docs/handoff/a7-inventario-export-auditoria.md` §2 (decisão A),
   `packages/db/src/audit/export.ts` (`ASSURANCE_NOTE`, `assurance:'self-recorded'`).
 
+- **§2.29 — P5 (AG-3.4, catálogo de tools por tenant): 4 decisões menores do shape (§4)
+  seguiram o DEFAULT proposto — o dono aprovou o [GATE] no todo, sem reconfirmar cada
+  uma linha a linha.** Registrado para não virar "decisão implícita" invisível:
+  1. `tenant_tools.tool` grava o `tool_id` BARE (ex. `tool:send-email`, sem versão) —
+     habilitar é por tool, não por versão publicada.
+  2. `tenant_tools.requires_gate` (coluna existente desde a `0006`) segue VESTIGIAL —
+     nunca lida/escrita pela rota nova; `requiresGate` do catálogo vem SEMPRE computado
+     ao vivo de `authorization` (`tool_definitions`, imutável). Não removida por migração
+     (limpeza, não urgência) — só para não confundir quem ler o schema no futuro.
+  3. RBAC de leitura do catálogo: só `admin`+`auditor` (`tools:read`); `operator`/`analyst`/
+     `business` não leem nem configuram. Nenhum "banner" amplo como o do kill-switch —
+     habilitar/desabilitar tool é decisão administrativa, não emergência que afete a
+     Operação corrente.
+  4. `scope` (jsonb, coluna existente desde a `0006`) fica FORA da v1 — nem exposta, nem
+     editável por esta rota.
+  **[ABERTO — GATILHO: dono revisar o PR e confirmar/objetar a alguma das 4 acima]**.
+  Detalhe: `docs/handoff/ag3-4-shape-proposta-p5-tools.md` §4, `packages/db/src/registry/toolStore.ts`.
+- **§2.30 — A3 (UI da tela de tools) ainda não tem marcação do designer.** O código do
+  P5 (rotas + enforcement) fechou o [GATE]; a TELA (protótipo já existe em
+  `Prototipos Administracao.dc.html`) precisa do mesmo rito inventário→marcação que A7/P4
+  tiveram, agora com os nomes REAIS das rotas (`GET /v1/tools`, `PATCH /v1/tools/:toolId`).
+  **[ABERTO — GATILHO: inventário A3 (dev) → marcação do designer → código]**. Detalhe:
+  `docs/handoff/ag3-4-shape-proposta-p5-tools.md` §5.
+- **§2.31 — VARREDURA de colunas de controle/estado sem leitura (pedido do dono, junto
+  com o P5 — mesma classe de achado que `tenant_tools.enabled`).** Li as 18 migrações na
+  íntegra e cruzei toda coluna candidata contra leitura real em `packages/db/src`,
+  `apps/api/src`, `apps/worker/src`, `apps/console/src`. Dois achados NOVOS confirmados,
+  um menor:
+  1. **`agent_definitions.autonomy_level`** — gravado a cada deploy (`agentStore.ts`),
+     incluído em todo `SELECT` da tabela, mas **nunca relido de volta** por nenhum
+     consumidor real: o worker (`apps/worker/src/main.ts`) só usa `def.graph` do agente
+     resolvido, descartando o campo; não há catálogo de agentes exposto em
+     `apps/api`/`apps/console` que o exiba. A regra "autonomia baixa exige gate"
+     (assinatura do F-AG, "autonomia como dial") **existe e é aplicada** — mas em
+     `packages/db/src/registry/lint.ts`, contra o `graph.autonomyLevel` **em memória**
+     do payload de deploy, não contra a coluna persistida. A coluna gravada no banco é
+     órfã: mudar o valor via SQL direto não mudaria nenhum comportamento observável.
+  2. **Tabela inteira `variable_search_keys`** (migração `0003`, "busca lateral D16r") —
+     schema completo, índice dedicado (`variable_search_idx`) e RLS configurada, mas
+     **zero INSERT e zero SELECT em qualquer lugar do código** fora do teste genérico de
+     isolamento de tenant (que só confere RLS, não a feature). É dead-on-arrival desde a
+     criação — nunca teve sequer uma tentativa de wiring dos dois lados (produtor
+     no worker, consumidor numa rota de busca).
+  3. **Menor: `process_definitions.bpmn_version`** — sempre grava `'1'` fixo
+     (`runtime/advance.ts`), aparece em `SELECT`s do registry mas nunca é comparado,
+     validado ou exposto a ninguém (diferente de `state_schema_version`, que É
+     ativamente comparado em `advance.ts` para bloquear avanço incompatível).
+  4. **Nota (não é finding pleno):** `tool_definitions.data_scope` é lido e EXIBIDO no
+     card de gate (`GateDetail.tsx`), mas só como rótulo informativo — não é usado para
+     nenhuma decisão real de acesso/filtragem. Soa como controle, é apresentação.
+  Confirmado por completude: `tenant_tools.requires_gate`/`scope` seguem vestigiais por
+  decisão já documentada (§2.29), consistente com o código; TODO o resto do schema
+  (jobs/outbox/timers/incidents, kill-switch, budget, claim/gate/pin, classification/
+  cifragem, idempotency, ledger de âncoras) foi conferido coluna a coluna e está
+  efetivamente lido/enforçado em pelo menos um caminho de execução real. **Não corrigido
+  nesta fatia** — só mapeado, por pedido explícito do dono ("é muito mais barato achar
+  agora do que descobrir no Gate de Piloto que um item marcado 'pronto' não tem
+  dentes"). **[ABERTO — GATILHO: decisão do dono sobre o que entra na v1 — provável
+  candidatos: remover `variable_search_keys` se F3/F4 não for buscar por variável de
+  negócio, OU implementar o wiring; expor `autonomy_level` num catálogo de agentes se P5-
+  irmão (catálogo de agentes) entrar em escopo]**.
+
 ## §3 · Infra & ambiente (Gate de Piloto)
 
 - **§3.1 — Smoke containerizado do compose.** api+worker validados só como PROCESSOS
