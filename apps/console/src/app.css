@@ -148,8 +148,9 @@ body {
 .draft-badge { font-size: var(--ui-font-size-meta); color: var(--ui-ink-muted); }
 .field { display: flex; flex-direction: column; gap: 0.25rem; margin: 0.5rem 0; }
 .field > span { font-size: var(--ui-font-size-label); color: var(--ui-ink-strong); }
-.field input { font-family: var(--ui-font-sans); font-size: var(--ui-font-size-body); border: 1px solid var(--ui-surface-border); border-radius: 6px; padding: 0.35rem 0.5rem; background: var(--ui-surface-card); }
+.field input, .field textarea { font-family: var(--ui-font-sans); font-size: var(--ui-font-size-body); border: 1px solid var(--ui-surface-border); border-radius: 6px; padding: 0.35rem 0.5rem; background: var(--ui-surface-card); }
 .field input.mono { font-family: var(--ui-font-mono); }
+.field textarea { resize: vertical; }
 
 /* forms route */
 .forms-grid { display: grid; grid-template-columns: 260px minmax(280px, 1fr) minmax(320px, 1fr); gap: var(--ui-space-calm-gutter); align-items: start; }

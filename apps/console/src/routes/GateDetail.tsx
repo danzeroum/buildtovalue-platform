@@ -103,6 +103,10 @@ export function GateDetail({
   const [banner, setBanner] = useState<{ tone: 'danger' | 'success' | 'warn'; text: string } | null>(null);
   const [confirmHeavy, setConfirmHeavy] = useState(false);
   const [done, setDone] = useState<string | null>(null);
+  // §2.26: motivo da decisão — obrigatório no reprovar, opcional no aprovar (o
+  // world-delta já é evidência do que foi aprovado). Mesma voz do resto do
+  // produto ("Motivo — vai para a auditoria", tasks.tsx/operate.tsx).
+  const [reason, setReason] = useState('');
 
   const options = task.decisionOptions ?? ['aprovar', 'reprovar'];
 
@@ -143,6 +147,12 @@ export function GateDetail({
       setBanner({ tone: 'danger', text: 'Assuma o gate antes de decidir (o claim gera o token exigido).' });
       return;
     }
+    // §2.26: reprovar SEM motivo não sai daqui — a mesma exigência que o
+    // servidor recusaria (422), mas dita antes da viagem de rede.
+    if (decision === 'reprovar' && !reason.trim()) {
+      setBanner({ tone: 'danger', text: 'Motivo obrigatório para reprovar (evidência de conformidade).' });
+      return;
+    }
     // aprovar de efeito irreversível: confirmação de PESO que nomeia o irreversível.
     if (decision === 'aprovar' && effect.heavy && !confirmHeavy) {
       setConfirmHeavy(true);
@@ -156,6 +166,7 @@ export function GateDetail({
         decision,
         // D28: a revisão que ESTE card renderizou — expira se a instância avançou.
         expectedInstanceRevision: task.instanceRevision,
+        ...(reason.trim() ? { reason: reason.trim() } : {}),
       },
     });
     setConfirmHeavy(false);
@@ -272,6 +283,14 @@ export function GateDetail({
         <p className={`gate-banner tone-${banner.tone}`} role={banner.tone === 'danger' ? 'alert' : 'status'} aria-live="polite">
           {banner.text}
         </p>
+      )}
+
+      {/* §2.26: motivo — próprio da decisão de gate, obrigatório só no reprovar. */}
+      {claimToken && !confirmHeavy && (
+        <label className="field gate-reason">
+          <span>Motivo (obrigatório ao reprovar — vai para a auditoria)</span>
+          <textarea rows={2} value={reason} onChange={(e) => setReason(e.target.value)} />
+        </label>
       )}
 
       {/* Ações — peso por efeito. Claim explícito (nunca auto-assumido, D21). */}
