@@ -293,6 +293,7 @@ export {
   maskIo,
   persistAgentTrail,
   type AgentActor,
+  type AgentCost,
   type AgentFact,
   type AgentIo,
   type Classification,

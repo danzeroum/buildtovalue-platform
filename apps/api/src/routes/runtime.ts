@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { PROBLEM_TYPES, problemSchema } from '@platform/api-contracts';
+import { hasPermission } from '@platform/auth';
 import type { FastifyReply } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { z } from 'zod';
@@ -175,7 +176,13 @@ export function registerRuntimeRoutes(rawApp: ZodApp, deps: ApiDeps): void {
       if (!row) {
         return problem(reply, 404, PROBLEM_TYPES.notFound, 'Instância não encontrada', String(req.id));
       }
-      const page = await runtime.history(req.auth!.tenantId, req.params.id, req.query);
+      // AG-3.3 (triagem do dono): `instances:read` (esta rota) é mais AMPLO que
+      // `operate:read` — business/analyst também o têm. O custo por passo (fato
+      // `agent:acao`) é operacional sensível, não PII; reserva-se na PROJEÇÃO do
+      // SQL (`listInstanceHistory`), não só omitindo aqui — herança simples de
+      // `instances:read` vazaria gasto de LLM para quem só vê as próprias tarefas.
+      const canSeeCost = hasPermission(req.auth!.role, 'operate:read');
+      const page = await runtime.history(req.auth!.tenantId, req.params.id, { ...req.query, canSeeCost });
       return {
         items: page.items.map((event) => ({
           seq: Number(event.seq),

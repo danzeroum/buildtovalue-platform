@@ -40,6 +40,22 @@ export interface AgentIo {
   output?: Record<string, unknown>;
 }
 
+/**
+ * Custo REAL de uma chamada `llm` (AG-3.3 — triagem do dono). Grava-se o objeto
+ * INTEIRO que o `realWalker` já calcula, não só os centavos: `priceTableVersion`
+ * + `fxRate` tornam o fato imutável e auto-explicativo — reconciliar depois de a
+ * tabela/câmbio mudarem é reler a linha, nunca recalcular. NUNCA é dado pessoal
+ * (fica no `payload`, não em `agent_io`) — mas é operacional sensível do tenant,
+ * então a PROJEÇÃO na rota é RBAC (`operate:read`), não o mascaramento de D20.
+ */
+export interface AgentCost {
+  cents: number;
+  currency: string;
+  priceTableVersion: string | null;
+  fxRate: number | null;
+  usage?: { inputTokens: number; outputTokens: number; cachedInputTokens?: number };
+}
+
 /** Mascara o I/O (input+output) de um fato do agente. */
 export function maskIo(io: AgentIo, policy: MaskingPolicy): AgentIo {
   return {
@@ -61,6 +77,9 @@ export interface AgentFact {
   nodeId?: string;
   io?: AgentIo;
   error?: boolean;
+  /** custo REAL da chamada `llm` deste nó (só no fato `acao` de um nó `llm` com
+   *  chamada real) — AUSENTE, nunca zero, quando o nó não gerou custo. */
+  cost?: AgentCost;
 }
 
 /**
@@ -118,6 +137,9 @@ export async function persistAgentTrail(
       message: fact.message,
       ...(fact.nodeId ? { nodeId: fact.nodeId } : {}),
       ...(fact.error ? { error: true } : {}),
+      // AG-3.3: custo é metadado NÃO-pessoal (não é PII) — vai no payload, não no
+      // agent_io mascarado. Presente só quando o nó gerou custo real (nunca 0).
+      ...(fact.cost ? { cost: fact.cost } : {}),
     };
     await tx`INSERT INTO history_events
         (tenant_id, instance_id, seq, kind, payload, agent_io, engine_version, effect_key)
@@ -146,6 +168,9 @@ export function buildAgentFacts(input: {
   stopReason?: string;
   /** nós de decisão que dispararam (do walk) — elo `decisao` da cadeia D1. */
   decisions?: string[];
+  /** custo REAL por nó (AG-3.3), do `realWalker` — `costByNode[nodeId]`, presente
+   *  só para nós `llm` com chamada real. Ausente no `simulateWalker` (CI/test). */
+  costByNode?: Record<string, AgentCost>;
 }): AgentFact[] {
   const facts: AgentFact[] = [];
   let step = 0;
@@ -157,9 +182,19 @@ export function buildAgentFacts(input: {
     message: 'agente invocado',
     ...(input.io.input ? { io: { input: input.io.input } } : {}),
   });
-  // ação: um fato por nó caminhado (a trilha do que rodou, na ordem).
+  // ação: um fato por nó caminhado (a trilha do que rodou, na ordem). Custo REAL
+  // (AG-3.3) grudado no MESMO fato quando o nó gerou uma chamada llm real —
+  // ausente (não zero) para nós que não custaram.
   for (const nodeId of input.visitedNodes) {
-    facts.push({ step: step++, kind: 'acao', source: 'fixture', message: `executou nó '${nodeId}'`, nodeId });
+    const cost = input.costByNode?.[nodeId];
+    facts.push({
+      step: step++,
+      kind: 'acao',
+      source: 'fixture',
+      message: `executou nó '${nodeId}'`,
+      nodeId,
+      ...(cost ? { cost } : {}),
+    });
   }
   // I/O da corrida (input+output, mascarados na persistência).
   facts.push({ step: step++, kind: 'io', source: 'fixture', message: 'I/O da corrida', io: input.io });

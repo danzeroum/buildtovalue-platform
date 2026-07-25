@@ -108,7 +108,9 @@ export interface PlatformRuntime {
   history(
     tenantId: string,
     instanceId: string,
-    options?: { cursor?: string; limit?: number },
+    /** `canSeeCost` (AG-3.3): RBAC `operate:read` decidido na rota — reservado por
+     *  padrão (fail-closed) se omitido. */
+    options?: { cursor?: string; limit?: number; canSeeCost?: boolean },
   ): Promise<HistoryPage>;
   idempotency: {
     get(tenantId: string, key: string): Promise<IdempotentHit | undefined>;
