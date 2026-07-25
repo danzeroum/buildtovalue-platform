@@ -244,6 +244,14 @@ como LOG estruturado (o 403 já existe e é testado; falta o evento de log).
     Registrado para não confundir leitura futura do schema.
   Evidência para o Gate de Piloto: o schema não tem mais alavancas decorativas além
   destas três, e as três têm destino decidido.
+- **AG-3.4 — FECHADA por inteiro (P5 + varredura + limpeza).** Marco: **schema varrido
+  coluna a coluna; 3 controles órfãos endereçados (1 removido, 1 estruturalmente
+  íntegro, 1 documentado como reservado); resto verificado como lido/enforçado em
+  caminho real** — evidência de conformidade para o Gate de Piloto, não suposição. A
+  solução do achado 1 (`autonomy_level`) segue a MESMA filosofia do RLS (§01) e das
+  trilhas append-only (§03/D32): fechar a divergência por **ESTRUTURA** (o Postgres
+  recusa gravar o valor errado) em vez de por **disciplina de código** — garantia
+  estrutural não depende de ninguém lembrar. Migrações `0019`/`0020`, PR #65.
 
 ---
 
