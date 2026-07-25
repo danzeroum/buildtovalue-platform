@@ -60,6 +60,28 @@
   background: var(--ui-role-agent-bg);
   color: var(--ui-role-agent-fg);
 }
+/* HUMANO — verde (D25: read/ativo), o mesmo papel que o círculo de iniciais do
+   KillSwitchBanner já usa para o ator "user" (AG-3.3, marcação da timeline). */
+.ui-selo[data-tone='human'] {
+  background: var(--ui-role-success-bg);
+  color: var(--ui-role-success-fg);
+}
+/* iniciais do ator humano — mesmo tratamento do KillSwitchBanner
+   (.ui-killswitch-initials), promovido a papel geral do selo de ator. */
+.ui-selo-initials {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.4em;
+  height: 1.4em;
+  border-radius: 50%;
+  background: var(--ui-role-success-solid);
+  color: var(--ui-surface-card);
+  font-size: 0.7em;
+  font-weight: 700;
+  line-height: 1;
+  flex-shrink: 0;
+}
 /* MASCARADO — papel próprio (D20), não o do gate. */
 .ui-selo[data-tone='masked'] {
   background: var(--ui-role-masked-bg);

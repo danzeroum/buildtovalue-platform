@@ -233,7 +233,6 @@ body {
 .state-note .state-note-body { font-size: var(--ui-font-size-label); margin-top: 0.25rem; }
 .state-note .state-note-exit { font-size: var(--ui-font-size-label); margin-top: 0.4rem; }
 .job-pause-voice { margin-top: 0.25rem; }
-.history-list .hist-kind-raw { color: var(--ui-ink-muted); font-size: var(--ui-font-size-meta); }
 .history-list li[data-agent] { border-left: 2px solid var(--ui-role-agent-solid); padding-left: 0.4rem; }
 .task-form-body[data-locked] { opacity: 0.6; }
 .task-foot { display: flex; justify-content: space-between; align-items: center; gap: var(--ui-space-calm-gutter); border-top: 1px solid var(--ui-surface-border); margin-top: var(--ui-space-calm-block); padding-top: var(--ui-space-calm-row); }
@@ -297,8 +296,21 @@ body {
 .revealed-note { font-size: var(--ui-font-size-meta); color: var(--ui-role-warning-fg); }
 .reload-vars { display: inline-block; margin-top: 0.5rem; }
 .history-list { list-style: none; margin: 0; padding: 0; font-size: var(--ui-font-size-meta); color: var(--ui-ink-base); line-height: 1.9; }
+.history-list li { display: flex; align-items: baseline; justify-content: space-between; gap: 0.6rem; }
+.history-list .hist-line { display: flex; align-items: baseline; flex-wrap: wrap; gap: 0.3rem; min-width: 0; }
 .history-list .seq { color: var(--ui-ink-muted); }
 .history-list .hist-when { color: var(--ui-ink-muted); }
+/* custo: COLUNA implícita à direita (marcação §1) — mono, tinta secundária,
+   NUNCA dourado/vermelho (custo não é alerta, não competir com parada honesta).
+   Linha sem custo simplesmente não reserva o espaço — nenhum buraco. */
+.history-list .hist-cost { font-family: var(--ui-font-mono); color: var(--ui-ink-muted); flex-shrink: 0; white-space: nowrap; }
+.hist-detail { display: inline-block; margin-left: 0.3rem; }
+.hist-detail summary { cursor: pointer; color: var(--ui-role-info-fg); font-size: 0.95em; }
+.hist-detail dl { margin: 0.3rem 0 0.2rem; display: flex; flex-direction: column; gap: 0.15rem; }
+.hist-detail-row { display: flex; gap: 0.4rem; }
+.hist-detail-row dt { color: var(--ui-ink-muted); min-width: 7rem; }
+.hist-detail-row dd { margin: 0; font-family: var(--ui-font-mono); }
+.hist-footer { font-size: var(--ui-font-size-meta); color: var(--ui-ink-muted); margin-top: var(--ui-space-dense-gutter); }
 
 /* ── P1 · GATE de world-delta (AG-3.1) — só tokens, sinal nunca só por cor ── */
 .gate-card { display: flex; flex-direction: column; gap: var(--ui-space-calm-block); }
