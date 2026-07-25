@@ -115,6 +115,9 @@ importers:
         specifier: ^7.18.1
         version: 7.18.1(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
     devDependencies:
+      '@platform/api':
+        specifier: workspace:*
+        version: link:../api
       '@platform/auth':
         specifier: workspace:*
         version: link:../../packages/auth
