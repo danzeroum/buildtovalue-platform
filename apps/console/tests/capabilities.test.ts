@@ -1,5 +1,7 @@
+import { ROLES as SERVER_ROLES } from '@platform/auth';
 import { describe, expect, it } from 'vitest';
-import { can } from '../src/capabilities.js';
+import { can, GRANTS, type Permission } from '../src/capabilities.js';
+import type { Role } from '../src/session.js';
 
 /**
  * O espelho de UX precisa bater com o RBAC do servidor (`@platform/auth`). Se
@@ -30,6 +32,38 @@ describe('capabilities — espelho do RBAC v1', () => {
   it('admin tem tudo', () => {
     for (const p of ['operate:act', 'instances:start', 'tasks:work', 'variables:reveal-sensitive'] as const) {
       expect(can('admin', p)).toBe(true);
+    }
+  });
+
+  it('auditor: só leitura + audit:export — ZERO escrita, nunca revela sensível (evidência nunca é conteúdo)', () => {
+    expect(can('auditor', 'audit:export')).toBe(true);
+    expect(can('auditor', 'instances:read')).toBe(true);
+    for (const p of ['instances:start', 'instances:cancel', 'tasks:work', 'operate:act', 'definitions:deploy', 'variables:reveal-sensitive', 'ai:operate', 'ai:configure'] as const) {
+      expect(can('auditor', p)).toBe(false);
+    }
+  });
+});
+
+/**
+ * FECHA A CLASSE, não só o caso (achado do G-UX-3 da timeline, AG-3.4): o
+ * papel `auditor` existia no `rbac.ts` do servidor mas faltava no `GRANTS`
+ * daqui — `GRANTS['auditor']` → `undefined.includes(...)` → CRASH em runtime
+ * para quem logasse como auditor, justo o papel de conformidade. A causa raiz
+ * não é "esqueci o auditor" — é a ausência de qualquer teste que garanta que
+ * TODO papel real do servidor tem entrada aqui. Estes dois testes leem
+ * `ROLES` DIRETO do `@platform/auth` (fonte da verdade) — um papel novo
+ * amanhã sem este espelho atualizado FALHA aqui, antes de chegar a produção.
+ */
+describe('paridade de papéis servidor↔console (nunca mais um papel novo derruba can())', () => {
+  it('todo papel de ROLES (servidor) tem entrada em GRANTS (console)', () => {
+    for (const serverRole of SERVER_ROLES) {
+      expect(Object.prototype.hasOwnProperty.call(GRANTS, serverRole)).toBe(true);
+    }
+  });
+
+  it('can() nunca lança para nenhum papel real do servidor', () => {
+    for (const serverRole of SERVER_ROLES) {
+      expect(() => can(serverRole as Role, 'me:read' as Permission)).not.toThrow();
     }
   });
 });

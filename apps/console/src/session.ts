@@ -7,7 +7,7 @@ import type { components } from './api/generated/schema.js';
  * cada uso (single-use) — persistido no sessionStorage por aba, sobrescrito
  * em todo refresh. Sem token no localStorage por padrão (superfície menor).
  */
-export type Role = 'admin' | 'analyst' | 'business' | 'operator';
+export type Role = 'admin' | 'analyst' | 'business' | 'operator' | 'auditor';
 export interface SessionUser {
   id: string;
   displayName: string;

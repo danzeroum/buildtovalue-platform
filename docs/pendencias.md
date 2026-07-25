@@ -134,6 +134,17 @@
   resolução de displayName na rota de histórico]**. Detalhe:
   `packages/shared-ui/src/selo.tsx` (`ActorBadge`, pronto para receber `displayName`),
   `apps/api/src/routes/ai.ts` (`resolveActor`, o padrão de referência).
+- **§2.28 — Estado de garantia do recibo de auditoria muda quando a ancoragem externa
+  existir (A7, decisão do dono).** O recibo hoje sempre declara `assurance: 'self-recorded'`
+  (D30 — sem notarização externa/WAL imutável ainda, infra do Gate de Piloto). A marcação da
+  tela A7 (export de auditoria) reflete essa garantia real, não a "bloco #N sequencial" que o
+  protótipo original desenhava sem essa informação existir. Quando a infra de ancoragem
+  externa entrar (WAL imutável no Postgres do piloto, item do Gate — `docs/privacy/gate-piloto.md`),
+  o valor de `assurance` passa a ter um estado novo (`'externally-anchored'` ou equivalente) e
+  **o cartão do recibo muda de novo** — não antes. **[ABERTO — GATILHO: infra de ancoragem
+  externa do Gate de Piloto entrar em produção]**. Detalhe:
+  `docs/handoff/a7-inventario-export-auditoria.md` §2 (decisão A),
+  `packages/db/src/audit/export.ts` (`ASSURANCE_NOTE`, `assurance:'self-recorded'`).
 
 ## §3 · Infra & ambiente (Gate de Piloto)
 
