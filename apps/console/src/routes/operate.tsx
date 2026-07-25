@@ -1,6 +1,7 @@
-import { Suspense, lazy, useState } from 'react';
+import { Suspense, lazy, useEffect, useState } from 'react';
 import type { BpmnDiagram } from '@buildtovalue/core';
 import '@buildtovalue/react/styles.css';
+import { ActorBadge, type Actor } from '@platform/shared-ui';
 import { api, problemMessage } from '../api/client.js';
 import { useResource } from '../api/useResource.js';
 import type {
@@ -12,7 +13,7 @@ import type {
   VariableView,
 } from '../api/types.js';
 import { can } from '../capabilities.js';
-import { relativeTime, shortId } from '../format.js';
+import { formatMoney, relativeTime, shortId } from '../format.js';
 import { useSession } from '../shell.js';
 import { Button, NonIdeal, StatusPill, Tag } from '../ui/ui.js';
 import { historyLabel, voiceOf } from '../voices.js';
@@ -644,27 +645,189 @@ function VariablesTab({ instanceId, canReveal }: { instanceId: string; canReveal
   );
 }
 
-function HistoryTab({ instanceId }: { instanceId: string }) {
-  const res = useResource(
-    (signal) => api.GET('/v1/instances/{id}/history', { params: { path: { id: instanceId }, query: { limit: 100 } }, signal }),
-    [instanceId],
-  );
-  if (res.value.state === 'loading') return <NonIdeal kind="loading" title="Carregando histórico…" />;
-  if (res.value.state === 'forbidden') return <NonIdeal kind="forbidden" title="Sem acesso" detail={res.value.detail} />;
-  if (res.value.state === 'error')
-    return <NonIdeal kind="error" title="Falha ao carregar" detail={res.value.message} action={<Button onClick={() => res.reload()}>Tentar novamente</Button>} />;
-  const events = res.value.data.items;
-  if (events.length === 0) return <NonIdeal kind="empty" title="Sem histórico" />;
+/** AG-3.3 — fatos reais que a trilha carrega hoje (agente + humano, D33). `payload`
+ *  no SDK gerado é freeform (`Record<string, unknown>`) — cast local, mesmo
+ *  padrão do `GateDetail.tsx` para o world-delta (`task.payload as WorldDelta`). */
+/** Envelope de ator (D33) — o mesmo `{type,id,requestId}` que `Actor` do
+ *  shared-ui já cobre, mais `requestId` (correlação), que o selo não usa. */
+interface HistoryActor extends Actor {
+  requestId?: string;
+}
+interface HistoryCostUsage {
+  inputTokens: number;
+  outputTokens: number;
+  cachedInputTokens?: number;
+}
+interface HistoryCost {
+  cents: number;
+  currency: string;
+  priceTableVersion: string | null;
+  fxRate: number | null;
+  usage?: HistoryCostUsage;
+}
+interface HistoryPayload {
+  elementId?: string;
+  nodeId?: string;
+  agentRef?: string;
+  actor?: HistoryActor;
+  cost?: HistoryCost;
+  gateId?: string;
+  decision?: string;
+  motivo?: string | null;
+  decisionVar?: string;
+  [key: string]: unknown;
+}
+interface HistoryEvent {
+  seq: number;
+  kind: string;
+  payload: HistoryPayload;
+  engineVersion: string;
+  occurredAt: string;
+}
+
+/**
+ * Detalhe expansível (marcação §4/§6): `usage`/`fxRate`/`priceTableVersion` são
+ * PROCEDÊNCIA, não valor — vivem aqui, não na linha. `kind` cru também migra
+ * para cá QUANDO há rótulo humano (rótulo desconhecido já é o próprio `kind`
+ * cru na linha — nunca duplicar). Não-ESCOPO: o dado já vem no payload, é só
+ * divulgação progressiva de algo que a resposta já carrega.
+ */
+function HistoryDetail({ e, hasKnownLabel }: { e: HistoryEvent; hasKnownLabel: boolean }) {
+  const p = e.payload;
+  const rows: Array<[string, string]> = [];
+  if (hasKnownLabel) rows.push(['kind', e.kind]);
+  if (p.elementId) rows.push(['elemento', p.elementId]);
+  if (p.nodeId) rows.push(['nó', p.nodeId]);
+  if (p.gateId) rows.push(['gate', p.gateId]);
+  if (p.decision) rows.push(['decisão', p.decision]);
+  if (p.motivo) rows.push(['motivo', p.motivo]);
+  if (p.actor?.requestId) rows.push(['requisição', p.actor.requestId]);
+  if (p.cost) {
+    rows.push(['tabela de preço', p.cost.priceTableVersion ?? '—']);
+    if (p.cost.fxRate != null) rows.push(['câmbio', String(p.cost.fxRate)]);
+    if (p.cost.usage) {
+      const u = p.cost.usage;
+      rows.push([
+        'tokens',
+        `${u.inputTokens} entrada · ${u.outputTokens} saída${u.cachedInputTokens ? ` · ${u.cachedInputTokens} em cache` : ''}`,
+      ]);
+    }
+  }
+  if (rows.length === 0) return null;
   return (
-    <ol className="history-list mono">
-      {events.map((e) => (
-        <li key={e.seq} data-agent={e.kind.startsWith('agent:') || undefined}>
-          <span className="seq">seq {e.seq}</span> · <strong>{historyLabel(e.kind)}</strong>{' '}
-          <span className="hist-kind-raw">{e.kind}</span> ·{' '}
-          <span className="hist-when">{relativeTime(e.occurredAt)}</span>
-        </li>
-      ))}
-    </ol>
+    <details className="hist-detail">
+      <summary>detalhe</summary>
+      <dl>
+        {rows.map(([k, v]) => (
+          <div key={k} className="hist-detail-row">
+            <dt>{k}</dt>
+            <dd>{v}</dd>
+          </div>
+        ))}
+      </dl>
+    </details>
+  );
+}
+
+type HistoryState =
+  | { kind: 'loading' }
+  | { kind: 'forbidden'; detail: string }
+  | { kind: 'error'; message: string }
+  | { kind: 'ready'; items: HistoryEvent[]; nextCursor: string | null };
+
+function HistoryTab({ instanceId }: { instanceId: string }) {
+  const [state, setState] = useState<HistoryState>({ kind: 'loading' });
+  const [nonce, setNonce] = useState(0);
+
+  useEffect(() => {
+    const ctrl = new AbortController();
+    let alive = true;
+    setState({ kind: 'loading' });
+    void (async () => {
+      const { data, error, response } = await api.GET('/v1/instances/{id}/history', {
+        params: { path: { id: instanceId }, query: { limit: 100 } },
+        signal: ctrl.signal,
+      });
+      if (!alive) return;
+      if (error || !data) {
+        if (response.status === 403) {
+          setState({ kind: 'forbidden', detail: problemMessage(error, 'Você não tem permissão para ver isto.') });
+        } else {
+          setState({ kind: 'error', message: problemMessage(error, `Não foi possível carregar (HTTP ${response.status}).`) });
+        }
+        return;
+      }
+      setState({ kind: 'ready', items: data.items as HistoryEvent[], nextCursor: data.nextCursor });
+    })();
+    return () => {
+      alive = false;
+      ctrl.abort();
+    };
+  }, [instanceId, nonce]);
+
+  async function loadMore() {
+    if (state.kind !== 'ready' || !state.nextCursor) return;
+    const cursor = state.nextCursor;
+    const { data, error, response } = await api.GET('/v1/instances/{id}/history', {
+      params: { path: { id: instanceId }, query: { limit: 100, cursor } },
+    });
+    // falha ao carregar MAIS não apaga o que já está na tela (a lista que já
+    // carregou continua correta) — só o botão sinaliza a falha, sem tela cheia.
+    if (error || !data) throw new Error(problemMessage(error, `Não foi possível carregar mais (HTTP ${response.status}).`));
+    setState((prev) =>
+      prev.kind === 'ready' ? { kind: 'ready', items: [...prev.items, ...(data.items as HistoryEvent[])], nextCursor: data.nextCursor } : prev,
+    );
+  }
+
+  if (state.kind === 'loading') return <NonIdeal kind="loading" title="Carregando histórico…" />;
+  if (state.kind === 'forbidden') return <NonIdeal kind="forbidden" title="Sem acesso" detail={state.detail} />;
+  if (state.kind === 'error')
+    return (
+      <NonIdeal
+        kind="error"
+        title="Falha ao carregar"
+        detail={state.message}
+        action={<Button onClick={() => setNonce((n) => n + 1)}>Tentar novamente</Button>}
+      />
+    );
+  const { items, nextCursor } = state;
+  // vazio REAL (instância recém-criada) tem voz própria — nunca a mesma tela
+  // de erro, e nunca "nada aconteceu" por acidente de uma falha silenciosa.
+  if (items.length === 0) return <NonIdeal kind="empty" title="Nenhum evento ainda." />;
+  return (
+    <>
+      <ol className="history-list mono">
+        {items.map((e) => {
+          const label = historyLabel(e.kind);
+          const hasKnownLabel = label !== e.kind;
+          return (
+            <li key={e.seq} data-agent={e.kind.startsWith('agent:') || undefined}>
+              <span className="hist-line">
+                <span className="seq">seq {e.seq}</span> · <ActorBadge actor={e.payload.actor ?? null} />{' '}
+                <strong>{label}</strong> · <span className="hist-when">{relativeTime(e.occurredAt)}</span>
+                <HistoryDetail e={e} hasKnownLabel={hasKnownLabel} />
+              </span>
+              {/* custo: metadado, não o fato — chip mono/secundário à direita,
+                  NUNCA dourado/vermelho (não é alerta). Ausente = ausência,
+                  ponto (sem R$ 0,00, sem "—", sem "oculto"). */}
+              {e.payload.cost && (
+                <span className="hist-cost">{formatMoney(e.payload.cost.cents, e.payload.cost.currency)}</span>
+              )}
+            </li>
+          );
+        })}
+      </ol>
+      <p className="hist-footer">
+        {nextCursor ? (
+          <>
+            Mostrando os {items.length} eventos mais recentes.{' '}
+            <Button onClick={loadMore}>Carregar mais</Button>
+          </>
+        ) : (
+          `Mostrando ${items.length} evento${items.length === 1 ? '' : 's'}.`
+        )}
+      </p>
+    </>
   );
 }
 

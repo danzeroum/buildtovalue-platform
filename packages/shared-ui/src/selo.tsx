@@ -22,6 +22,11 @@ export interface Actor {
   type: ActorKind;
   /** id do ator (renderizado em mono quando presente). */
   id?: string;
+  /** nome de exibição RESOLVIDO NO SERVIDOR (nunca inventado aqui — mesmo
+   *  padrão do `KillSwitchBanner`: `null`/ausente = degrade honesto, o `id`
+   *  cru segue sendo o último recurso, nunca "desconhecido"). Presente só
+   *  para `type: 'user'` — glyph/tom de agente e sistema não dependem dele. */
+  displayName?: string | null;
 }
 
 const ACTOR_LABEL: Record<ActorKind, string> = {
@@ -37,22 +42,44 @@ const ACTOR_GLYPH: Record<ActorKind | 'motor', string> = {
   motor: '▸',
 };
 
+/** Iniciais (até 2) do nome de exibição — mesma função do `KillSwitchBanner`,
+ *  promovida a helper único (D25.2 do rito: não duplicar a régua do produto). */
+export function initialsOf(name: string): string {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase() ?? '')
+    .join('');
+}
+
 /**
  * Selo de ATOR. `actor === null` → "Motor" (ato determinístico do engine, D6):
  * não se inventa `{system,engine}` — o motor é seu próprio caso, com voz factual
- * (nunca "desconhecido"). `agent` ganha o papel violeta; os demais, tinta neutra.
+ * (nunca "desconhecido"). `agent` ganha o papel violeta; `user` ganha o papel
+ * verde (leitura/ativo, D25) — com iniciais em círculo QUANDO `displayName`
+ * chega resolvido; sem ele, degrade honesto: só o `id` cru em mono, como hoje.
+ * `system` fica neutro (ato do host, não de uma pessoa nem do agente).
  */
 export function ActorBadge({ actor }: { actor: Actor | null }) {
   const kind = actor?.type ?? 'motor';
   const label = actor ? ACTOR_LABEL[actor.type] : 'Motor';
-  const tone = actor?.type === 'agent' ? 'agent' : 'neutral';
+  const tone = actor?.type === 'agent' ? 'agent' : actor?.type === 'user' ? 'human' : 'neutral';
+  const initials = actor?.type === 'user' && actor.displayName ? initialsOf(actor.displayName) : '';
+  const idText = actor?.type === 'user' ? (actor.displayName ?? actor.id) : actor?.id;
   return (
     <span className="ui-selo ui-selo-actor" data-tone={tone}>
-      <span className="ui-selo-glyph" aria-hidden="true">
-        {ACTOR_GLYPH[kind]}
-      </span>
+      {initials ? (
+        <span className="ui-selo-initials" aria-hidden="true">
+          {initials}
+        </span>
+      ) : (
+        <span className="ui-selo-glyph" aria-hidden="true">
+          {ACTOR_GLYPH[kind]}
+        </span>
+      )}
       <span className="ui-selo-label">{label}</span>
-      {actor?.id && <span className="ui-selo-id">{actor.id}</span>}
+      {idText && <span className="ui-selo-id">{idText}</span>}
     </span>
   );
 }

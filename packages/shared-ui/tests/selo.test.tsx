@@ -30,11 +30,13 @@ describe('ActorBadge — envelope D33 (4 casos)', () => {
     expect(screen.queryByText(/desconhecido/i)).not.toBeInTheDocument();
   });
 
-  it('agent ganha o papel violeta (data-tone=agent); demais neutro', () => {
+  it('agent ganha o papel violeta (data-tone=agent); user ganha verde (human, AG-3.3); system neutro', () => {
     const { container: c1 } = render(<ActorBadge actor={{ type: 'agent' }} />);
     expect(c1.querySelector('.ui-selo-actor')).toHaveAttribute('data-tone', 'agent');
     const { container: c2 } = render(<ActorBadge actor={{ type: 'user' }} />);
-    expect(c2.querySelector('.ui-selo-actor')).toHaveAttribute('data-tone', 'neutral');
+    expect(c2.querySelector('.ui-selo-actor')).toHaveAttribute('data-tone', 'human');
+    const { container: c3 } = render(<ActorBadge actor={{ type: 'system' }} />);
+    expect(c3.querySelector('.ui-selo-actor')).toHaveAttribute('data-tone', 'neutral');
   });
 
   it('id do ator vai em mono, presente só quando informado', () => {
@@ -42,6 +44,19 @@ describe('ActorBadge — envelope D33 (4 casos)', () => {
     expect(screen.getByText('agnt-rsch@1.0.0')).toHaveClass('ui-selo-id');
     const { container: c2 } = render(<ActorBadge actor={{ type: 'user' }} />);
     expect(c2.querySelector('.ui-selo-id')).toBeNull();
+  });
+
+  it('user SEM displayName (não resolvido): degrade honesto — id cru, sem iniciais', () => {
+    const { container } = render(<ActorBadge actor={{ type: 'user', id: 'diana' }} />);
+    expect(screen.getByText('diana')).toHaveClass('ui-selo-id');
+    expect(container.querySelector('.ui-selo-initials')).toBeNull();
+  });
+
+  it('user COM displayName resolvido: iniciais em círculo + nome (não o id cru)', () => {
+    const { container } = render(<ActorBadge actor={{ type: 'user', id: 'diana', displayName: 'Diana Souza' }} />);
+    expect(container.querySelector('.ui-selo-initials')).toHaveTextContent('DS');
+    expect(screen.getByText('Diana Souza')).toHaveClass('ui-selo-id');
+    expect(screen.queryByText('diana')).not.toBeInTheDocument();
   });
 });
 

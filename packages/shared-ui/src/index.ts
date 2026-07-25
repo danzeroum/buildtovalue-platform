@@ -5,6 +5,7 @@ export {
   GateSeal,
   AutonomyDial,
   ProcedenceSeal,
+  initialsOf,
   type Actor,
   type ActorKind,
   type EvidenceState,

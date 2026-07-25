@@ -114,6 +114,22 @@
   aprovar/reprovar) — aguardando, junto com §2.25, a próxima marcação do designer]**.
   Detalhe: `packages/db/src/runtime/userTasks.ts` (`reason` já aceito, ignorado sem UI),
   `apps/console/src/routes/GateDetail.tsx` (tela a alterar).
+- **§2.27 — Nome de exibição do ator HUMANO ainda não resolvido na timeline (AG-3.3
+  UI).** A marcação aprovada pede "humano → iniciais em verde + nome" — construí o
+  suporte completo no `ActorBadge` (shared-ui): tom verde (`data-tone='human'`) +
+  iniciais em círculo QUANDO recebe `displayName` resolvido, com o MESMO degrade
+  honesto do `KillSwitchBanner` (`displayName` ausente → id cru, sem iniciais, nunca
+  "desconhecido"). O que falta: a rota `GET /v1/instances/:id/history` ainda NÃO resolve
+  `displayName` (ao contrário de `GET /v1/ai/config` que já faz via `resolveActor`,
+  AG-3.2) — hoje a timeline mostra sempre o `id` cru para atores humanos. Não é
+  "esqueci"; é escolha deliberada: `resolveActor` de UM ator por resposta (kill-switch)
+  é barato; a história pagina até 100 linhas, cada uma podendo ter um ator humano
+  DIFERENTE — resolver displayName por linha pede um `findByIds` em lote (não existe
+  hoje; `UserRepository.findById` é 1-a-1), não um `resolveActor` chamado 100x por
+  página. **[ABERTO — GATILHO: decisão do dono sobre adicionar `findByIds` em lote +
+  resolução de displayName na rota de histórico]**. Detalhe:
+  `packages/shared-ui/src/selo.tsx` (`ActorBadge`, pronto para receber `displayName`),
+  `apps/api/src/routes/ai.ts` (`resolveActor`, o padrão de referência).
 
 ## §3 · Infra & ambiente (Gate de Piloto)
 

@@ -173,3 +173,129 @@ describe('OperateRoute — F3.5', () => {
     await expectNoSeriousAxe(container);
   });
 });
+
+describe('HistoryTab — AG-3.3 (custo + ator humano+agente + paginação, marcação ag3-3-marcacao-timeline-custo.md)', () => {
+  async function openHistory() {
+    await openDetail();
+    await userEvent.click(screen.getByRole('tab', { name: 'Histórico' }));
+  }
+
+  it('custo por linha (chip), SEM total; ator humano e agente na mesma timeline; sem cicatriz onde não há custo', async () => {
+    seedDetail({
+      'GET /v1/instances/{id}/history': () =>
+        ok({
+          items: [
+            { seq: 1, kind: 'instanceStarted', payload: {}, engineVersion: '1.1.0', occurredAt: now },
+            {
+              seq: 2,
+              kind: 'agent:acao',
+              payload: {
+                nodeId: 'llm-review',
+                actor: { type: 'agent', id: 'agnt-aprova@1.0.0', requestId: 'job-1' },
+                cost: { cents: 342, currency: 'BRL', priceTableVersion: 'deepseek-2026-07', fxRate: 5.3, usage: { inputTokens: 120, outputTokens: 40 } },
+              },
+              engineVersion: '1.1.0',
+              occurredAt: now,
+            },
+            {
+              seq: 3,
+              kind: 'userTaskCompleted',
+              payload: { elementId: 'review', actor: { type: 'user', id: 'carla', requestId: 'req-1' } },
+              engineVersion: '1.1.0',
+              occurredAt: now,
+            },
+          ],
+          nextCursor: null,
+        }),
+    });
+    await openHistory();
+
+    // custo aparece exatamente onde o payload carrega `cost` — nunca "R$ 0,00".
+    expect(await screen.findByText('R$ 3,42')).toBeInTheDocument();
+    expect(screen.queryByText(/R\$\s*0,00/)).not.toBeInTheDocument();
+
+    // ator: agente, humano E motor (sem `actor`) na MESMA timeline — "unificada" de verdade.
+    expect(screen.getByText('Agente')).toBeInTheDocument();
+    expect(screen.getByText('Pessoa')).toBeInTheDocument();
+    expect(screen.getByText('Motor')).toBeInTheDocument();
+    expect(screen.getByText('agnt-aprova@1.0.0')).toBeInTheDocument();
+    expect(screen.getByText('carla')).toBeInTheDocument();
+
+    // usage/fxRate/tabela vivem no <details> progressivo (§4), não na linha —
+    // fecham por padrão (jsdom não recolhe o conteúdo do <details>, mas o
+    // <summary> "detalhe" é o toggle real que o navegador usa). A linha do
+    // agente é a primeira com detalhe (o `agent:acao` traz nodeId+cost+requestId).
+    const [agentDetail] = screen.getAllByText('detalhe');
+    expect(agentDetail.closest('details')).not.toHaveAttribute('open');
+    await userEvent.click(agentDetail);
+    expect(screen.getByText(/120 entrada · 40 saída/)).toBeInTheDocument();
+    expect(screen.getByText('deepseek-2026-07')).toBeInTheDocument();
+  });
+
+  it('kind desconhecido aparece CRU na linha — nunca escondido (regra herdada)', async () => {
+    seedDetail({
+      'GET /v1/instances/{id}/history': () =>
+        ok({ items: [{ seq: 1, kind: 'umKindNovoQualquer', payload: {}, engineVersion: '1.1.0', occurredAt: now }], nextCursor: null }),
+    });
+    await openHistory();
+    expect(await screen.findByText('umKindNovoQualquer')).toBeInTheDocument();
+  });
+
+  it('vazio REAL (instância nova): "Nenhum evento ainda." — nunca a tela de erro', async () => {
+    seedDetail({ 'GET /v1/instances/{id}/history': () => ok({ items: [], nextCursor: null }) });
+    await openHistory();
+    expect(await screen.findByText('Nenhum evento ainda.')).toBeInTheDocument();
+  });
+
+  it('falha ao carregar: erro explícito com «Tentar novamente» — NUNCA lista vazia', async () => {
+    seedDetail({ 'GET /v1/instances/{id}/history': () => fail(500, { title: 'boom' }) });
+    await openHistory();
+    expect(await screen.findByText('Falha ao carregar')).toBeInTheDocument();
+    expect(screen.queryByText('Nenhum evento ainda.')).not.toBeInTheDocument();
+
+    route('GET /v1/instances/{id}/history', () =>
+      ok({ items: [{ seq: 1, kind: 'instanceStarted', payload: {}, engineVersion: '1.1.0', occurredAt: now }], nextCursor: null }),
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Tentar novamente' }));
+    expect(await screen.findByText('instanceStarted')).toBeInTheDocument();
+  });
+
+  it('paginação honesta: rodapé nunca diz "toda a instância"; «Carregar mais» soma a próxima página', async () => {
+    seedDetail({
+      'GET /v1/instances/{id}/history': (opts: { params?: { query?: { cursor?: string } } }) =>
+        opts?.params?.query?.cursor === 'pg2'
+          ? ok({ items: [{ seq: 2, kind: 'instanceStarted', payload: {}, engineVersion: '1.1.0', occurredAt: now }], nextCursor: null })
+          : ok({ items: [{ seq: 1, kind: 'userTaskCompleted', payload: {}, engineVersion: '1.1.0', occurredAt: now }], nextCursor: 'pg2' }),
+    });
+    await openHistory();
+    expect(await screen.findByText('Mostrando os 1 eventos mais recentes.')).toBeInTheDocument();
+    expect(screen.queryByText(/toda a instância|todos os passos/i)).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Carregar mais' }));
+    expect(await screen.findByText('Mostrando 2 eventos.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Carregar mais' })).not.toBeInTheDocument();
+  });
+
+  it('a11y: timeline com custo + ator sem violação séria', async () => {
+    seedDetail({
+      'GET /v1/instances/{id}/history': () =>
+        ok({
+          items: [
+            {
+              seq: 1,
+              kind: 'agent:acao',
+              payload: { nodeId: 'llm', actor: { type: 'agent', id: 'agnt@1' }, cost: { cents: 100, currency: 'BRL', priceTableVersion: null, fxRate: null } },
+              engineVersion: '1.1.0',
+              occurredAt: now,
+            },
+          ],
+          nextCursor: null,
+        }),
+    });
+    const { container } = render(<OperateRoute />);
+    await userEvent.click(await screen.findByRole('button', { name: /RB-2026-0142/ }));
+    await userEvent.click(await screen.findByRole('tab', { name: 'Histórico' }));
+    await screen.findByText('R$ 1,00');
+    await expectNoSeriousAxe(container);
+  });
+});

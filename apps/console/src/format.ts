@@ -18,6 +18,18 @@ export function shortId(id: string): string {
 }
 
 /**
+ * Custo em moeda humana (AG-3.3, marcação §2): "R$ 3,42", NUNCA centavos —
+ * centavo é unidade de máquina, ninguém raciocina orçamento nela. Quando a
+ * moeda não é a do tenant (BRL), sufixo mono discreto (`· USD`) — omitir
+ * seria enganoso, o valor NÃO está na moeda que o leitor espera.
+ */
+export function formatMoney(cents: number, currency: string): string {
+  const amount = cents / 100;
+  const value = new Intl.NumberFormat('pt-BR', { style: 'currency', currency }).format(amount);
+  return currency === 'BRL' ? value : `${value} · ${currency}`;
+}
+
+/**
  * Voz de data/hora do banner de kill-switch (AG-3.2 marcação §2): "hoje às
  * HH:MM" / "ontem às HH:MM" / data completa — sempre no fuso do NAVEGADOR
  * (Intl usa o fuso local; a preferência explícita de fuso é A5, ainda não
