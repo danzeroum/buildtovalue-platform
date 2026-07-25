@@ -242,9 +242,18 @@ describe('AG-2.2 etapa 5 — ciclo do gate ponta a ponta pelas portas reais (D31
     const runtime = createRuntime(api, NOW);
     const claim = await runtime.userTasks.claim(tenant, gateTaskId, 'aprovador');
     if (!claim.ok) throw new Error('claim falhou');
+    // §2.26: reprovar um gate SEM motivo é 422 — a mesma exigência do servidor,
+    // testada aqui na porta do repositório.
+    const semMotivo = await completeUserTask(api, tenant, gateTaskId, {
+      claimToken: claim.claimToken, submission: {}, user: 'aprovador', now: NOW(),
+      decision: 'reprovar', expectedInstanceRevision: gateRevision,
+    });
+    expect(semMotivo).toMatchObject({ ok: false, reason: 'reasonRequired' });
+
     const rejected = await completeUserTask(api, tenant, gateTaskId, {
       claimToken: claim.claimToken, submission: {}, user: 'aprovador', now: NOW(),
       decision: 'reprovar', expectedInstanceRevision: gateRevision,
+      reason: 'proposta fora da política de envio a terceiros',
     });
     expect(rejected.ok).toBe(true);
     await drain();
@@ -263,12 +272,13 @@ describe('AG-2.2 etapa 5 — ciclo do gate ponta a ponta pelas portas reais (D31
     // AG-3.3 ponto 4: ANTES desta correção, reprovar não deixava NENHUM envelope
     // no ledger (nenhum efeito roda a jusante para carregar o selo). Agora a
     // DECISÃO é fato próprio, gravado no momento — reprovação com evidência
-    // (Art.14): ator + motivo consultáveis mesmo sem efeito nenhum.
+    // (Art.14): ator + motivo consultáveis mesmo sem efeito nenhum. §2.26: o
+    // motivo agora é SEMPRE capturado no reprovar (não mais `null`).
     const [gateDec] = await withTenant(api, tenant, (tx) =>
       tx`SELECT payload FROM history_events WHERE instance_id = ${instanceId} AND kind = 'gateDecision'`);
     expect(gateDec).toBeDefined();
     expect(gateDec.payload).toMatchObject({
-      gateId: 'gate', decision: 'reprovar', motivo: null,
+      gateId: 'gate', decision: 'reprovar', motivo: 'proposta fora da política de envio a terceiros',
       actor: { type: 'user', id: 'aprovador' },
     });
   });

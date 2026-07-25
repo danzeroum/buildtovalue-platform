@@ -309,7 +309,8 @@ export function registerUserTaskRoutes(rawApp: ZodApp, deps: ApiDeps): void {
           'A decisão flui para `variables` (sob a decisionVar) E para `history_events` (quem decidiu o quê). ' +
           'AG-3.3: toda conclusão grava `userTaskCompleted` (quem/quando); um gate grava também ' +
           '`gateDecision` (aprovar|reprovar) com `reason` como motivo — evidência de conformidade, não ' +
-          'reservado, aparece a quem enxerga o histórico.',
+          'reservado, aparece a quem enxerga o histórico. §2.26: reprovar um gate SEM `reason` é 422 ' +
+          '(obrigatório no reprovar; opcional no aprovar, onde o world-delta já é a evidência).',
         security: [{ bearerAuth: [] }],
         params: z.object({ id: z.string().uuid() }),
         body: z.object({
@@ -321,9 +322,10 @@ export function registerUserTaskRoutes(rawApp: ZodApp, deps: ApiDeps): void {
           // etapa 5 (D28): SÓ o gate a usa — a revisão da instância que o cliente
           // viu ao carregar o world-delta. Divergiu da atual → 409 proposta expirada.
           expectedInstanceRevision: z.number().int().nonnegative().optional(),
-          // AG-3.3 ponto 4: motivo da decisão de GATE (aprovar OU reprovar) — só
-          // relevante quando a task é gate; ignorado nas demais. Opcional porque a
-          // UI do P1 (GateDetail.tsx) ainda não coleta — fica `null`, honesto.
+          // AG-3.3 ponto 4 / §2.26: motivo da decisão de GATE (aprovar OU reprovar) —
+          // só relevante quando a task é gate; ignorado nas demais. A obrigatoriedade
+          // no reprovar é decidida NO SERVIDOR (depende de is_gate + decision, que só
+          // se resolvem contra a task) → 422 'reasonRequired', não zod puro.
           reason: z.string().min(1).max(500).optional(),
         }),
         response: {
@@ -359,6 +361,13 @@ export function registerUserTaskRoutes(rawApp: ZodApp, deps: ApiDeps): void {
           outcome.reason === 'decisionInvalid'
         ) {
           return problem(reply, 422, PROBLEM_TYPES.validation, 'Decisão inválida', String(req.id), {
+            detail: outcome.message,
+          });
+        }
+        // §2.26: reprovar um gate sem motivo é 422 explícito (mesma família — nunca
+        // aceitar-e-descartar a exigência de conformidade).
+        if (outcome.reason === 'reasonRequired') {
+          return problem(reply, 422, PROBLEM_TYPES.validation, 'Motivo obrigatório', String(req.id), {
             detail: outcome.message,
           });
         }

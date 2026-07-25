@@ -108,12 +108,17 @@
   buraco de auditoria mais grave); mas é dívida de conformidade em aberto, não frouxidão de
   produto. **Escopo do campo**: motivo **obrigatório no reprovar**, opcional no aprovar
   (razão: reprovação sem justificativa é a lacuna que o Art.14 mais teme; aprovação já tem
-  o world-delta como evidência do quê foi aprovado). **NÃO inventar voz/rótulo/posição do
-  campo aqui** — mesma regra que gerou o P1 original: rótulo e tratamento são do design.
-  **[ABERTO — GATILHO: marcação do designer para o campo de motivo no P1 (`GateDetail.tsx`,
-  aprovar/reprovar) — aguardando, junto com §2.25, a próxima marcação do designer]**.
-  Detalhe: `packages/db/src/runtime/userTasks.ts` (`reason` já aceito, ignorado sem UI),
-  `apps/console/src/routes/GateDetail.tsx` (tela a alterar).
+  o world-delta como evidência do quê foi aprovado). **[RESOLVIDO]** (PR paralela à AG-3.6,
+  sem `[GATE]` — campo novo num elemento já aprovado do P1, sem rota/RBAC novos). O campo
+  reaproveita a voz JÁ estabelecida no produto ("Motivo — vai para a auditoria", mesma de
+  `tasks.tsx`/`operate.tsx`), rotulado "Motivo (obrigatório ao reprovar — vai para a
+  auditoria)" acima dos botões de decisão. A obrigatoriedade é reforçada NO SERVIDOR
+  (`completeUserTask`: `isGate && decision === 'reprovar' && !reason` → 422
+  `reasonRequired`), não só no cliente — a UI apenas evita a viagem de rede inútil.
+  Detalhe: `packages/db/src/runtime/userTasks.ts` (validação + novo outcome
+  `reasonRequired`), `apps/api/src/routes/userTasks.ts` (422), `apps/console/src/routes/
+  GateDetail.tsx` (campo), testes em `packages/db/tests/agent-gate-e2e.test.ts`,
+  `apps/api/tests/decision.e2e.test.ts`, `apps/console/tests/gate-detail.test.tsx`.
 - **§2.27 — Nome de exibição do ator HUMANO ainda não resolvido na timeline (AG-3.3
   UI).** A marcação aprovada pede "humano → iniciais em verde + nome" — construí o
   suporte completo no `ActorBadge` (shared-ui): tom verde (`data-tone='human'`) +

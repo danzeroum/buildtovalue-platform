@@ -134,13 +134,35 @@ describe('GateDetail — P1 (AG-3.1)', () => {
     seed();
     renderGate(makeTask({ instanceRevision: 7 }));
     await userEvent.click(screen.getByRole('button', { name: 'Assumir este gate' }));
-    await userEvent.click(await screen.findByRole('button', { name: 'Reprovar' }));
+    await userEvent.type(await screen.findByLabelText(/Motivo/), 'fora do teto aprovado para o fornecedor');
+    await userEvent.click(screen.getByRole('button', { name: 'Reprovar' }));
     await waitFor(() =>
       expect((api.POST as unknown as Mock).mock.calls.some((c) => c[0] === '/v1/user-tasks/{id}/completion')).toBe(true),
     );
     const call = (api.POST as unknown as Mock).mock.calls.find((c) => c[0] === '/v1/user-tasks/{id}/completion');
     expect(call?.[1]?.body?.expectedInstanceRevision).toBe(7);
     expect(call?.[1]?.body?.decision).toBe('reprovar');
+    expect(call?.[1]?.body?.reason).toBe('fora do teto aprovado para o fornecedor');
+  });
+
+  it('§2.26: reprovar SEM motivo não sai do card — banner explica, nenhuma chamada à API', async () => {
+    seed();
+    renderGate(makeTask());
+    await userEvent.click(screen.getByRole('button', { name: 'Assumir este gate' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Reprovar' }));
+    expect(await screen.findByText(/Motivo obrigatório para reprovar/)).toBeInTheDocument();
+    expect((api.POST as unknown as Mock).mock.calls.some((c) => c[0] === '/v1/user-tasks/{id}/completion')).toBe(false);
+  });
+
+  it('aprovar SEM motivo segue normalmente (motivo é opcional no aprovar)', async () => {
+    seed();
+    const task = makeTask({ payload: { ...makeTask().payload, effect: 'write-reversible' }, paramsMasked: false });
+    renderGate(task);
+    await userEvent.click(screen.getByRole('button', { name: 'Assumir este gate' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Aprovar' }));
+    expect(await screen.findByText(/Gate aprovado/)).toBeInTheDocument();
+    const call = (api.POST as unknown as Mock).mock.calls.find((c) => c[0] === '/v1/user-tasks/{id}/completion');
+    expect(call?.[1]?.body?.reason).toBeUndefined();
   });
 
   it('completion 409 (proposta expirou) → banner ÂMBAR e devolve o claim', async () => {
@@ -150,7 +172,8 @@ describe('GateDetail — P1 (AG-3.1)', () => {
     });
     renderGate(makeTask());
     await userEvent.click(screen.getByRole('button', { name: 'Assumir este gate' }));
-    await userEvent.click(await screen.findByRole('button', { name: 'Reprovar' }));
+    await userEvent.type(await screen.findByLabelText(/Motivo/), 'revisar antes de reprovar');
+    await userEvent.click(screen.getByRole('button', { name: 'Reprovar' }));
     const banner = await screen.findByText(/revisão avançou/);
     expect(banner.closest('.gate-banner')).toHaveClass('tone-warn');
     // claim devolvido: volta a oferecer «Assumir»

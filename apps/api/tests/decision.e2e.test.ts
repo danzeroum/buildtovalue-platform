@@ -40,13 +40,17 @@ describe('user-tasks completion — decision × decisionVar (etapa 6)', () => {
     fields: [{ key: 'obs', type: 'text', label: 'Obs', dataClassification: 'internal' }],
   } as unknown as FormSchema;
 
-  function decisionDiagram(withVar: boolean): BpmnDiagram {
+  function decisionDiagram(withVar: boolean, gate = false): BpmnDiagram {
     const d = createDiagram({ name: 'Dec' });
     d.nodes.start = createNode({ id: 'start', type: 'startEvent', label: 's', x: 0, y: 0 });
     const review = createNode({ id: 'review', type: 'userTask', label: 'r', x: 200, y: 0 });
     review.properties.formRef = 'df@1';
     review.properties.candidateRoles = ['business'];
     if (withVar) review.properties.decisionVar = 'decisao';
+    // §2.26: marca o elemento como GATE (btv:gate) — sem toolRef/proposalVar, o
+    // world-delta fica vazio ({}), mas is_gate=true é o que importa para a
+    // exigência de motivo no reprovar.
+    if (gate) review.properties.btvGate = true;
     d.nodes.review = review;
     if (withVar) {
       d.nodes.gw = createNode({ id: 'gw', type: 'exclusiveGateway', label: 'gw', x: 400, y: 0 });
@@ -91,6 +95,7 @@ describe('user-tasks completion — decision × decisionVar (etapa 6)', () => {
     await deployFormDefinition(sql, tenant, { formId: 'df', schema: dfForm });
     await deployProcessDefinition(sql, tenant, { name: 'dec', diagram: decisionDiagram(true), engineVersion: 'e2e' });
     await deployProcessDefinition(sql, tenant, { name: 'plain', diagram: decisionDiagram(false), engineVersion: 'e2e' });
+    await deployProcessDefinition(sql, tenant, { name: 'gate-dec', diagram: decisionDiagram(true, true), engineVersion: 'e2e' });
   }, 60_000);
 
   afterAll(async () => {
@@ -101,19 +106,20 @@ describe('user-tasks completion — decision × decisionVar (etapa 6)', () => {
 
   const auth = (token: string) => ({ authorization: `Bearer ${token}` });
 
-  async function startAndClaim(ref: string): Promise<{ taskId: string; token: string }> {
+  async function startAndClaim(ref: string): Promise<{ taskId: string; token: string; instanceId: string }> {
     const start = await app.inject({ method: 'POST', url: '/v1/instances', headers: auth(admin), payload: { definitionRef: ref, businessKey: `${ref}-${Math.random()}`.slice(0, 40) } });
     expect(start.statusCode).toBe(201);
     for (;;) {
       const r = await dispatchOutboxOnce(sql, tenant, { batch: 50 });
       if (r.processed === 0 && r.failed === 0) break;
     }
+    const instanceId = start.json().id as string;
     const [task] = await withTenant(sql, tenant, (tx) =>
-      tx`SELECT id FROM user_tasks WHERE instance_id = ${start.json().id} AND status = 'open'`);
+      tx`SELECT id FROM user_tasks WHERE instance_id = ${instanceId} AND status = 'open'`);
     const taskId = task.id as string;
     const claim = await app.inject({ method: 'POST', url: `/v1/user-tasks/${taskId}/claim`, headers: auth(biz) });
     expect(claim.statusCode).toBe(200);
-    return { taskId, token: claim.json().claimToken as string };
+    return { taskId, token: claim.json().claimToken as string, instanceId };
   }
 
   it('o detalhe expõe decisionVar + decisionOptions (null quando não há decisão)', async () => {
@@ -182,5 +188,43 @@ describe('user-tasks completion — decision × decisionVar (etapa 6)', () => {
       payload: { claimToken: empty.token, submission: {}, decision: 'aprovar' },
     });
     expect(ok.statusCode).toBe(200);
+  });
+
+  it('§2.26: reprovar um GATE sem motivo → 422 (obrigatório); com motivo conclui e audita o motivo', async () => {
+    const semMotivo = await startAndClaim('gate-dec@1');
+    const recusado = await app.inject({
+      method: 'POST',
+      url: `/v1/user-tasks/${semMotivo.taskId}/completion`,
+      headers: auth(biz),
+      payload: { claimToken: semMotivo.token, submission: {}, decision: 'reprovar' },
+    });
+    expect(recusado.statusCode).toBe(422);
+    expect(recusado.json().detail).toMatch(/motivo/i);
+
+    // o claim segue vigente (a recusa não consumiu a task) — conclui com motivo.
+    const comMotivo = await app.inject({
+      method: 'POST',
+      url: `/v1/user-tasks/${semMotivo.taskId}/completion`,
+      headers: auth(biz),
+      payload: { claimToken: semMotivo.token, submission: {}, decision: 'reprovar', reason: 'dados incompletos na proposta' },
+    });
+    expect(comMotivo.statusCode).toBe(200);
+    const [gateDec] = await withTenant(sql, tenant, (tx) =>
+      tx`SELECT payload FROM history_events WHERE instance_id = ${semMotivo.instanceId} AND kind = 'gateDecision'`);
+    expect(gateDec.payload).toMatchObject({ decision: 'reprovar', motivo: 'dados incompletos na proposta' });
+  });
+
+  it('§2.26: aprovar um GATE sem motivo segue permitido (opcional) — motivo null na auditoria', async () => {
+    const { taskId, token, instanceId } = await startAndClaim('gate-dec@1');
+    const res = await app.inject({
+      method: 'POST',
+      url: `/v1/user-tasks/${taskId}/completion`,
+      headers: auth(biz),
+      payload: { claimToken: token, submission: {}, decision: 'aprovar' },
+    });
+    expect(res.statusCode).toBe(200);
+    const [gateDec] = await withTenant(sql, tenant, (tx) =>
+      tx`SELECT payload FROM history_events WHERE instance_id = ${instanceId} AND kind = 'gateDecision'`);
+    expect(gateDec.payload).toMatchObject({ decision: 'aprovar', motivo: null });
   });
 });

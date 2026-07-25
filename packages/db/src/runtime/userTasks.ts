@@ -244,6 +244,8 @@ export type CompleteTaskOutcome =
   | { ok: false; reason: 'invalidSubmission'; errors: SubmissionErrors }
   // etapa 6 — a decisão NUNCA é ignorada em silêncio:
   | { ok: false; reason: 'decisionRequired' | 'decisionUnexpected' | 'decisionInvalid'; message: string }
+  // §2.26: reprovar um GATE sem motivo é a lacuna que o Art.14 mais teme.
+  | { ok: false; reason: 'reasonRequired'; message: string }
   // etapa 5 (D28) — o gate re-verifica a proposta na aprovação; a instância
   // avançou desde que o gate abriu → proposta expirada (voz própria, não botão mudo):
   | { ok: false; reason: 'proposalExpired'; message: string };
@@ -271,11 +273,11 @@ export async function completeUserTask(
     expectedInstanceRevision?: number;
     /** envelope de ator (D33): requestId de correlação do aval (vai para o selo). */
     requestId?: string;
-    /** AG-3.3 ponto 4: motivo da decisão de GATE (aprovar OU reprovar) — evidência
-     *  de conformidade (Art.14 EU AI Act), não dado reservado (segue o RBAC do
-     *  histórico, sem dois níveis). Ignorado fora de gate. Ausente hoje na UI do
-     *  P1 (`GateDetail.tsx` não coleta) — fica `null`, ausência honesta, não
-     *  inventada, até uma marcação própria adicionar o campo. */
+    /** AG-3.3 ponto 4 / §2.26: motivo da decisão de GATE (aprovar OU reprovar) —
+     *  evidência de conformidade (Art.14 EU AI Act), não dado reservado (segue o
+     *  RBAC do histórico, sem dois níveis). Ignorado fora de gate. Obrigatório ao
+     *  reprovar (validado abaixo); opcional ao aprovar (o world-delta já é
+     *  evidência do que foi aprovado). */
     reason?: string;
   },
   cipher?: FieldCipher,
@@ -373,6 +375,16 @@ export async function completeUserTask(
         ok: false as const,
         reason: 'decisionInvalid' as const,
         message: `'decision' = '${decision}' não é uma rota válida de '${decisionVar}' (esperado: ${decisionOptions.map((o) => `'${o}'`).join(', ')})`,
+      };
+    }
+    // §2.26: reprovar um gate SEM motivo é conformidade no papel, não na prática —
+    // obrigatório no reprovar (evidência de Art.14); aprovar segue opcional (o
+    // world-delta já registra o que foi aprovado).
+    if (isGate && decision === 'reprovar' && !input.reason?.trim()) {
+      return {
+        ok: false as const,
+        reason: 'reasonRequired' as const,
+        message: 'reprovar um gate exige motivo (evidência de conformidade, Art.14 EU AI Act)',
       };
     }
 
