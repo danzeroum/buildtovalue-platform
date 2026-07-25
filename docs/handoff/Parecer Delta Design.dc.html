@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet">
+<style>
+doc-page:not(:defined){visibility:hidden}
+a{color:#1a6a54;text-decoration:none}a:hover{color:#8a6d1e;text-decoration:underline}
+.k{font-family:'IBM Plex Mono',monospace;font-size:11px;color:#8a6d1e}
+.tag{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.5px;border-radius:5px;padding:1px 7px;white-space:nowrap}
+</style>
+<script src="./doc-page.js"></script>
+</helmet>
+<doc-page margin="0.8in">
+<div style="font-family:'IBM Plex Sans',sans-serif;color:#44403a">
+
+<div style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:2.5px;color:#8a6d1e;margin-bottom:8px">PARECER DE DESIGN · DELTA AG-2 · RATIFICAÇÃO + VARREDURA</div>
+<h1 style="font-family:'Source Serif 4',Georgia,serif;font-size:29px;font-weight:600;letter-spacing:-0.5px;color:#262220;line-height:1.15;margin:0 0 14px">Delta de design — o que a implementação criou, e o que encontrei varrendo o console</h1>
+<div style="display:flex;flex-wrap:wrap;gap:6px 22px;font-size:12.5px;color:#6f675a;border-top:1px solid #e2ddd3;border-bottom:1px solid #e2ddd3;padding:10px 0;margin-bottom:20px">
+  <span style="white-space:nowrap"><strong style="color:#44403a;font-weight:600">De:</strong> Designer da plataforma</span>
+  <span style="white-space:nowrap"><strong style="color:#44403a;font-weight:600">Para:</strong> Arquitetura (triagem)</span>
+  <span><strong style="color:#44403a;font-weight:600">Ref.:</strong> <span class="k">main @ e9712d9</span> · <span class="k">app.css</span> · <span class="k">tokens.css</span> · <span class="k">tasks.tsx</span> + <span style="font-family:'IBM Plex Mono',monospace;font-size:11px">Delta Decisao e Tokens.dc.html</span></span>
+  <span style="white-space:nowrap"><strong style="color:#44403a;font-weight:600">Data:</strong> 23 jul 2026</span>
+</div>
+
+<div style="background:#f4faf6;border:1px solid #dff0e6;border-left:4px solid #1a6a54;border-radius:12px;padding:15px 20px;margin-bottom:12px;break-inside:avoid">
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:1.8px;color:#175c49;margin-bottom:8px">SÍNTESE</div>
+  <p style="font-size:14px;line-height:1.6;color:#33413a;margin:0">Li o código na <span class="k">main</span>, não os protótipos. Os três itens são <strong>ratificados com uma correção cada</strong> — nenhum reprova o que foi construído. O ponto que importa é o item 2: entrego a <strong>forma canônica</strong> do controle de decisão (protótipo anexo) que serve à user task e ao gate P1 sem duas línguas. A varredura achou 4 itens, sendo 1 de acessibilidade que vale corrigir já.</p>
+</div>
+
+<!-- BLOCO 1 -->
+<div style="margin-top:24px">
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:2px;color:#8a6d1e;margin-bottom:4px">BLOCO 1</div>
+  <h2 style="font-family:'Source Serif 4',Georgia,serif;font-size:22px;font-weight:600;letter-spacing:-0.3px;color:#262220;margin:0 0 4px">Itens 1–3, ratificados ou corrigidos</h2>
+</div>
+
+<!-- item 1 -->
+<div style="border:1px solid #e2ddd3;border-radius:12px;padding:16px 18px;margin-top:14px;break-inside:avoid">
+  <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:6px">
+    <h3 style="font-family:'Source Serif 4',Georgia,serif;font-size:16px;font-weight:600;color:#262220;margin:0">1 · Tom <span class="k" style="font-size:13px">gold</span> + <span class="k" style="font-size:13px">.decision-option</span></h3>
+    <span class="tag" style="background:#dff0e6;color:#175c49;border:1px solid #b9dcc8">RATIFICO A COR · CORRIJO O NOME</span>
+  </div>
+  <p style="font-size:13px;line-height:1.6;margin:0 0 8px"><strong style="color:#175c49">A leitura semântica está certa</strong> — dourado = escrita/gate/decisão que roteia é a minha linguagem. Mas <span class="k">gate</span>, <span class="k">warning</span> e a classificação <span class="k">personal</span> hoje compartilham o literal <span class="k">--ui-role-warning-*</span>. Não é intenção nobre, é colisão de nome: um chip “PESSOAL” (dado) e um “decisão roteia” (gate) saem idênticos.</p>
+  <p style="font-size:13px;line-height:1.6;margin:0"><strong>Correção (forma → shared-ui direto):</strong> uma rampa dourada primitiva, e <strong>papéis públicos por intenção</strong> — <span class="k">--ui-role-warning-*</span> (aviso), <span class="k">--ui-role-gate-*</span> (decisão/gate), e a classificação numa <strong>escala própria</strong> (não no gate). Mesma cor hoje; divergível amanhã sem retrofit. Detalhe visual no protótipo, seção 4. É o princípio “papel semântico, não hex” da decisão C.</p>
+</div>
+
+<!-- item 2 -->
+<div style="border:1px solid #dff0e6;background:#f8fcf9;border-radius:12px;padding:16px 18px;margin-top:12px;break-inside:avoid">
+  <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:6px">
+    <h3 style="font-family:'Source Serif 4',Georgia,serif;font-size:16px;font-weight:600;color:#262220;margin:0">2 · O controle de decisão e seu irmão (gate P1)</h3>
+    <span class="tag" style="background:#1a6a54;color:#fff">FORMA CANÔNICA · PROTÓTIPO</span>
+  </div>
+  <p style="font-size:13px;line-height:1.6;margin:0 0 8px"><strong style="color:#175c49">Ratifico a abordagem do dev</strong> (opções derivadas do gateway, escolha exata, servidor recusa fora da lista — é melhor que meus botões, e casa com D19). Um controle único, <span class="k">DecisionOption {value, label, intent}</span>, serve aos dois:</p>
+  <ul style="margin:0 0 8px;padding-left:18px;font-size:12.5px;line-height:1.55">
+    <li style="margin:3px 0"><strong>A cor vem da intenção, e só quando conhecida.</strong> User task = <span class="k">routing</span> (dourado — honesto: o sistema não sabe qual rota é “boa”; <strong>é o que o dev já fez</strong>). Gate P1 = <span class="k">affirmative</span>/<span class="k">destructive</span>/<span class="k">neutral</span> (verde/vermelho/discreto — o significado é conhecido). Mesma peça, não duas línguas.</li>
+    <li style="margin:3px 0"><strong>Rótulo humano</strong>, valor cru é o dado auditado (hoje mostra <span class="k">aprovar</span> minúsculo — ver varredura).</li>
+    <li style="margin:3px 0"><strong>Estados</strong> (travado/carregando/muitas-longas/pós-decisão) e a representação única no histórico/Operate via selo de procedência — todos no protótipo, seções 2–3.</li>
+  </ul>
+  <p style="font-size:12.5px;line-height:1.55;margin:0"><strong style="color:#8a6d1e">ESCOPO (não bloqueia v1):</strong> para a user task colorir <span class="k">Reprovar</span> de vermelho como o gate, a <strong>publicação</strong> teria de anotar a intenção por rota — toca contrato+schema. Até lá, <span class="k">routing</span> dourado é o certo.</p>
+</div>
+
+<!-- item 3 -->
+<div style="border:1px solid #e2ddd3;border-radius:12px;padding:16px 18px;margin-top:12px;break-inside:avoid">
+  <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:6px">
+    <h3 style="font-family:'Source Serif 4',Georgia,serif;font-size:16px;font-weight:600;color:#262220;margin:0">3 · Tela 05 — comportamento</h3>
+    <span class="tag" style="background:#dff0e6;color:#175c49;border:1px solid #b9dcc8">CIENTE · RATIFICO AS DUAS</span>
+  </div>
+  <p style="font-size:13px;line-height:1.6;margin:0"><strong>(a) Negócio vê o botão</strong> via <span class="k">startable-definitions</span> escopado por <span class="k">instances:start</span> sem <span class="k">definitions:read</span> — resolve exatamente o beco que apontei no parecer do Console. Ótimo. <strong>(b) Só a versão ativa</strong> está correto e coerente com D3/D19: a instância nasce na versão publicada e fica pinada; a <span class="k">registryRef</span> exibida deixa legível em qual versão ela nasce. <strong>Único caso de uso para iniciar versão anterior</strong> é rollback deliberado (a ativa tem bug, quer-se a última boa) — é raro, deve ser ação permissionada e explícita, não o padrão da lista. Fica como necessidade conhecida de F4/F5, não lacuna da v1.</p>
+</div>
+
+<!-- BLOCO 2 -->
+<div style="margin-top:26px;break-before:page">
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:2px;color:#8a6d1e;margin-bottom:4px">BLOCO 2</div>
+  <h2 style="font-family:'Source Serif 4',Georgia,serif;font-size:22px;font-weight:600;letter-spacing:-0.3px;color:#262220;margin:0 0 4px">A varredura — o que ninguém pediu</h2>
+  <p style="font-size:12.5px;color:#6f675a;margin:0 0 4px">Olhei o console real (não só os protótipos). Ordenado por urgência.</p>
+</div>
+
+<div style="margin-top:14px;display:flex;flex-direction:column;gap:10px">
+  <div style="border:1px solid #f0d9d6;background:#fdf7f6;border-radius:10px;padding:13px 16px;break-inside:avoid">
+    <div style="display:flex;justify-content:space-between;gap:10px"><strong style="font-size:13.5px;color:#262220">V1 · Alvo de toque abaixo de 44px</strong><span class="tag" style="background:#f7e6e0;color:#9c2f28">A11Y · DIRETO</span></div>
+    <p style="font-size:12.5px;line-height:1.55;margin:6px 0 0">Os <span class="k">.decision-option</span> têm <span class="k">padding:.35rem .8rem</span> (~28px de altura) — abaixo do piso de 44px para toque. Vale para <span class="k">.chip</span>, <span class="k">.palette-pill</span>, <span class="k">.segment</span> também. Subir o mínimo. O gate P1 herda o mesmo controle, então corrigir aqui corrige lá.</p>
+  </div>
+  <div style="border:1px solid #f6edd4;background:#fdfaf1;border-radius:10px;padding:13px 16px;break-inside:avoid">
+    <div style="display:flex;justify-content:space-between;gap:10px"><strong style="font-size:13.5px;color:#262220">V2 · Um verbo, duas palavras</strong><span class="tag" style="background:#f6edd4;color:#6d5115">MICROCOPY · DIRETO</span></div>
+    <p style="font-size:12.5px;line-height:1.55;margin:6px 0 0">A liberação da própria tarefa é o botão <span class="k">“Desatribuir…”</span>, mas a voz do sistema diz <span class="k">“liberar”</span> (“Tarefa liberada”, “só você pode liberar”). Três palavras para dois atos. Sugiro fixar: <strong>“Liberar”</strong> = soltar a própria (unclaim); <strong>“Reatribuir”</strong> = operador passa a outrem (D24, já aplicado ✓); aposentar “Desatribuir”.</p>
+  </div>
+  <div style="border:1px solid #f6edd4;background:#fdfaf1;border-radius:10px;padding:13px 16px;break-inside:avoid">
+    <div style="display:flex;justify-content:space-between;gap:10px"><strong style="font-size:13.5px;color:#262220">V3 · Rótulo de decisão é o valor cru</strong><span class="tag" style="background:#f6edd4;color:#6d5115">MICROCOPY · DIRETO</span></div>
+    <p style="font-size:12.5px;line-height:1.55;margin:6px 0 0">Os chips mostram <span class="k">{opt}</span> verbatim — <span class="k">aprovar</span>, minúsculo, como o BPMN gravou. Convenção de rótulo de exibição (Title Case / mapa humano); o valor cru permanece o dado auditado, nunca some. Ideal: o processo fornecer o rótulo; senão, formatar.</p>
+  </div>
+  <div style="border:1px solid #e2ddd3;background:#faf9f6;border-radius:10px;padding:13px 16px;break-inside:avoid">
+    <div style="display:flex;justify-content:space-between;gap:10px"><strong style="font-size:13.5px;color:#262220">V4 · Reatribuir por digitação de ID</strong><span class="tag" style="background:#f6edd4;color:#6d5115">ESCOPO LEVE</span></div>
+    <p style="font-size:12.5px;line-height:1.55;margin:6px 0 0">O <span class="k">ReassignModal</span> pede o novo responsável em <strong>campo de texto livre</strong> (digitar o id). Risco de erro (typo → pessoa errada ou 404). Minha decisão B pressupunha “escolher uma pessoa”. Vira um seletor de pessoas — precisa de uma fonte (endpoint de membros do papel candidato). Sinalizo ESCOPO leve por depender de dado novo.</p>
+  </div>
+  <div style="border:1px solid #e2ddd3;background:#faf9f6;border-radius:10px;padding:13px 16px;break-inside:avoid">
+    <div style="display:flex;justify-content:space-between;gap:10px"><strong style="font-size:13.5px;color:#262220">V5 · <span class="k" style="font-size:12px">#fff</span> avulso contra a regra D25.1</strong><span class="tag" style="background:#f2f0ec;color:#6f675a">TRIVIAL · DIRETO</span></div>
+    <p style="font-size:12.5px;line-height:1.55;margin:6px 0 0">O cabeçalho do <span class="k">app.css</span> diz “nenhum hex neste arquivo”, mas <span class="k">.task-decision</span> tem <span class="k">var(--ui-surface-raised, #fff)</span> — um fallback hard-coded. Trocar pelo token puro fecha a própria disciplina que o arquivo declara.</p>
+  </div>
+  <div style="border:1px solid #dff0e6;background:#f4faf6;border-radius:10px;padding:13px 16px;break-inside:avoid">
+    <div style="display:flex;justify-content:space-between;gap:10px"><strong style="font-size:13.5px;color:#175c49">✓ Confirmações — dois vazios que eu tinha apontado, fechados</strong><span class="tag" style="background:#dff0e6;color:#175c49">RECONHECIMENTO</span></div>
+    <p style="font-size:12.5px;line-height:1.55;margin:6px 0 0">Vi no código: <span class="k">forbidden</span> (403 de rota) e o <strong>conflito de claim</strong> (409 com <span class="k">holder</span> nomeado) agora têm tratamento — eram dois “ESCOPO” que sinalizei no parecer do Console. Bom ver fechados sem eu pedir de novo.</p>
+  </div>
+</div>
+
+<!-- BLOCO 3 -->
+<div style="margin-top:26px;break-before:page">
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:2px;color:#8a6d1e;margin-bottom:4px">BLOCO 3</div>
+  <h2 style="font-family:'Source Serif 4',Georgia,serif;font-size:22px;font-weight:600;letter-spacing:-0.3px;color:#262220;margin:0 0 4px">O que vira protótipo, o que é direto, o que é ESCOPO</h2>
+</div>
+
+<div style="margin-top:14px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+  <div style="border:1px solid #cdd9c9;background:#f4faf6;border-radius:11px;padding:14px 15px">
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1px;color:#175c49;margin-bottom:8px">PROTÓTIPO (entregue)</div>
+    <ul style="margin:0;padding-left:16px;font-size:12px;line-height:1.5">
+      <li style="margin:4px 0">Controle de decisão canônico (user task + gate P1), estados e pós-decisão.</li>
+      <li style="margin:4px 0">Aliasing do token gold→gate e o papel de agente (violeta).</li>
+    </ul>
+  </div>
+  <div style="border:1px solid #cdd9c9;background:#f4faf6;border-radius:11px;padding:14px 15px">
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1px;color:#175c49;margin-bottom:8px">DIRETO → shared-ui</div>
+    <ul style="margin:0;padding-left:16px;font-size:12px;line-height:1.5">
+      <li style="margin:4px 0">Renomear papéis: <span class="k" style="font-size:10px">gate</span>/<span class="k" style="font-size:10px">warning</span>/classificação.</li>
+      <li style="margin:4px 0">Criar <span class="k" style="font-size:10px">--ui-role-agent-*</span> (violeta) com teste AA.</li>
+      <li style="margin:4px 0">Unificar cópia p/ “Liberar” (V2); rótulo humano (V3).</li>
+      <li style="margin:4px 0">Piso de 44px (V1); remover <span class="k" style="font-size:10px">#fff</span> (V5).</li>
+    </ul>
+  </div>
+  <div style="border:1px solid #ecd9a0;background:#fdfaf1;border-radius:11px;padding:14px 15px">
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1px;color:#8a6d1e;margin-bottom:8px">ESCOPO (passa pelo plano)</div>
+    <ul style="margin:0;padding-left:16px;font-size:12px;line-height:1.5">
+      <li style="margin:4px 0">Intenção por rota na publicação (colorir Reprovar na user task).</li>
+      <li style="margin:4px 0">Seletor de pessoas na reatribuição (V4 — precisa de endpoint).</li>
+      <li style="margin:4px 0">Iniciar versão anterior deliberadamente (rollback, F4/F5).</li>
+    </ul>
+  </div>
+</div>
+
+<div style="background:#f8f7f4;border:1px solid #e2ddd3;border-radius:11px;padding:14px 18px;margin-top:16px;break-inside:avoid">
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1.5px;color:#6f675a;margin-bottom:6px">SOBRE A ETAPA 3 EM CURSO (aviso do §4 do delta)</div>
+  <p style="font-size:12.5px;line-height:1.6;margin:0">A persistência da trilha de fatos com máscara e as paradas honestas em incidente já casam com o desenho: <strong>parada honesta em âmbar, nunca vermelho de erro</strong> (é feature); origem rotulada <span class="k">fixture</span> × <span class="k">evidência-verificada</span> (esta só do runtime real, D30); e o mascarado apresentado pelo selo de procedência do Atlas. Duas coisas a garantir na gravação, para a AG-3 não retrabalhar: a <strong>granularidade dos fatos</strong> (intenção→ação→I/O→decisão→evidência, um por linha) e que o <strong>ator</strong> venha no envelope <span class="k">{type,id,requestId}</span> desde já. Se a forma persistida bater com isso, P2/P7 montam sem migração.</p>
+</div>
+
+<div style="background:#262220;border-radius:12px;padding:18px 22px;margin-top:22px;break-inside:avoid">
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:2px;color:#c9a94a;margin-bottom:8px">DE ACORDO COM O NOVO PROCESSO</div>
+  <p style="font-size:13px;line-height:1.6;color:#e9e6dd;margin:0">O “toque de design” (dev sinaliza na PR, eu ratifico em paralelo, ninguém trava) é o rito certo — é o que teria pego o <span class="k" style="color:#c9a94a">gold</span> na origem. Deste delta, o que é forma entra direto no <span class="k" style="color:#c9a94a">shared-ui</span>; os três ESCOPO consolide em adendo antes do dev. O controle de decisão canônico é o que evita a AG-3 falar duas línguas — é o item a não deixar passar.</p>
+</div>
+
+</div>
+</doc-page>
+</x-dc>
+</body>
+</html>

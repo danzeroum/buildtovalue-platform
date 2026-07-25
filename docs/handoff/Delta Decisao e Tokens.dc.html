@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#e9e6dd}
+a{color:#1a6a54;text-decoration:none}a:hover{color:#8a6d1e;text-decoration:underline}
+</style>
+</helmet>
+<div style="padding:48px 40px;font-family:'IBM Plex Sans',sans-serif;color:#262220;display:flex;flex-direction:column;gap:36px;align-items:center">
+
+<header style="width:1280px" data-screen-label="Cabeçalho">
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:2.5px;color:#8a6d1e;margin-bottom:6px">BUILDTOVALUE · DELTA DE DESIGN AG-2 · CONTROLE DE DECISÃO + TOKENS</div>
+  <h1 style="margin:0;font-family:'Source Serif 4',Georgia,serif;font-size:29px;font-weight:600;letter-spacing:-0.4px">Uma forma canônica de decisão — e o token que a sustenta</h1>
+  <p style="margin:10px 0 0;font-size:13.5px;color:#6f675a;max-width:920px;line-height:1.65">O desenvolvedor inventou, na implementação, o controle de decisão da user task (chips derivados de <span style="font-family:'IBM Plex Mono',monospace;font-size:12px">decisionOptions</span>). Ele tem um irmão que passou por mim: as saídas <strong>aprovar/reprovar/escalar</strong> do gate de agente (P1). São a <strong>mesma ação</strong>. Aqui está a forma única que serve aos dois — antes de a AG-3 replicar duas línguas em sete superfícies.</p>
+  <div style="display:flex;flex-wrap:wrap;gap:14px;margin-top:12px;font-size:11.5px;color:#6f675a">
+    <span>↓ 1 · o modelo · 2 · os dois irmãos · 3 · estados · 4 · o token</span>
+    <span style="color:#175c49">■ shared-ui (direto)</span>
+    <span style="color:#8a6d1e">■ ESCOPO (passa pelo plano)</span>
+  </div>
+</header>
+
+<!-- ===================== 1 · MODELO ===================== -->
+<section style="width:1280px" data-screen-label="1 Modelo do controle">
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6f675a;margin-bottom:8px">1 · <strong style="color:#262220">O modelo</strong> — um controle, opções com intenção. A cor vem da intenção, e só quando ela é conhecida.</div>
+  <div style="background:#faf9f6;border:1px solid #e2ddd3;border-radius:14px;padding:24px 28px;display:grid;grid-template-columns:1fr 1fr;gap:28px">
+    <div>
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:1.5px;color:#8a6d1e;margin-bottom:10px">A OPÇÃO CANÔNICA</div>
+      <div style="background:#262220;border-radius:10px;padding:14px 16px;font-family:'IBM Plex Mono',monospace;font-size:11.5px;line-height:1.8;color:#e9e6dd">DecisionOption {<br>&nbsp;&nbsp;<span style="color:#c9a94a">value</span>: string   <span style="color:#9a8f7e">// dado auditado (do gateway)</span><br>&nbsp;&nbsp;<span style="color:#c9a94a">label</span>: string   <span style="color:#9a8f7e">// humano, nunca o cru</span><br>&nbsp;&nbsp;<span style="color:#c9a94a">intent</span>: <span style="color:#8fd3b6">'routing'</span> <span style="color:#9a8f7e">// padrão</span><br>&nbsp;&nbsp;&nbsp;&nbsp;| <span style="color:#8fd3b6">'affirmative'</span> | <span style="color:#e08b7f">'destructive'</span> | <span style="color:#9a8f7e">'neutral'</span><br>}</div>
+      <p style="font-size:12.5px;color:#44403a;line-height:1.6;margin:14px 0 0">Um só componente — <strong>mesma forma, interação, seleção e foco</strong> em toda parte. O que muda entre user task e gate é a <em>configuração</em>, não a linguagem.</p>
+    </div>
+    <div>
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:1.5px;color:#8a6d1e;margin-bottom:10px">INTENÇÃO → COR (regra)</div>
+      <div style="display:flex;flex-direction:column;gap:9px">
+        <div style="display:flex;align-items:center;gap:12px;background:#fff;border:1px solid #e2ddd3;border-radius:9px;padding:9px 12px">
+          <span style="font-size:12.5px;border-radius:999px;padding:5px 14px;font-weight:600;background:#fff;border:1.5px solid #8a6d1e;color:#6d5115">routing</span>
+          <span style="font-size:11.5px;color:#6f675a"><strong style="color:#44403a">dourado/gate — o padrão honesto.</strong> Rota de gateway cujo “mérito” o sistema não conhece.</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;background:#fff;border:1px solid #e2ddd3;border-radius:9px;padding:9px 12px">
+          <span style="font-size:12.5px;border-radius:999px;padding:5px 14px;font-weight:600;background:#1a6a54;color:#fff">affirmative</span>
+          <span style="font-size:11.5px;color:#6f675a"><strong style="color:#44403a">verde.</strong> Avança/aprova. Só quando o significado é <u>conhecido pelo sistema</u> (gate P1; ou rota anotada).</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;background:#fff;border:1px solid #e2ddd3;border-radius:9px;padding:9px 12px">
+          <span style="font-size:12.5px;border-radius:999px;padding:5px 14px;font-weight:600;background:#fff;border:1.5px solid #b3372f;color:#9c2f28">destructive</span>
+          <span style="font-size:11.5px;color:#6f675a"><strong style="color:#44403a">vermelho.</strong> Reprova/encerra caminho. Idem: intenção conhecida.</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;background:#fff;border:1px solid #e2ddd3;border-radius:9px;padding:9px 12px">
+          <span style="font-size:12.5px;border-radius:999px;padding:5px 14px;font-weight:600;background:#f2f0ec;border:1px solid #e2ddd3;color:#6f675a">neutral</span>
+          <span style="font-size:11.5px;color:#6f675a"><strong style="color:#44403a">discreto.</strong> Escalar, adiar — sai do fluxo sem julgá-lo.</span>
+        </div>
+      </div>
+      <div style="margin-top:14px;background:#f4faf6;border:1px solid #dff0e6;border-radius:9px;padding:11px 14px;font-size:12px;color:#25453a;line-height:1.55"><strong>Isto dissolve o medo de “duas línguas”:</strong> a user task usa <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px">routing</span> (o dourado que o dev já construiu — <strong>ratificado</strong>), porque o sistema não sabe qual rota é “boa”. O gate P1 usa cores de intenção porque <em>sabe</em>. Mesma peça; a cor só aparece quando há significado real.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== 2 · OS DOIS IRMÃOS ===================== -->
+<section style="width:1280px" data-screen-label="2 User task e gate P1">
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6f675a;margin-bottom:8px">2 · <strong style="color:#262220">Os dois irmãos, lado a lado</strong> — mesma peça, configurações diferentes</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+    <!-- user task -->
+    <div style="background:#fff;border:1px solid #e2ddd3;border-radius:14px;overflow:hidden;box-shadow:0 2px 10px rgba(38,34,32,.06)">
+      <div style="background:#f8f7f4;border-bottom:1px solid #e2ddd3;padding:10px 16px;display:flex;justify-content:space-between;align-items:center"><span style="font-size:12px;font-weight:600">User task · decisão de gateway</span><span style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;background:#f6edd4;color:#6d5115;border-radius:6px;padding:2px 8px">routing · N derivadas</span></div>
+      <div style="padding:18px 18px 20px">
+        <div style="font-size:11px;color:#6f675a;font-family:'IBM Plex Mono',monospace;margin-bottom:12px">inst 8f21 · Aprovar reembolso · form pinado reembolso@v3</div>
+        <div style="border:1px solid #f6edd4;border-radius:8px;padding:12px 14px;background:#fff">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><span style="font-size:12.5px;font-weight:600">Decisão</span><span style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;background:#f6edd4;color:#6d5115;border-radius:999px;padding:2px 8px">roteia o processo</span></div>
+          <div style="display:flex;flex-wrap:wrap;gap:9px" role="radiogroup">
+            <span style="font-size:13px;border-radius:999px;padding:9px 16px;font-weight:600;background:#f6edd4;border:1.5px solid #8a6d1e;color:#6d5115;min-height:44px;display:inline-flex;align-items:center;box-sizing:border-box">Aprovar</span>
+            <span style="font-size:13px;border-radius:999px;padding:9px 16px;font-weight:600;background:#fff;border:1.5px solid #e2ddd3;color:#44403a;min-height:44px;display:inline-flex;align-items:center;box-sizing:border-box">Reprovar</span>
+            <span style="font-size:13px;border-radius:999px;padding:9px 16px;font-weight:600;background:#fff;border:1.5px solid #e2ddd3;color:#44403a;min-height:44px;display:inline-flex;align-items:center;box-sizing:border-box">Revisar orçamento</span>
+          </div>
+          <p style="font-size:11px;color:#6f675a;line-height:1.5;margin:11px 0 0">Comparada por <strong>igualdade</strong> no gateway (grava em <span style="font-family:'IBM Plex Mono',monospace;font-size:10px">decisao</span> e na trilha). Rótulo humano; o valor cru é o dado auditado.</p>
+        </div>
+        <div style="font-size:11px;color:#8a6d1e;margin-top:10px;line-height:1.5">↑ <strong>Todas dourado (routing)</strong> — honesto: o sistema não sabe qual rota é a “boa”. Selecionada = preenchida.</div>
+      </div>
+    </div>
+    <!-- gate P1 -->
+    <div style="background:#fff;border:1px solid #e2ddd3;border-radius:14px;overflow:hidden;box-shadow:0 2px 10px rgba(38,34,32,.06)">
+      <div style="background:#f8f7f4;border-bottom:1px solid #e2ddd3;padding:10px 16px;display:flex;justify-content:space-between;align-items:center"><span style="font-size:12px;font-weight:600">Gate de agente · P1</span><span style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;background:#ecebf6;color:#3f3785;border-radius:6px;padding:2px 8px">intenção conhecida</span></div>
+      <div style="padding:18px 18px 20px">
+        <div style="font-size:11px;color:#6f675a;font-family:'IBM Plex Mono',monospace;margin-bottom:12px;display:flex;align-items:center;gap:6px"><span style="width:15px;height:15px;border-radius:4px;background:#5b57b8;color:#fff;font-size:8px;display:inline-flex;align-items:center;justify-content:center">⬡</span>agente quer: enviar cotação a 3 fornecedores · external-commitment</div>
+        <div style="border:1px solid #f0d9d6;border-radius:8px;padding:12px 14px;background:#fff">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><span style="font-size:12.5px;font-weight:600">Sua decisão</span><span style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;background:#f7e6e0;color:#9c2f28;border-radius:999px;padding:2px 8px">efeito irreversível</span></div>
+          <div style="display:flex;flex-wrap:wrap;gap:9px" role="radiogroup">
+            <span style="font-size:13px;border-radius:999px;padding:9px 16px;font-weight:600;background:#1a6a54;color:#fff;min-height:44px;display:inline-flex;align-items:center;box-sizing:border-box">Aprovar este envio</span>
+            <span style="font-size:13px;border-radius:999px;padding:9px 16px;font-weight:600;background:#fff;border:1.5px solid #b3372f;color:#9c2f28;min-height:44px;display:inline-flex;align-items:center;box-sizing:border-box">Reprovar</span>
+            <span style="font-size:13px;border-radius:999px;padding:9px 16px;font-weight:600;background:#f2f0ec;border:1px solid #e2ddd3;color:#6f675a;min-height:44px;display:inline-flex;align-items:center;box-sizing:border-box">Escalar…</span>
+          </div>
+          <p style="font-size:11px;color:#6f675a;line-height:1.5;margin:11px 0 0">Reprovar conclui com <span style="font-family:'IBM Plex Mono',monospace;font-size:10px">approved=false</span> (o processo decide o rumo). O world-delta vive ao lado (P1).</p>
+        </div>
+        <div style="font-size:11px;color:#3f3785;margin-top:10px;line-height:1.5">↑ <strong>affirmative/destructive/neutral</strong> — mesma peça da esquerda, agora colorida porque o significado é conhecido.</div>
+      </div>
+    </div>
+  </div>
+  <div style="margin-top:14px;background:#fdfaf1;border-left:3px solid #8a6d1e;border-radius:0 10px 10px 0;padding:12px 16px;font-size:12.5px;color:#6d5115;line-height:1.55">
+    <strong>ESCOPO (opcional, não bloqueia a v1):</strong> para a user task também colorir <span style="font-family:'IBM Plex Mono',monospace;font-size:11px">Reprovar</span> de vermelho como o gate, o passo de <strong>publicação</strong> precisaria anotar a intenção de cada rota do gateway (<span style="font-family:'IBM Plex Mono',monospace;font-size:11px">affirmative/destructive</span>). Toca contrato + schema → passa pelo plano. Até lá, <span style="font-family:'IBM Plex Mono',monospace;font-size:11px">routing</span> dourado é o correto.
+  </div>
+</section>
+
+<!-- ===================== 3 · ESTADOS ===================== -->
+<section style="width:1280px" data-screen-label="3 Estados do controle">
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6f675a;margin-bottom:8px">3 · <strong style="color:#262220">Estados</strong> — o que a implementação precisa cobrir (perguntado no delta)</div>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px">
+    <!-- selected -->
+    <div style="background:#fff;border:1px solid #e2ddd3;border-radius:12px;padding:16px">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1px;color:#6f675a;margin-bottom:10px">SELEÇÃO (radiogroup · escolha exata)</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">
+        <span style="font-size:12.5px;border-radius:999px;padding:8px 14px;font-weight:600;background:#f6edd4;border:1.5px solid #8a6d1e;color:#6d5115">Aprovar ✓</span>
+        <span style="font-size:12.5px;border-radius:999px;padding:8px 14px;font-weight:600;background:#fff;border:1.5px solid #e2ddd3;color:#44403a">Reprovar</span>
+      </div>
+      <p style="font-size:11px;color:#6f675a;margin:10px 0 0;line-height:1.5">Uma só selecionável; foco visível (anel info), <span style="font-family:'IBM Plex Mono',monospace;font-size:10px">aria-checked</span>.</p>
+    </div>
+    <!-- locked -->
+    <div style="background:#fff;border:1px solid #e2ddd3;border-radius:12px;padding:16px">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1px;color:#6f675a;margin-bottom:10px">TRAVADO (sem claim) / CARREGANDO</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;opacity:.55">
+        <span style="font-size:12.5px;border-radius:999px;padding:8px 14px;font-weight:600;background:#fff;border:1.5px solid #e2ddd3;color:#44403a">Aprovar</span>
+        <span style="font-size:12.5px;border-radius:999px;padding:8px 14px;font-weight:600;background:#fff;border:1.5px solid #e2ddd3;color:#44403a">Reprovar</span>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <span style="width:88px;height:34px;border-radius:999px;background:#f2f0ec"></span>
+        <span style="width:72px;height:34px;border-radius:999px;background:#f2f0ec"></span>
+      </div>
+      <p style="font-size:11px;color:#6f675a;margin:10px 0 0;line-height:1.5">Travado até assumir (claim D21). Carregando = chips esqueleto.</p>
+    </div>
+    <!-- many / long -->
+    <div style="background:#fff;border:1px solid #e2ddd3;border-radius:12px;padding:16px">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1px;color:#6f675a;margin-bottom:10px">MUITAS / LONGAS (&gt; ~5 ou rótulo longo)</div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <span style="font-size:12px;border:1.5px solid #e2ddd3;border-radius:8px;padding:8px 12px;color:#44403a">Aprovar e encaminhar ao financeiro</span>
+        <span style="font-size:12px;border:1.5px solid #8a6d1e;background:#f6edd4;color:#6d5115;border-radius:8px;padding:8px 12px;font-weight:600">Devolver ao solicitante com ressalvas ✓</span>
+        <span style="font-size:12px;border:1.5px solid #e2ddd3;border-radius:8px;padding:8px 12px;color:#44403a">Escalar ao comitê de compras</span>
+      </div>
+      <p style="font-size:11px;color:#6f675a;margin:10px 0 0;line-height:1.5">Degrada para lista vertical (linhas inteiras) — nunca chips espremidos.</p>
+    </div>
+  </div>
+  <!-- post-decision: selo -->
+  <div style="margin-top:16px;background:#fff;border:1px solid #e2ddd3;border-radius:12px;padding:18px 20px">
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1px;color:#6f675a;margin-bottom:12px">DEPOIS DE DECIDIR — UMA SÓ REPRESENTAÇÃO NO HISTÓRICO, NA TAREFA E NO OPERATE (selo de procedência, Atlas E2)</div>
+    <div style="display:flex;flex-wrap:wrap;gap:18px;align-items:center">
+      <div style="display:flex;align-items:center;gap:9px;background:#f8f7f4;border:1px solid #e2ddd3;border-radius:10px;padding:10px 14px">
+        <span style="width:22px;height:22px;border-radius:50%;background:#1a6a54;color:#fff;font-size:9px;display:inline-flex;align-items:center;justify-content:center;font-weight:600">AR</span>
+        <span style="font-size:13px"><strong>Ana Ruiz</strong> decidiu <span style="background:#dff0e6;color:#175c49;border-radius:999px;padding:2px 10px;font-weight:600;font-size:12px">Aprovar</span></span>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;background:#dff0e6;border:1px solid #b9dcc8;color:#175c49;border-radius:6px;padding:2px 8px">✓ auditado</span>
+      </div>
+      <div style="font-size:12px;color:#6f675a;font-family:'IBM Plex Mono',monospace">14:03 · motivo: “cotação aprovada p/ compra” · grava em <span style="color:#44403a">decisao=aprovar</span></div>
+    </div>
+    <p style="font-size:11.5px;color:#6f675a;margin:12px 0 0;line-height:1.55">A escolha concluída aparece <strong>igual</strong> nos três lugares — o chip preenchido + ator + estado de evidência. É o selo de procedência do Atlas fazendo o trabalho, sem inventar uma segunda forma de mostrar “o que foi decidido”.</p>
+  </div>
+</section>
+
+<!-- ===================== 4 · TOKEN ===================== -->
+<section style="width:1280px" data-screen-label="4 Token gold/gate">
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#6f675a;margin-bottom:8px">4 · <strong style="color:#262220">O token</strong> — ratifico a cor, corrijo o nome. Item 1 do delta.</div>
+  <div style="background:#faf9f6;border:1px solid #e2ddd3;border-radius:14px;padding:24px 28px">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:28px">
+      <div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:1.5px;color:#b3372f;margin-bottom:10px">HOJE — TRÊS SIGNIFICADOS NUM NOME SÓ</div>
+        <div style="background:#fff;border:1px solid #f0d9d6;border-radius:10px;padding:14px 16px;font-family:'IBM Plex Mono',monospace;font-size:11px;line-height:1.9;color:#44403a">
+          <div>--ui-role-<span style="color:#b3372f">warning</span>-* <span style="color:#a49c8f">= #f6edd4 / #6d5115</span></div>
+          <div style="padding-left:14px;border-left:2px solid #f0d9d6;margin-top:6px">↳ lint <span style="color:#8a6d1e">aviso</span> <span style="color:#a49c8f">(legítimo)</span></div>
+          <div style="padding-left:14px;border-left:2px solid #f0d9d6">↳ <span style="color:#8a6d1e">gate/decisão</span> que roteia <span style="color:#b3372f">← alheio</span></div>
+          <div style="padding-left:14px;border-left:2px solid #f0d9d6">↳ tag <span style="color:#8a6d1e">“pessoal”</span> (classificação) <span style="color:#b3372f">← alheio</span></div>
+        </div>
+        <p style="font-size:12px;color:#6f675a;line-height:1.6;margin:12px 0 0">Um chip “PESSOAL” (dado sensível) e um “decisão roteia” (gate) saem <strong>idênticos</strong>. Quando a AG-3 quiser o gate com preenchimento sólido e o aviso suave, não dá — mexeria em tudo.</p>
+      </div>
+      <div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:1.5px;color:#175c49;margin-bottom:10px">PROPOSTA — UMA RAMPA, NOMES POR INTENÇÃO</div>
+        <div style="background:#262220;border-radius:10px;padding:14px 16px;font-family:'IBM Plex Mono',monospace;font-size:11px;line-height:1.85;color:#e9e6dd">
+          <div style="color:#9a8f7e">// primitiva (privada): a rampa dourada</div>
+          <div>--gold-bg/fg/solid <span style="color:#c9a94a">= #f6edd4…</span></div>
+          <div style="margin-top:8px;color:#9a8f7e">// papéis públicos (por intenção)</div>
+          <div>--ui-role-<span style="color:#8fd3b6">warning</span>-*&nbsp;→ gold <span style="color:#9a8f7e">// aviso</span></div>
+          <div>--ui-role-<span style="color:#8fd3b6">gate</span>-*&nbsp;&nbsp;&nbsp;→ gold <span style="color:#9a8f7e">// decisão/gate</span></div>
+          <div>--ui-class-<span style="color:#8fd3b6">personal</span> → <span style="color:#9a8f7e">escala própria</span></div>
+        </div>
+        <p style="font-size:12px;color:#25453a;line-height:1.6;margin:12px 0 0"><strong>Mesma cor hoje</strong> (nada muda visualmente agora) — mas nomeados pela intenção, cada um pode divergir depois sem retrofit nas sete superfícies. É o princípio “papel semântico, não hex” da decisão C (F3) e do Atlas E2.</p>
+      </div>
+    </div>
+    <div style="margin-top:18px;border-top:1px solid #e2ddd3;padding-top:16px;display:grid;grid-template-columns:1fr 1fr;gap:24px">
+      <div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:1.5px;color:#b3372f;margin-bottom:8px">FALTA UM PAPEL — AGENTE (violeta)</div>
+        <p style="font-size:12px;color:#44403a;line-height:1.6;margin:0">O <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px">tokens.css</span> tem 5 famílias (success·warning·danger·info + superfícies). <strong>Não existe papel de agente/squad.</strong> O selo de procedência (E2) e P1–P7 precisam do violeta <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:#5b57b8">#5b57b8</span> / tint <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px">#ecebf6</span>. Defini-lo agora em <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px">tokens.ts</span> (com o teste de contraste AA) evita que a AG-3 invente um violeta ad-hoc — exatamente como o dourado nasceu.</p>
+        <div style="margin-top:10px;display:flex;gap:8px;align-items:center">
+          <span style="width:20px;height:20px;border-radius:5px;background:#5b57b8"></span>
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#3f3785">--ui-role-agent-solid: #5b57b8</span>
+        </div>
+      </div>
+      <div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:1.5px;color:#175c49;margin-bottom:8px">ONDE MORA</div>
+        <p style="font-size:12px;color:#44403a;line-height:1.6;margin:0"><span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px">packages/shared-ui/src/tokens.ts</span> (fonte da verdade, com teste AA) → espelhado em <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px">tokens.css</span>. Tudo isto é <strong style="color:#175c49">forma/linguagem → entra direto</strong>, sem cerimônia de plano. Só o <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px">.decision-option</span> passa a apontar <span style="font-family:'IBM Plex Mono',monospace;font-size:10.5px">--ui-role-gate-*</span> e ganha o piso de 44px.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+</div>
+</x-dc>
+</body>
+</html>

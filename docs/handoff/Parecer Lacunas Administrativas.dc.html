@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet">
+<style>
+doc-page:not(:defined){visibility:hidden}
+a{color:#1a6a54;text-decoration:none}a:hover{color:#8a6d1e;text-decoration:underline}
+.k{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:#8a6d1e}
+.mx{width:100%;border-collapse:collapse;margin:6px 0 0;font-size:11px}
+.mx th{text-align:left;padding:6px 8px;border-bottom:1.5px solid #262220;font-family:'IBM Plex Mono',monospace;font-size:8.5px;letter-spacing:.8px;color:#6f675a;font-weight:500}
+.mx td{padding:6px 8px;border-bottom:1px solid #e8e3d9;vertical-align:top;line-height:1.4}
+.mx .f{font-weight:600;color:#262220}
+.no{font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:#9c2f28;font-weight:500}
+.yes{font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:#175c49;font-weight:500}
+.part{font-family:'IBM Plex Mono',monospace;font-size:9.5px;color:#8a6d1e;font-weight:500}
+</style>
+<script src="./doc-page.js"></script>
+</helmet>
+<doc-page margin="0.75in">
+<div style="font-family:'IBM Plex Sans',sans-serif;color:#44403a">
+
+<div style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:2.5px;color:#8a6d1e;margin-bottom:8px">PARECER DE DESIGN · AUDITORIA DE LACUNAS ADMINISTRATIVAS · UI × API</div>
+<h1 style="font-family:'Source Serif 4',Georgia,serif;font-size:29px;font-weight:600;letter-spacing:-0.5px;color:#262220;line-height:1.14;margin:0 0 12px">O que o cliente não tem como controlar — telas administrativas e de preferências ausentes</h1>
+<div style="display:flex;flex-wrap:wrap;gap:6px 20px;font-size:12px;color:#6f675a;border-top:1px solid #e2ddd3;border-bottom:1px solid #e2ddd3;padding:9px 0;margin-bottom:18px">
+  <span style="white-space:nowrap"><strong style="color:#44403a;font-weight:600">De:</strong> Designer da plataforma</span>
+  <span style="white-space:nowrap"><strong style="color:#44403a;font-weight:600">Para:</strong> Gestão + Arquitetura</span>
+  <span style="flex:1 1 100%"><strong style="color:#44403a;font-weight:600">Método:</strong> li a <span class="k">main @ c556fdc</span> — 42 rotas de <span class="k">apps/api/src/routes/</span> × 4 rotas do console × <span class="k">capabilities.ts</span></span>
+  <span style="white-space:nowrap"><strong style="color:#44403a;font-weight:600">Data:</strong> 24 jul 2026</span>
+</div>
+
+<div style="background:#fdf7f6;border:1px solid #f0d9d6;border-left:4px solid #b3372f;border-radius:12px;padding:15px 20px;margin-bottom:14px;break-inside:avoid">
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:1.8px;color:#9c2f28;margin-bottom:8px">SÍNTESE — HÁ UMA LACUNA ESTRUTURAL</div>
+  <p style="font-size:14px;line-height:1.6;color:#5f2f2a;margin:0 0 10px">O console tem <strong>quatro rotas</strong> (Tarefas · Formulários · Operação · Estúdio) e <strong>nenhuma superfície administrativa</strong>. Três capacidades que o ADENDO-02 aprovou como <em>“v1 completa”</em> — <strong>configuração de inteligência do tenant, kill-switch e catálogo de tools</strong> — não têm tela <strong>nem rota de API</strong>: existem como função de pacote, operadas por <strong><span class="k" style="color:#9c2f28">INSERT</span> manual no banco</strong>.</p>
+  <p style="font-size:13.5px;line-height:1.6;color:#5f2f2a;margin:0"><strong>A consequência mais grave:</strong> o kill-switch é a interrupção do <strong>Art. 14 do EU AI Act</strong> e o item 8 do Gate de Piloto. Hoje, numa emergência, o cliente <strong>não tem como parar seus agentes</strong> — depende de alguém com acesso ao Postgres. Um controle de emergência que exige <span class="k">psql</span> não é um controle de emergência.</p>
+</div>
+
+<div style="background:#f4faf6;border:1px solid #dff0e6;border-radius:10px;padding:12px 16px;margin-bottom:16px;break-inside:avoid">
+  <p style="font-size:12.5px;line-height:1.6;color:#25453a;margin:0"><strong>Isto não contradiz o resumo do gerente</strong> — o motor está construído e testado, e é verdade. O ponto cego é outro: parte do que se descreve como “camada visual faltando” <strong>não tem backend para a tela consumir</strong>. Não é só desenhar: é rota + permissão + tela. Melhor descobrir agora do que na frente do cliente.</p>
+</div>
+
+<!-- MATRIZ -->
+<div style="break-inside:avoid">
+  <h2 style="font-family:'Source Serif 4',Georgia,serif;font-size:19px;font-weight:600;color:#262220;margin:0 0 2px">Matriz de cobertura — funcionalidade × API × tela</h2>
+  <p style="font-size:11.5px;color:#6f675a;margin:0 0 4px">Cruzei cada capacidade de governança/administração com as rotas reais e as 4 rotas do console.</p>
+  <table class="mx">
+    <thead><tr><th style="width:29%">CAPACIDADE (quem controla)</th><th style="width:26%">ROTA DE API</th><th style="width:20%">TELA NO CONSOLE</th><th style="width:25%">VEREDITO</th></tr></thead>
+    <tbody>
+      <tr><td class="f">Kill-switch de agentes <span style="font-weight:400;color:#6f675a">(D29 · Art. 14)</span></td><td><span class="no">NENHUMA</span> — <span class="k">setKillSwitch</span> é função de pacote, ausente em <span class="k">apps/api/src</span></td><td><span class="no">NENHUMA</span></td><td><span class="no">CRÍTICO</span> — só por SQL</td></tr>
+      <tr><td class="f">Inteligência do tenant <span style="font-weight:400;color:#6f675a">(provider/modelo/chave/budget · P4)</span></td><td><span class="no">NENHUMA</span> — <span class="k">tenant_ai_config</span> por <span class="k">INSERT</span> (runbook §2)</td><td><span class="no">NENHUMA</span></td><td><span class="no">CRÍTICO</span> — cliente não se configura</td></tr>
+      <tr><td class="f">Catálogo/governança de tools <span style="font-weight:400;color:#6f675a">(D31 · P5)</span></td><td><span class="no">NENHUMA</span> — <span class="k">tenant_tools</span> por SQL</td><td><span class="no">NENHUMA</span></td><td><span class="no">CRÍTICO</span> — habilitar tool é decisão de governança</td></tr>
+      <tr><td class="f">Membros &amp; papéis <span style="font-weight:400;color:#6f675a">(criar/convidar/desativar)</span></td><td><span class="no">NENHUMA</span> — usuários só via <span class="k">scripts/seed-demo.ts</span></td><td><span class="no">NENHUMA</span></td><td><span class="no">CRÍTICO</span> p/ piloto real</td></tr>
+      <tr><td class="f">Trocar senha / perfil do usuário</td><td><span class="part">SÓ LEITURA</span> — <span class="k">GET /v1/me</span>; não há <span class="k">PATCH</span></td><td><span class="no">NENHUMA</span></td><td><span class="no">CRÍTICO</span> — senha nasce em seed</td></tr>
+      <tr><td class="f">Recuperar senha (esqueci)</td><td><span class="no">NENHUMA</span></td><td><span class="no">NENHUMA</span></td><td><span class="no">ALTO</span> — sem autoatendimento</td></tr>
+      <tr><td class="f">Export/verificação de auditoria <span style="font-weight:400;color:#6f675a">(D36)</span></td><td><span class="yes">EXISTE</span> — <span class="k">/v1/audit/export</span> · <span class="k">/v1/audit/verify</span></td><td><span class="no">NENHUMA</span></td><td><span class="part">DELIBERADO</span> (E3 = F4) · ver §3</td></tr>
+      <tr><td class="f">Retomar agente / repropor <span style="font-weight:400;color:#6f675a">(§5.2)</span></td><td><span class="yes">EXISTE</span> — <span class="k">/v1/agents/resume</span> · <span class="k">/v1/agents/reproposta</span></td><td><span class="part">VERIFICAR</span> — Operação tem vozes/nota</td><td><span class="part">CONFERIR</span> na revisão do slice</td></tr>
+      <tr><td class="f">Reveal de sensível · cancelar · reatribuir · incidentes</td><td><span class="yes">EXISTE</span></td><td><span class="yes">EXISTE</span></td><td><span class="yes">COBERTO</span> ✓</td></tr>
+      <tr><td class="f">Publicar processo/formulário · iniciar instância</td><td><span class="yes">EXISTE</span></td><td><span class="yes">EXISTE</span></td><td><span class="yes">COBERTO</span> ✓</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ACHADO CONCRETO -->
+<div style="border:1px solid #f0d9d6;background:#fefcfb;border-left:3px solid #b3372f;border-radius:0 10px 10px 0;padding:14px 17px;margin-top:18px;break-inside:avoid">
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1.5px;color:#9c2f28;margin-bottom:6px">ACHADO VERIFICÁVEL — O ESPELHO DE PERMISSÕES DIVERGIU</div>
+  <p style="font-size:12.5px;line-height:1.6;margin:0"><span class="k">apps/console/src/capabilities.ts</span> declara <strong>11 permissões</strong> e o próprio arquivo diz que é mantido <em>“byte-a-byte com o mapa do servidor”</em>. Mas <strong><span class="k">audit:export</span> não está lá</strong> — a permissão que o D36 criou no servidor. Ou seja: <strong>o console não conseguiria renderizar um botão de export nem se quisesse</strong>, e não há nenhuma permissão administrativa no espelho (<span class="k">tools:manage</span>, <span class="k">ai-config:write</span>, <span class="k">tenant:admin</span> — nenhuma existe). O arquivo diz que divergência é “falha de UX, não de segurança”: é exatamente o caso, e é sintoma da lacuna estrutural, não um esquecimento isolado.</p>
+</div>
+
+<!-- TIERS -->
+<div style="margin-top:22px;break-before:page">
+  <h2 style="font-family:'Source Serif 4',Georgia,serif;font-size:20px;font-weight:600;color:#262220;margin:0 0 10px">§1 · Bloqueia o Gate de Piloto (conformidade)</h2>
+
+  <div style="border:1px solid #e2ddd3;border-radius:11px;padding:14px 16px;margin-bottom:10px">
+    <div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline"><strong style="font-size:14px;color:#262220">1 · Kill-switch sem superfície nem rota</strong><span class="no">Art. 14 · item 8 do Gate</span></div>
+    <p style="font-size:12.5px;line-height:1.55;margin:6px 0 0">O mecanismo <strong>existe e é testado</strong> (<span class="k">kill-switch.test.ts</span> prova a semântica: pausa só jobs de agente, gates humanos seguem, reativação re-locka, acionar/reativar auditados com motivo). O que não existe é a <strong>alavanca</strong>. O parecer do ADENDO-02 exigiu “confirmação com motivo auditado — não pode ser um toggle solto”; hoje não é toggle nenhum. E o item 8 do Gate (“ensaiado com evidência”) <strong>não pode ser cumprido pela UI</strong>. <strong>Precisa:</strong> rota (acionar/reativar com motivo) + permissão + a tela P4 que já prototipei.</p>
+  </div>
+
+  <div style="border:1px solid #e2ddd3;border-radius:11px;padding:14px 16px;margin-bottom:10px">
+    <div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline"><strong style="font-size:14px;color:#262220">2 · Inteligência do tenant (P4) sem rota</strong><span class="no">CRÍTICO</span></div>
+    <p style="font-size:12.5px;line-height:1.55;margin:6px 0 0">Provider, modelo, <span class="k">base_url</span>, <span class="k">key_ref</span> e budget são provisionados por <strong>INSERT manual</strong> — é o que o runbook do ensaio descreve e o que está sendo feito para o DeepSeek. Funciona para um piloto conduzido por nós; <strong>não é um produto multi-tenant</strong>: cada cliente novo exige um humano com acesso ao banco. Prototipei P4 como v1 completa e o ADENDO-02 aceitou — mas sem rota, a tela não tem o que chamar. A disciplina do <span class="k">secret://</span> (chave nunca no banco) <strong>permanece intacta</strong>: a tela grava a <em>referência</em>, nunca o segredo.</p>
+  </div>
+
+  <div style="border:1px solid #e2ddd3;border-radius:11px;padding:14px 16px">
+    <div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline"><strong style="font-size:14px;color:#262220">3 · Governança de tools (P5) sem rota</strong><span class="no">CRÍTICO</span></div>
+    <p style="font-size:12.5px;line-height:1.55;margin:6px 0 0">O D31 é imposto nas duas pontas (lint + runtime) — isso está certo e testado. Mas <strong>habilitar/desabilitar uma tool por tenant é decisão de governança do cliente</strong>, e só existe por SQL. Sem ela, o cliente não pode dizer “meu agente não manda e-mail” sem abrir ticket. P5 mínima (liga/desliga + efeito/autorização em leitura + trilha de quem habilitou) já foi aprovada como v1.</p>
+  </div>
+</div>
+
+<div style="margin-top:20px;break-inside:avoid">
+  <h2 style="font-family:'Source Serif 4',Georgia,serif;font-size:20px;font-weight:600;color:#262220;margin:0 0 10px">§2 · Administração básica de SaaS — ausente por inteiro</h2>
+  <p style="font-size:12.5px;line-height:1.6;margin:0 0 10px">Nenhuma destas existe (nem rota, nem tela). Não são “nice to have” de F4: são o mínimo para <strong>um cliente real usar o sistema sem nós</strong>.</p>
+  <ul style="margin:0;padding-left:18px;font-size:12.5px;line-height:1.6">
+    <li style="margin:4px 0"><strong>Membros &amp; papéis</strong> — criar/convidar usuário, atribuir papel, desativar. Hoje só <span class="k">seed-demo.ts</span>. O piloto não consegue dar acesso a um colega.</li>
+    <li style="margin:4px 0"><strong>Trocar senha</strong> — <span class="k">/v1/me</span> é só <span class="k">GET</span>. As senhas nascem de seed e <strong>não podem ser trocadas pelo usuário</strong>. Para um piloto com gente real, isto é inaceitável em segurança.</li>
+    <li style="margin:4px 0"><strong>Esqueci minha senha</strong> — inexistente; toda recuperação passa por nós.</li>
+    <li style="margin:4px 0"><strong>Preferências</strong> — nome de exibição, fuso, formato de data/moeda, notificações. Nada. (Fuso/moeda importam: o Operate mostra horários e o budget mostra R$ com <span class="k">FX_USD_BRL</span> fixo por env.)</li>
+    <li style="margin:4px 0"><strong>Sessões/logout global</strong> — refresh token rotativo existe, mas o usuário não vê nem revoga sessões.</li>
+  </ul>
+</div>
+
+<div style="margin-top:20px;break-inside:avoid">
+  <h2 style="font-family:'Source Serif 4',Georgia,serif;font-size:20px;font-weight:600;color:#262220;margin:0 0 10px">§3 · APIs prontas sem consumidor</h2>
+  <p style="font-size:12.5px;line-height:1.6;margin:0"><strong>Auditoria (<span class="k">/v1/audit/export</span> + <span class="k">/v1/audit/verify</span>):</strong> existe e é boa — mas nenhuma UI a consome, e a permissão <span class="k">audit:export</span> nem está no espelho do console. Foi <strong>decisão consciente</strong> (Console de Auditoria = F4, meu parecer E3), então <strong>não reabro o escopo</strong>. Registro só o mínimo que evita um piloto sem saída: <strong>um botão “Exportar auditoria” na Operação</strong> para quem tem a permissão, entregando o arquivo + o recibo com digest ancorado (E4). É uma tela de nada e destrava o DPO/auditor sem antecipar a F4.</p>
+</div>
+
+<!-- RECOMENDAÇÃO -->
+<div style="margin-top:22px;break-inside:avoid">
+  <h2 style="font-family:'Source Serif 4',Georgia,serif;font-size:20px;font-weight:600;color:#262220;margin:0 0 8px">§4 · Recomendação — uma 5ª rota: <span class="k" style="font-size:17px;color:#8a6d1e">Administração</span></h2>
+  <p style="font-size:12.5px;line-height:1.6;margin:0 0 12px">Já prototipei o esqueleto no P4/P5: uma rota <strong>Administração</strong> com barra lateral (Identidade · Membros &amp; papéis · <strong>Inteligência</strong> · <strong>Ferramentas</strong> · Auditoria). É a casa natural de tudo acima e mantém o Console único (D15). A nav ganha um 5º item, visível só para <span class="k">admin</span>.</p>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+    <div style="border:1px solid #f0d9d6;background:#fdf7f6;border-radius:11px;padding:13px 15px">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1px;color:#9c2f28;margin-bottom:7px">MÍNIMO PARA O PILOTO (recomendo v1)</div>
+      <ol style="margin:0;padding-left:16px;font-size:12px;line-height:1.55">
+        <li style="margin:3px 0"><strong>Kill-switch</strong> com confirmação e motivo auditado (Art. 14 — não é opcional).</li>
+        <li style="margin:3px 0"><strong>Trocar senha</strong> (<span class="k">PATCH /v1/me/password</span>).</li>
+        <li style="margin:3px 0"><strong>Inteligência do tenant</strong> (P4) — leitura + editar modelo/budget; <span class="k">key_ref</span> como referência.</li>
+        <li style="margin:3px 0"><strong>Tools</strong> (P5 mínima) — liga/desliga com trilha.</li>
+        <li style="margin:3px 0"><strong>Membros &amp; papéis</strong> — criar usuário + atribuir papel.</li>
+        <li style="margin:3px 0"><strong>Botão de export</strong> de auditoria (§3).</li>
+      </ol>
+    </div>
+    <div style="border:1px solid #e2ddd3;background:#faf9f6;border-radius:11px;padding:13px 15px">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1px;color:#6f675a;margin-bottom:7px">PODE ESPERAR (F4)</div>
+      <ul style="margin:0;padding-left:16px;font-size:12px;line-height:1.55">
+        <li style="margin:3px 0">Console de Auditoria como tela (E3) — já era F4.</li>
+        <li style="margin:3px 0">Convite por e-mail / SSO / esqueci-minha-senha automatizado (no piloto, reset pelo admin resolve).</li>
+        <li style="margin:3px 0">Preferências ricas (fuso, formatos, notificações).</li>
+        <li style="margin:3px 0">Matriz de governança de tools editável; budget avançado.</li>
+        <li style="margin:3px 0">Gestão de sessões; auditoria de login por usuário.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div style="background:#262220;border-radius:12px;padding:18px 22px;margin-top:22px;break-inside:avoid">
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:2px;color:#c9a94a;margin-bottom:8px">ESCOPO — PASSA PELO PLANO, NÃO DIRETO AO DEV</div>
+  <p style="font-size:13px;line-height:1.6;color:#e9e6dd;margin:0 0 10px">Tudo no §4 é <strong>mudança de escopo</strong>: são rotas novas + permissões novas + uma rota de console. Não mando ao desenvolvedor — vai para triagem e adendo, como as três rodadas anteriores. <strong>Não bloqueia a AG-3.1</strong> (P1 segue).</p>
+  <p style="font-size:13px;line-height:1.6;color:#e9e6dd;margin:0">Do meu lado, <strong>P4 e P5 já estão prototipados</strong> (handoff-agentes) — se a triagem aprovar, o que falta é rota + permissão, e a marcação sai rápido. Posso desenhar as telas que ainda não existem (Membros &amp; papéis, senha/perfil) quando vocês decidirem o recorte; <strong>não desenhei ainda para não presumir escopo</strong>.</p>
+</div>
+
+<p style="font-size:11px;color:#9a8f7e;margin:14px 0 0;line-height:1.5;font-style:italic">Auditoria feita sobre o código real (<span class="k" style="font-size:10px">main @ c556fdc</span>), não sobre os protótipos: 42 rotas de API, 4 rotas de console, o espelho de permissões e o runbook do ensaio. Onde afirmo “não existe”, verifiquei a ausência por busca no diretório correspondente.</p>
+
+</div>
+</doc-page>
+</x-dc>
+</body>
+</html>

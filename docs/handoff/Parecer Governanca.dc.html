@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet">
+<style>
+doc-page:not(:defined){visibility:hidden}
+a{color:#1a6a54;text-decoration:none}a:hover{color:#9a7b1e;text-decoration:underline}
+.k{font-family:'IBM Plex Mono',monospace;font-size:11px;color:#8a6d16}
+</style>
+<script src="./doc-page.js"></script>
+</helmet>
+<doc-page margin="0.8in">
+<div style="font-family:'IBM Plex Sans',sans-serif;color:#44403a">
+
+<div style="font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:2.5px;color:#9a7b1e;margin-bottom:8px">PARECER DE DESIGN · ATLAS DE GOVERNANÇA · CONFORMIDADE</div>
+<h1 style="font-family:'Source Serif 4',Georgia,serif;font-size:30px;font-weight:600;letter-spacing:-0.5px;color:#262220;line-height:1.15;margin:0 0 14px">Parecer sobre o Atlas de Governança e suas superfícies</h1>
+<div style="display:flex;flex-wrap:wrap;gap:6px 22px;font-size:12.5px;color:#6f675a;border-top:1px solid #e2ddd3;border-bottom:1px solid #e2ddd3;padding:10px 0;margin-bottom:22px">
+  <span style="white-space:nowrap"><strong style="color:#44403a;font-weight:600">De:</strong> Designer da plataforma BuildToValue</span>
+  <span style="white-space:nowrap"><strong style="color:#44403a;font-weight:600">Para:</strong> Governança do Plano</span>
+  <span><strong style="color:#44403a;font-weight:600">Ref.:</strong> <span style="font-family:'IBM Plex Mono',monospace;font-size:11px">Atlas de Governanca.dc.html</span> + <span style="font-family:'IBM Plex Mono',monospace;font-size:11px">Prototipos Governanca.dc.html</span> · ADENDO-03</span>
+  <span style="white-space:nowrap"><strong style="color:#44403a;font-weight:600">Data:</strong> 22 jul 2026</span>
+</div>
+
+<div style="background:#f4faf6;border:1px solid #dff0e6;border-left:4px solid #1a6a54;border-radius:12px;padding:16px 20px;margin-bottom:12px;break-inside:avoid">
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:1.8px;color:#1a6a54;margin-bottom:8px">SÍNTESE</div>
+  <p style="font-size:14.5px;line-height:1.6;color:#33413a;margin:0 0 12px">Entrego o Atlas (E1) + as três superfícies (E2/E3/E6). Nenhum controle novo — o Atlas <strong>torna legível</strong> o que a engenharia do ADENDO-03 já impõe. Decisões que me cabiam:</p>
+  <div style="display:flex;flex-direction:column;gap:7px;font-size:13px;color:#33413a">
+    <div style="display:flex;gap:10px"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;color:#1a6a54;flex-shrink:0;width:74px">organização</span><span><strong>Por camada</strong>, com um atalho por jornada de auditoria no topo. É como o auditor pede prova de um controle.</span></div>
+    <div style="display:flex;gap:10px"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;color:#1a6a54;flex-shrink:0;width:74px">assinatura</span><span>O <strong>selo de procedência</strong> (ator + estado de evidência) é a assinatura visual da governança — o análogo do dial de autonomia.</span></div>
+    <div style="display:flex;gap:10px"><span style="font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:500;color:#1a6a54;flex-shrink:0;width:74px">norte</span><span>O Console (E3) é F4, mas desenhá-lo <strong>agora</strong> fixa os campos que a API v1 precisa expor — insumo direto para a proposta AG-2.</span></div>
+  </div>
+</div>
+
+<table style="width:100%;border-collapse:collapse;margin:18px 0 4px;font-size:12.5px">
+  <thead><tr>
+    <th style="text-align:left;padding:7px 8px;border-bottom:2px solid #262220;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1px;color:#6f675a;font-weight:500">ENCOMENDA</th>
+    <th style="text-align:left;padding:7px 8px;border-bottom:2px solid #262220;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1px;color:#6f675a;font-weight:500">ONDE ESTÁ</th>
+    <th style="text-align:left;padding:7px 8px;border-bottom:2px solid #262220;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1px;color:#6f675a;font-weight:500">STATUS</th>
+  </tr></thead>
+  <tbody>
+    <tr><td style="padding:6px 8px;border-bottom:1px solid #e2ddd3">E1 · Atlas (por camada)</td><td style="padding:6px 8px;border-bottom:1px solid #e2ddd3;font-size:11.5px"><span class="k" style="font-size:10px">Atlas…dc.html</span></td><td style="padding:6px 8px;border-bottom:1px solid #e2ddd3"><span style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;background:#1a6a54;color:#fff;border-radius:999px;padding:2px 9px">ENTREGUE</span></td></tr>
+    <tr><td style="padding:6px 8px;border-bottom:1px solid #e2ddd3">E2 · Linguagem de evidência</td><td style="padding:6px 8px;border-bottom:1px solid #e2ddd3;font-size:11.5px">Protótipos · selo de procedência</td><td style="padding:6px 8px;border-bottom:1px solid #e2ddd3"><span style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;background:#e7f2ec;color:#1a6a54;border:1px solid #cfe6da;border-radius:999px;padding:2px 9px">→ shared-ui</span></td></tr>
+    <tr><td style="padding:6px 8px;border-bottom:1px solid #e2ddd3">E3 · Console de Auditoria</td><td style="padding:6px 8px;border-bottom:1px solid #e2ddd3;font-size:11.5px">Protótipos · norte F4</td><td style="padding:6px 8px;border-bottom:1px solid #e2ddd3"><span style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;background:#fdfaf1;color:#9a7b1e;border:1px solid #f6edd4;border-radius:999px;padding:2px 9px">FIXA API v1</span></td></tr>
+    <tr><td style="padding:6px 8px;border-bottom:1px solid #e2ddd3">E4 · Recibo de export</td><td style="padding:6px 8px;border-bottom:1px solid #e2ddd3;font-size:11.5px">Atlas · anatomia</td><td style="padding:6px 8px;border-bottom:1px solid #e2ddd3"><span style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;background:#e7f2ec;color:#1a6a54;border:1px solid #cfe6da;border-radius:999px;padding:2px 9px">v1</span></td></tr>
+    <tr><td style="padding:6px 8px;border-bottom:1px solid #e2ddd3">E5 · Negação &amp; retenção</td><td style="padding:6px 8px;border-bottom:1px solid #e2ddd3;font-size:11.5px">Atlas · padrões</td><td style="padding:6px 8px;border-bottom:1px solid #e2ddd3"><span style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;background:#e7f2ec;color:#1a6a54;border:1px solid #cfe6da;border-radius:999px;padding:2px 9px">v1 + F5</span></td></tr>
+    <tr><td style="padding:6px 8px;border-bottom:1px solid #e2ddd3">E6 · Prancha de venda</td><td style="padding:6px 8px;border-bottom:1px solid #e2ddd3;font-size:11.5px">Protótipos · a jornada</td><td style="padding:6px 8px;border-bottom:1px solid #e2ddd3"><span style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;background:#1a6a54;color:#fff;border-radius:999px;padding:2px 9px">ENTREGUE</span></td></tr>
+  </tbody>
+</table>
+
+<!-- BLOCO 1 -->
+<div style="margin-top:30px;break-before:page">
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:2px;color:#9a7b1e;margin-bottom:4px">BLOCO 1</div>
+  <h2 style="font-family:'Source Serif 4',Georgia,serif;font-size:23px;font-weight:600;letter-spacing:-0.3px;color:#262220;margin:0 0 4px">Por encomenda (E1–E6)</h2>
+</div>
+
+<div style="border:1px solid #e2ddd3;border-radius:12px;padding:16px 18px;margin-top:16px;break-inside:avoid">
+  <h3 style="font-family:'Source Serif 4',Georgia,serif;font-size:17px;font-weight:600;color:#262220;margin:0 0 6px">E1 · O Atlas</h3>
+  <p style="font-size:13.5px;line-height:1.6;margin:0">Sete camadas, cada mecanismo com <strong>evidência → onde aparece → controle/artigo</strong> (ISO 42001; EU AI Act 12/13/14). Funciona impresso e em tela. O atalho por jornada no topo dá ao auditor externo (que não conhece o produto) uma entrada de 30 segundos; as tabelas por camada servem o DPO recorrente. Todo exemplo usa dado mascarado — o Atlas nunca se torna a violação que documenta.</p>
+</div>
+
+<div style="border:1px solid #e2ddd3;border-radius:12px;padding:16px 18px;margin-top:14px;break-inside:avoid">
+  <h3 style="font-family:'Source Serif 4',Georgia,serif;font-size:17px;font-weight:600;color:#262220;margin:0 0 6px">E2 · Linguagem de evidência — a assinatura</h3>
+  <p style="font-size:13.5px;line-height:1.6;margin:0">Reduzi os sinais espalhados a dois eixos: <strong>ator</strong> (humano · sistema · agente — o envelope D33 como badge tríplice) e <strong>estado de evidência</strong> (auditado · ancorado·verificável · mascarado · negado), sempre ícone+rótulo, nunca só cor. Compostos, viram o <strong>selo de procedência</strong>. Entra no <span class="k">shared-ui</span> como tokens+componentes; o retrofit é leve — o selo do P7, o chip de efeito e o aviso de sensível passam a falar o mesmo vocabulário trocando o token, sem redesenho.</p>
+</div>
+
+<div style="border:1px solid #dff0e6;background:#f8fcf9;border-radius:12px;padding:16px 18px;margin-top:14px;break-inside:avoid">
+  <h3 style="font-family:'Source Serif 4',Georgia,serif;font-size:17px;font-weight:600;color:#262220;margin:0 0 6px">E3 · Console de Auditoria <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#9a7b1e">(o motivo de desenhá-lo agora)</span></h3>
+  <p style="font-size:13.5px;line-height:1.6;margin:0 0 8px">Trilha unificada (as duas tabelas numa vista), filtros por ator/período/tipo/recurso, detalhe com envelope completo, botão <strong>verificar integridade</strong> (recalcula o digest e mostra o bloco ancorado) e export com recibo. Serve auditor e DPO.</p>
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:1.5px;color:#9a7b1e;margin:8px 0 4px">O QUE ISSO EXIGE DA API v1 (insumo p/ AG-2)</div>
+  <p style="font-size:13px;line-height:1.55;margin:0">A tela é F4, mas só funciona se a v1 já gravar: <span class="k">actor{type,id,requestId}</span> como campo consultável (não em payload), <span class="k">event_type</span> e <span class="k">resource_type/id</span> estáveis, <span class="k">motivo</span>, e a referência do intervalo/bloco de ancoragem. Desenhar agora garante que <span class="k">GET /v1/audit/export</span> (D36) e a leitura da trilha nasçam com esses campos — senão a F4 vira migração. <span style="color:#9a7b1e">É ESCOPO → entra na proposta de contrato da AG-2.</span></p>
+</div>
+
+<div style="border:1px solid #e2ddd3;border-radius:12px;padding:16px 18px;margin-top:14px;break-inside:avoid">
+  <h3 style="font-family:'Source Serif 4',Georgia,serif;font-size:17px;font-weight:600;color:#262220;margin:0 0 6px">E4 · Recibo de export</h3>
+  <p style="font-size:13.5px;line-height:1.6;margin:0">Anatomia no Atlas: <span class="k">export_id</span>, filtros, contagem, digest sha256, bloco de ancoragem, solicitante+permissão. Verificação em 4 passos que o auditor confere sozinho. Na v1 aparece no corpo da resposta e como cabeçalho do arquivo; e-mail ao solicitante é proposta — <span style="color:#9a7b1e">se pedir campo novo no recibo, ESCOPO → AG-2</span>. Reusa a ancoragem do ledger (D35): zero infra de chave nova.</p>
+</div>
+
+<div style="border:1px solid #e2ddd3;border-radius:12px;padding:16px 18px;margin-top:14px;break-inside:avoid">
+  <h3 style="font-family:'Source Serif 4',Georgia,serif;font-size:17px;font-weight:600;color:#262220;margin:0 0 6px">E5 · Negação &amp; retenção</h3>
+  <p style="font-size:13.5px;line-height:1.6;margin:0">Cross-tenant é <strong>404 sempre</strong> (nunca revela existência); intra-tenant é <strong>403 com a voz por persona</strong> da F3, e a negação sensível vira evento (D34). Retenção/expurgo: só o padrão (F5) — a superfície indica prazo e distingue expurgo de exclusão; no ledger, conteúdo pessoal sai por tombstone e a cadeia permanece. O Atlas <strong>afirma</strong> “o ledger nunca contém conteúdo pessoal” como diferencial.</p>
+</div>
+
+<div style="border:1px solid #e2ddd3;border-radius:12px;padding:16px 18px;margin-top:14px;break-inside:avoid">
+  <h3 style="font-family:'Source Serif 4',Georgia,serif;font-size:17px;font-weight:600;color:#262220;margin:0 0 6px">E6 · Prancha de venda</h3>
+  <p style="font-size:13.5px;line-height:1.6;margin:0">A jornada em cinco atos — modelou → publicou com lint → humano no gate → ancorou → exportável — cada um marcado com o artigo do AI Act que atende. Fecha com a frase que resume a aposta: <em>“evidência nunca é conteúdo; a prova de que o controle funciona não viola o controle.”</em> É o Atlas condensado para uma reunião de venda.</p>
+</div>
+
+<!-- BLOCO 2 -->
+<div style="margin-top:32px;break-before:page">
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:2px;color:#9a7b1e;margin-bottom:4px">BLOCO 2</div>
+  <h2 style="font-family:'Source Serif 4',Georgia,serif;font-size:23px;font-weight:600;letter-spacing:-0.3px;color:#262220;margin:0 0 4px">Decisões, com justificativa</h2>
+</div>
+
+<div style="border:1px solid #e2ddd3;border-radius:12px;padding:16px 18px;margin-top:16px;break-inside:avoid">
+  <h3 style="font-family:'Source Serif 4',Georgia,serif;font-size:16px;font-weight:600;color:#262220;margin:0 0 4px">1 · Organização por camada (não por jornada)</h3>
+  <p style="font-size:13px;line-height:1.55;margin:0">Uma auditoria pergunta “prove o controle X” — pergunta de camada. A jornada é ótima para <em>vender</em> (E6) e para orientar quem chega (o atalho no topo), mas seria frágil como estrutura: um controle apareceria em vários passos. Camada primária + jornada como índice dá os dois sem duplicar.</p>
+</div>
+<div style="border:1px solid #e2ddd3;border-radius:12px;padding:16px 18px;margin-top:14px;break-inside:avoid">
+  <h3 style="font-family:'Source Serif 4',Georgia,serif;font-size:16px;font-weight:600;color:#262220;margin:0 0 4px">2 · O selo de procedência como assinatura</h3>
+  <p style="font-size:13px;line-height:1.55;margin:0">O briefing pediu uma “assinatura visual” para a governança, como o dial foi para os agentes. É o selo (ator+estado): reaproveita sinais que já existem, dá consistência auditável e é barato de aplicar. Torna a governança <em>reconhecível</em> num relance em qualquer tela.</p>
+</div>
+<div style="border:1px solid #e2ddd3;border-radius:12px;padding:16px 18px;margin-top:14px;break-inside:avoid">
+  <h3 style="font-family:'Source Serif 4',Georgia,serif;font-size:16px;font-weight:600;color:#262220;margin:0 0 4px">3 · Console F4, mas campos na v1</h3>
+  <p style="font-size:13px;line-height:1.55;margin:0">Concordo em não construir a tela na v1 (o export via API cobre o auditor). Mas o envelope de ator, <span class="k">event_type</span>/<span class="k">resource</span>, motivo e referência de ancoragem <strong>precisam existir na gravação da v1</strong>, ou a F4 exigirá migração retroativa da trilha. Este é o único ponto em que empurro por antecipação — e é de contrato, não de tela.</p>
+</div>
+
+<!-- BLOCO 3 -->
+<div style="margin-top:32px;break-before:page">
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:2px;color:#9a7b1e;margin-bottom:4px">BLOCO 3</div>
+  <h2 style="font-family:'Source Serif 4',Georgia,serif;font-size:23px;font-weight:600;letter-spacing:-0.3px;color:#262220;margin:0 0 4px">Propostas adicionais</h2>
+</div>
+<ul style="margin:16px 0 0;padding-left:18px;font-size:13.5px;line-height:1.6">
+  <li style="margin:6px 0"><strong>Legenda compartilhada biblioteca↔plataforma.</strong> Os rótulos de origem da trilha (<span class="k">fixture</span>/<span class="k">declarada</span>/<span class="k">verificada</span>) e o selo de procedência entram no mesmo lugar do <span class="k">shared-ui</span> — uma só fonte para os dois mundos. <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#9a7b1e;background:#fdfaf1;border:1px solid #f6edd4;border-radius:5px;padding:1px 6px">ESCOPO leve</span></li>
+  <li style="margin:6px 0"><strong>Contraste do selo.</strong> Os quatro estados precisam passar AA no tamanho de chip (o dourado sobre creme é o limítrofe) — travar no token, com o par ícone+rótulo garantindo leitura sem cor.</li>
+  <li style="margin:6px 0"><strong>“Verificar integridade” é ação, e ação se audita.</strong> Sugiro que a própria verificação (quem verificou, quando, resultado) seja um evento — o auditor gosta de ver que a checagem aconteceu.</li>
+  <li style="margin:6px 0"><strong>Não desenhei o que o ADENDO-03 rejeitou</strong> (triggers, hash-por-linha, assinatura própria, DENIED total em banco). A ancoragem de digest (D35) é o que aparece na E3/E4 — coerente com a rejeição registrada.</li>
+</ul>
+
+<div style="background:#262220;border-radius:12px;padding:20px 22px;margin-top:26px;break-inside:avoid">
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:2px;color:#c9a94a;margin-bottom:8px">PRÓXIMOS PASSOS</div>
+  <ul style="margin:0;padding-left:18px;font-size:13.5px;line-height:1.6;color:#e9e6dd">
+    <li style="margin:5px 0">Atlas (E1) + superfícies (E2/E3/E6) entregues; E2 vira tokens+componentes do <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#c9a94a">shared-ui</span>.</li>
+    <li style="margin:5px 0"><strong style="color:#c9a94a">Insumo para a proposta AG-2</strong>: os campos de auditoria que a v1 deve gravar (envelope de ator, event_type/resource, motivo, ref de ancoragem) + <span style="font-family:'IBM Plex Mono',monospace;font-size:11px">GET /v1/audit/export</span> (D36).</li>
+    <li style="margin:5px 0"><strong style="color:#c9a94a">ESCOPO</strong> (passa pelo plano): qualquer campo novo no recibo (E4); auditar a ação “verificar integridade”.</li>
+    <li style="margin:5px 0">Sigo no circuito: o Console de Auditoria (F4) volta a mim antes do código (G-UX-3); Atlas e dossiê atualizados a cada fechamento de fase.</li>
+  </ul>
+</div>
+
+<p style="font-size:11.5px;color:#9a8f7e;margin:16px 0 0;line-height:1.5;font-style:italic">Parecer de produto e identidade sobre a camada de governança. O Atlas não cria controle — mapeia o que a engenharia impõe (ADENDO-03) para os olhos de um auditor, de um DPO e de um comprador.</p>
+
+</div>
+</doc-page>
+</x-dc>
+</body>
+</html>
