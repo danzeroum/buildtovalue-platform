@@ -4,9 +4,16 @@ import { validateFormSchema, type FormSchema, type SchemaIssue } from '@buildtov
 import type { Sql, TransactionSql } from '../client.js';
 import { withTenant } from '../tenancy.js';
 import { conditionEvaluator } from '../runtime/definitions.js';
-import { effectRequiresGate, parseRef } from '@buildtovalue/agentflow';
+import { effectRequiresGate, parseRef, type AgentWorkflow, type ValidationIssue } from '@buildtovalue/agentflow';
 import { deriveDecisionRouting, isBtvGate, lintBlocks, lintDiagram, toolEffectGateViolations, type LintIssue } from './lint.js';
 import { isToolEnabledForTenantTx, toolEffectOfTx } from './toolStore.js';
+import {
+  deployAgentDefinition,
+  lintAgentGraph,
+  listAgentDefinitions,
+  type AgentDefinitionRow,
+  type DeployAgentOutcome,
+} from './agentStore.js';
 
 /**
  * Registry de definições (F3.1, shape /v1 §1/§2b): deploy IMUTÁVEL com lint
@@ -391,6 +398,16 @@ export interface PlatformRegistry {
     tenantId: string,
     options?: { cursor?: string; limit?: number; formId?: string },
   ): Promise<Page<Omit<FormDefinitionRow, 'schema'>>>;
+  /** P6 (deploy de agente, AG-3.6) — mesmo padrão de deployProcess/lintProcess.
+   *  `graph` chega como registro livre (o zod da rota só garante "objeto");
+   *  o cast para `AgentWorkflow` mora aqui dentro, não no chamador HTTP (que
+   *  não precisa depender de `@buildtovalue/agentflow` só por um tipo). */
+  lintAgent(graph: Record<string, unknown>): ValidationIssue[];
+  deployAgent(
+    tenantId: string,
+    input: { graph: Record<string, unknown>; createdBy?: string },
+  ): Promise<DeployAgentOutcome>;
+  listAgents(tenantId: string): Promise<Omit<AgentDefinitionRow, 'graph'>[]>;
 }
 
 export function createRegistry(sql: Sql, engineVersion: string): PlatformRegistry {
@@ -405,6 +422,10 @@ export function createRegistry(sql: Sql, engineVersion: string): PlatformRegistr
     deployForm: (tenantId, input) => deployFormDefinition(sql, tenantId, input),
     getFormByRef: (tenantId, ref) => getFormDefinitionByRef(sql, tenantId, ref),
     listForms: (tenantId, options) => listFormDefinitions(sql, tenantId, options),
+    lintAgent: (graph) => lintAgentGraph(graph as unknown as AgentWorkflow),
+    deployAgent: (tenantId, input) =>
+      deployAgentDefinition(sql, tenantId, { ...input, graph: input.graph as unknown as AgentWorkflow }),
+    listAgents: (tenantId) => listAgentDefinitions(sql, tenantId),
   };
 }
 

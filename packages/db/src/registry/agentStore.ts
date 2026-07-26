@@ -57,6 +57,16 @@ export function compareSemver(a: string, b: string): number {
 }
 
 /**
+ * GATE de validação: `validateGraph` (a mesma checagem do save/promoção da
+ * lib) + lint de EXECUÇÃO do host (o que o runtime v1 não honra, ex. cadeia
+ * llm→llm — AG-2.5). Função PURA — sem side effect, reusada pelo deploy
+ * (bloqueia gravação) e pelo dry-run (`/v1/agent-definitions/lint`, P6/AG-3.6).
+ */
+export function lintAgentGraph(graph: AgentWorkflow): ValidationIssue[] {
+  return [...validateGraph(graph), ...lintAgentGraphExecution(graph)];
+}
+
+/**
  * Deploy IMUTÁVEL com o GATE de validação. `validateGraph` roda headless (a
  * mesma checagem do save/promoção da lib); qualquer issue `error` bloqueia e
  * NADA é gravado. A `ref` canônica (`formatRef`) carimba a identidade — a
@@ -69,9 +79,7 @@ export async function deployAgentDefinition(
   tenantId: string,
   input: { graph: AgentWorkflow; createdBy?: string },
 ): Promise<DeployAgentOutcome> {
-  // GATE = validação da lib (§3) + lint de EXECUÇÃO do host (o que o runtime v1
-  // não honra, ex. cadeia llm→llm — AG-2.5). Erro de qualquer um bloqueia; nada gravado.
-  const issues = [...validateGraph(input.graph), ...lintAgentGraphExecution(input.graph)];
+  const issues = lintAgentGraph(input.graph);
   const errors = issues.filter((i) => i.severity === 'error');
   if (errors.length > 0) return { ok: false, issues };
 

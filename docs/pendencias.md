@@ -227,14 +227,18 @@
   Detalhe: `packages/db/migrations/0019_drop_variable_search_keys.sql`,
   `packages/db/migrations/0020_autonomy_level_generated.sql`,
   `packages/db/src/registry/agentStore.ts`, `docs/compliance/dossie.md`.
-- **§2.32 — F4 nomeado: catálogo de agentes na UI (`listAgentDefinitions`).** A função
-  já existe em `packages/db/src/registry/agentStore.ts` (latest-per-name, mesmo padrão
-  do catálogo de tools do P5) mas não tem rota (`apps/api`) nem tela (`apps/console`) —
-  nascida da varredura §2.31 (achado 1), onde ficou decidido que a INTEGRIDADE da
-  coluna `autonomy_level` era urgente (fechada, migração `0020`), mas a SUPERFÍCIE que a
-  exibiria (o catálogo) é trabalho de UI genuíno, fora desta fatia. **[ABERTO —
-  GATILHO: decisão do dono sobre quando o catálogo de agentes entra em escopo —
-  provavelmente junto com A3 (catálogo de tools), mesmo rito inventário→marcação]**.
+- **§2.32 — F4 nomeado: catálogo de agentes na UI (`listAgentDefinitions`).**
+  **[PARCIAL — a ROTA fechou na AG-3.6 (P6); o CATÁLOGO navegável segue F4.]**
+  `GET /v1/agent-definitions` existe agora (`definitions:read`, latest-per-name, mesmo
+  padrão do catálogo de tools do P5) — mas isto NÃO é o catálogo rico que este item
+  sempre nomeou: não há tela de listagem/detalhe, nem editor visual, nem a ponte
+  `?load=` do Squad Studio (fora de escopo enquanto P3 não decide). O que a AG-3.6
+  entregou foi só a CAPACIDADE de publicar (`POST /v1/agent-definitions[/lint]` +
+  tela mínima "colar JSON" em `AgentDeployModal`, Estúdio) — decisão do dono: capacidade
+  só-por-API não é capacidade de produto. Navegar/explorar agentes publicados
+  continua **[ABERTO — GATILHO: decisão do dono sobre quando o catálogo NAVEGÁVEL entra
+  em escopo — provavelmente junto com A3 (catálogo de tools), mesmo rito
+  inventário→marcação]**.
 
 ## §3 · Infra & ambiente (Gate de Piloto)
 

@@ -39,6 +39,26 @@ const formSummarySchema = z.object({
   createdAt: z.string(),
 });
 
+// P6 (deploy de agente, AG-3.6) — issues de `ValidationIssue` (lib agentflow),
+// forma PRÓPRIA (nodeId/remediation), diferente de LintIssue (elementId/edgeId).
+const agentLintIssueSchema = z.object({
+  code: z.string(),
+  severity: z.enum(['error', 'warning']),
+  message: z.string(),
+  nodeId: z.string().optional(),
+  remediation: z.string().optional(),
+});
+
+const agentDefinitionSummarySchema = z.object({
+  id: z.string().uuid(),
+  agentId: z.string(),
+  version: z.string(),
+  ref: z.string(),
+  name: z.string(),
+  autonomyLevel: z.number().int(),
+  createdAt: z.string(),
+});
+
 const pageQuerySchema = z.object({
   cursor: z.string().optional(),
   limit: z.coerce.number().int().min(1).max(100).optional(),
@@ -351,5 +371,87 @@ export function registerDefinitionRoutes(rawApp: ZodApp, deps: ApiDeps): void {
         schema: row.schema as unknown as Record<string, unknown>,
       };
     },
+  );
+
+  // ---- agent-definitions (P6, AG-3.6) --------------------------------------
+  // Mesmo padrão de process-definitions: deploy imutável com lint no gate (422
+  // + issues, nada gravado em erro), /lint para dry-run. RBAC reaproveitada —
+  // quem publica processo publica agente (decisão do dono, shape §2 do doc).
+  app.post(
+    '/v1/agent-definitions',
+    {
+      preHandler: [app.authenticate, app.requirePermission('definitions:deploy')],
+      schema: {
+        tags: ['agent-definitions'],
+        summary: 'Deploy imutável de um grafo de agente (validateGraph + lint de execução no gate)',
+        security: [{ bearerAuth: [] }],
+        body: z.object({ graph: z.record(z.string(), z.unknown()) }),
+        response: {
+          201: agentDefinitionSummarySchema.extend({ warnings: z.array(agentLintIssueSchema) }),
+          422: problemSchema.extend({ issues: z.array(agentLintIssueSchema) }).partial({ issues: true }),
+        },
+      },
+    },
+    async (req, reply) => {
+      const outcome = await registry.deployAgent(req.auth!.tenantId, {
+        graph: req.body.graph,
+        createdBy: req.auth!.sub,
+      });
+      if (!outcome.ok) {
+        return problem(reply, 422, PROBLEM_TYPES.validation, 'Grafo de agente rejeitado pelo lint', String(req.id), {
+          issues: outcome.issues,
+        });
+      }
+      reply.status(201);
+      return {
+        id: outcome.definition.id,
+        agentId: outcome.definition.agent_id,
+        version: outcome.definition.version,
+        ref: outcome.definition.ref,
+        name: outcome.definition.name,
+        autonomyLevel: outcome.definition.autonomy_level,
+        createdAt: String(outcome.definition.created_at),
+        warnings: outcome.warnings,
+      };
+    },
+  );
+
+  app.post(
+    '/v1/agent-definitions/lint',
+    {
+      preHandler: [app.authenticate, app.requirePermission('definitions:deploy')],
+      schema: {
+        tags: ['agent-definitions'],
+        summary: 'Lint do grafo de agente sem deploy (mesmo motor do gate)',
+        security: [{ bearerAuth: [] }],
+        body: z.object({ graph: z.record(z.string(), z.unknown()) }),
+        response: { 200: z.object({ issues: z.array(agentLintIssueSchema) }) },
+      },
+    },
+    async (req) => ({ issues: registry.lintAgent(req.body.graph) }),
+  );
+
+  app.get(
+    '/v1/agent-definitions',
+    {
+      preHandler: [app.authenticate, app.requirePermission('definitions:read')],
+      schema: {
+        tags: ['agent-definitions'],
+        summary: 'Lista a versão MAIS RECENTE de cada agente publicado',
+        security: [{ bearerAuth: [] }],
+        response: { 200: z.object({ items: z.array(agentDefinitionSummarySchema) }) },
+      },
+    },
+    async (req) => ({
+      items: (await registry.listAgents(req.auth!.tenantId)).map((a) => ({
+        id: a.id,
+        agentId: a.agent_id,
+        version: a.version,
+        ref: a.ref,
+        name: a.name,
+        autonomyLevel: a.autonomy_level,
+        createdAt: String(a.created_at),
+      })),
+    }),
   );
 }

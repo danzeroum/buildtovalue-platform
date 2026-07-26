@@ -1,9 +1,10 @@
 import { useState, type ChangeEvent } from 'react';
-import { ActorBadge, EvidenceSeal, type Actor } from '@platform/shared-ui';
+import type { Actor } from '@platform/shared-ui';
 import { api, problemMessage } from '../api/client.js';
 import { can } from '../capabilities.js';
 import { Button, NonIdeal } from '../ui/ui.js';
 import { useSession } from '../shell.js';
+import { ReceiptCard, shortDigest, formatDateTime, type AuditReceipt } from '../receiptCard.js';
 
 /**
  * A7 — export de auditoria + recibo (marcação `a7-marcacao-export-auditoria.md`).
@@ -12,6 +13,9 @@ import { useSession } from '../shell.js';
  * recibo mostra a garantia REAL (`self-recorded`), nunca sugere notarização
  * externa que o sistema não tem — a correção mais séria das quatro rodadas
  * deste rito (P1 → kill-switch → timeline → aqui).
+ *
+ * `ReceiptCard`/`CoverageSection` moraram aqui até a AG-3.6 (P7) precisar do
+ * MESMO componente/voz no Operate — extraídos para `receiptCard.js`.
  */
 
 type ActorType = 'user' | 'system' | 'agent';
@@ -28,26 +32,6 @@ interface AuditFilters {
   source?: Source;
 }
 
-interface AuditCoverageTrail {
-  throughXid: string | null;
-  throughTime: string | null;
-}
-interface AuditReceipt {
-  digest: string;
-  algorithm: 'sha256';
-  count: number;
-  filters: AuditFilters;
-  anchorRef: string;
-  assurance: 'self-recorded';
-  assuranceNote: string;
-  coverage: {
-    perTrail: { tenant: AuditCoverageTrail; instance: AuditCoverageTrail };
-    unanchoredCount: number;
-    note: string;
-  };
-  generatedAt: string;
-  generatedBy: Actor & { requestId: string | null };
-}
 interface AuditRecord {
   source: 'instance' | 'tenant';
   at: string;
@@ -60,121 +44,11 @@ interface AuditRecord {
   anchorRef: string | null;
 }
 
-function shortDigest(digest: string): string {
-  return digest.length > 20 ? `${digest.slice(0, 13)}…${digest.slice(-6)}` : digest;
-}
-function formatDateTime(iso: string): string {
-  return new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
-}
 function presetRange(preset: '7d' | '30d'): { from: string; to: string } {
   const to = new Date();
   const from = new Date(to);
   from.setDate(from.getDate() - (preset === '7d' ? 7 : 30));
   return { from: from.toISOString(), to: to.toISOString() };
-}
-
-async function copyText(text: string): Promise<void> {
-  try {
-    await navigator.clipboard.writeText(text);
-  } catch {
-    /* clipboard indisponível (permissão/contexto) — degrade silencioso, o texto segue selecionável na tela */
-  }
-}
-
-/** Cobertura das duas trilhas: veredito PRIMEIRO (§1 da marcação), nunca lista crua de xid/tempo. */
-function CoverageSection({ coverage, count }: { coverage: AuditReceipt['coverage']; count: number }) {
-  const ok = coverage.unanchoredCount === 0;
-  return (
-    <div className="audit-coverage">
-      <p className={`audit-verdict${ok ? '' : ' audit-verdict-warn'}`}>
-        <span aria-hidden="true">{ok ? '✓' : '⚠'}</span>{' '}
-        {ok
-          ? `Todas as ${count} linhas deste export estão dentro da cobertura registrada.`
-          : `${coverage.unanchoredCount} linha(s) deste export estão fora da cobertura registrada.`}
-      </p>
-      <ul className="audit-trails">
-        <li>
-          trilha do tenant —{' '}
-          {coverage.perTrail.tenant.throughTime
-            ? `coberta até ${formatDateTime(coverage.perTrail.tenant.throughTime)}`
-            : 'sem cobertura registrada'}
-        </li>
-        <li>
-          trilha da instância —{' '}
-          {coverage.perTrail.instance.throughTime
-            ? `coberta até ${formatDateTime(coverage.perTrail.instance.throughTime)}`
-            : 'sem cobertura registrada'}
-        </li>
-      </ul>
-    </div>
-  );
-}
-
-function ReceiptCard({ receipt }: { receipt: AuditReceipt }) {
-  const [showDetail, setShowDetail] = useState(false);
-  return (
-    <div className="audit-receipt-card">
-      <div className="audit-receipt-assurance">
-        <EvidenceSeal state="ancoravel" note="self-recorded" />
-        <strong>Registro próprio</strong>
-      </div>
-      <p className="audit-receipt-sentence">
-        O digest fica registrado na própria trilha da plataforma. <strong>Não há notarização externa.</strong>
-      </p>
-      <dl className="audit-receipt-fields">
-        <div>
-          <dt>digest</dt>
-          <dd className="mono">
-            {shortDigest(receipt.digest)}{' '}
-            <button type="button" className="link-btn tiny" onClick={() => copyText(receipt.digest)}>
-              copiar
-            </button>
-          </dd>
-        </div>
-        <div>
-          <dt>algoritmo</dt>
-          <dd className="mono">{receipt.algorithm}</dd>
-        </div>
-        <div>
-          <dt>eventos</dt>
-          <dd>{receipt.count}</dd>
-        </div>
-        <div>
-          <dt>gerado em</dt>
-          <dd>{formatDateTime(receipt.generatedAt)}</dd>
-        </div>
-        <div>
-          <dt>solicitado por</dt>
-          <dd>
-            <ActorBadge actor={receipt.generatedBy} />
-          </dd>
-        </div>
-      </dl>
-      <CoverageSection coverage={receipt.coverage} count={receipt.count} />
-      <details className="audit-receipt-detail" open={showDetail} onToggle={(e) => setShowDetail((e.target as HTMLDetailsElement).open)}>
-        <summary>detalhe técnico (anchorRef, identificadores de transação)</summary>
-        <dl>
-          <div>
-            <dt>anchorRef</dt>
-            <dd className="mono">{receipt.anchorRef}</dd>
-          </div>
-          <div>
-            <dt>trilha tenant · throughXid</dt>
-            <dd className="mono">{receipt.coverage.perTrail.tenant.throughXid ?? '(sem cobertura registrada)'}</dd>
-          </div>
-          <div>
-            <dt>trilha instância · throughXid</dt>
-            <dd className="mono">{receipt.coverage.perTrail.instance.throughXid ?? '(sem cobertura registrada)'}</dd>
-          </div>
-        </dl>
-      </details>
-      <div className="audit-receipt-actions">
-        <Button intent="neutral" onClick={() => copyText(JSON.stringify(receipt, null, 2))}>
-          Copiar recibo
-        </Button>
-      </div>
-    </div>
-  );
 }
 
 type ExportState =
