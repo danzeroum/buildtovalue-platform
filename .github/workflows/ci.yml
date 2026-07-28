@@ -115,3 +115,39 @@ jobs:
         run: |
           echo "=== API ==="; cat /tmp/api.log || true
           echo "=== WORKER ==="; cat /tmp/worker.log || true
+
+  # Job de IMAGEM: constrói as QUATRO imagens do deploy. Existe por causa de uma
+  # regressão real — o `--legacy` do pnpm 10 quebrou os três Dockerfiles de Node
+  # e só apareceu no primeiro build na VPS, porque nada aqui construía imagem.
+  #
+  # Constrói os Dockerfiles de `deploy/` — os que o `deploy/docker-compose.yml`
+  # referencia de fato. Os de `infra/docker/` são ÓRFÃOS (nenhum compose os usa)
+  # e divergiram: sem pin de pnpm e sem `--legacy`. Construí-los daria job verde
+  # sobre arquivo que ninguém implanta, que é pior que não ter job.
+  #
+  # Sem push e sem registry: o valor está em COMPILAR, não em publicar. Nenhuma
+  # credencial entra neste workflow.
+  imagens:
+    name: imagem (${{ matrix.imagem }})
+    runs-on: ubuntu-latest
+    strategy:
+      # Uma imagem quebrada não pode esconder o estado das outras: com fail-fast
+      # o log diria só "cancelado" e a próxima rodada recomeçaria às cegas.
+      fail-fast: false
+      matrix:
+        imagem: [api, worker, migrate, console]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build de deploy/Dockerfile.${{ matrix.imagem }}
+        uses: docker/build-push-action@v6
+        with:
+          # Contexto = raiz do repo, igual ao compose (`context: ..` a partir de
+          # deploy/). Muda o que o `COPY . .` enxerga — e o .dockerignore da raiz.
+          context: .
+          file: deploy/Dockerfile.${{ matrix.imagem }}
+          push: false
+          # Cache por imagem: escopo compartilhado faria uma sobrescrever a outra
+          # e o cache degradaria a cada rodada.
+          cache-from: type=gha,scope=${{ matrix.imagem }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.imagem }}
