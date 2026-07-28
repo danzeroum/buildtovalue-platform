@@ -70,10 +70,25 @@ usa baseUrl relativa, então não há CORS nem URL de API embutida no build.
   formas possíveis (rede compartilhada × porta no host).
 
 ## 5. Operar
+
+Atualizar é `deploy/update.sh` — puxa a branch, reconstrói e VERIFICA (código de
+saída ≠ 0 se algo não ficou healthy ou se a migração falhou). Sem commit novo ele
+nem chama o Docker:
 ```bash
-docker compose logs -f api worker         # logs (json, rotacionados 10m×3)
-docker compose pull && docker compose up -d   # atualizar versão (imagens novas)
-docker compose up -d --build api worker   # rebuild local (sem registry)
+cd /opt/btv/buildtovalue-platform
+./deploy/update.sh --check    # o que mudaria; não toca em nada
+./deploy/update.sh            # atualiza de fato
+./deploy/update.sh --force    # reconstrói mesmo sem commit novo
+```
+Ele PARA antes de mexer em qualquer coisa se houver mudança local não commitada
+(um `git merge` silencioso engoliria) ou se a branch tiver divergido do remoto
+(`--ff-only`), e AVISA quando a atualização traz migração — que é forward-only e
+não tem `down`. Nesse caso, backup antes (§6).
+
+Comandos avulsos:
+```bash
+docker compose logs -f api worker          # logs (json, rotacionados 10m×3)
+docker compose up -d --build console       # rebuild de um serviço só
 docker compose down                        # parar (mantém o volume btv_pgdata)
 ```
 
