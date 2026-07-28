@@ -97,6 +97,40 @@ docker compose down                        # parar (mantém o volume btv_pgdata)
 > O item do gate é o **ENSAIO documentado**, não só o dump. Faça o dump para
 > **FORA da VPS** e restaure num banco descartável, comparando contagens.
 
+### 6.0 Backup automático (diário)
+
+`infra/docker/backup.sh` roda em dois modos; na VPS é o de Docker, porque o
+Postgres do deploy **não publica porta** — só se chega por `compose exec`.
+
+Instalar o agendamento (uma vez, como root):
+```bash
+crontab -l > /tmp/cron.atual 2>/dev/null
+cat /opt/btv/buildtovalue-platform/infra/docker/backup.cron >> /tmp/cron.atual
+crontab /tmp/cron.atual && crontab -l
+```
+
+Antes de confiar nele, rode uma vez à mão e confira que o arquivo tem tamanho:
+```bash
+BACKUP_DIR=/var/backups/btv COMPOSE_DIR=/opt/btv/buildtovalue-platform/deploy \
+  /opt/btv/buildtovalue-platform/infra/docker/backup.sh
+ls -l /var/backups/btv
+```
+
+O script escreve em `.part` e só promove no fim, com piso de 1 KB: banco fora do
+ar → `exit 1` registrado no log e **nenhum arquivo novo**. Isso importa porque a
+versão anterior escrevia direto no destino e deixava um dump de **0 byte com
+nome de dump bom** — backup que parece existir é pior que backup que não existe.
+
+Rotação do log (senão `/var/log/btv-backup.log` cresce sem fim):
+```bash
+cat > /etc/logrotate.d/btv-backup <<'EOF'
+/var/log/btv-backup.log { weekly rotate 12 compress missingok notifempty }
+EOF
+```
+
+O dump fica **na VPS**. Isso não substitui a cópia para fora dela (§6 abaixo) —
+disco que morre leva junto o backup que estava nele.
+
 **Backup (pg_dump para fora da VPS):**
 ```bash
 # do seu workstation (o Postgres não tem porta publicada — dump via exec):
