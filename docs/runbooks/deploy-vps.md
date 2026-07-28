@@ -38,10 +38,12 @@ curl -sf http://127.0.0.1:${API_HOST_PORT:-3000}/ready && echo OK
 A ordem é garantida: a `api`/`worker` só sobem após `migrate` sair com sucesso
 (`service_completed_successfully`) — migração forward-only com o papel de migração.
 
-> As imagens são multi-stage e usam `pnpm --filter=… --prod deploy` (marcado
-> "experimental" pelo pnpm) para o runtime sem devDependencies. Se um build não
-> empacotar as deps de workspace, acrescente `--legacy` ao `deploy` no Dockerfile.
-> Este primeiro build é validado NA VPS (não há daemon Docker no CI).
+> As imagens são multi-stage e usam `pnpm --filter=… --prod deploy --legacy`
+> para o runtime sem devDependencies. O `--legacy` **não é opcional**: a partir
+> do pnpm 10 o `deploy` só roda sem ele em workspaces com
+> `inject-workspace-packages=true`, e sem ele o build morre com
+> `ERR_PNPM_DEPLOY_NONINJECTED_WORKSPACE`. Não há daemon Docker no CI, então
+> mudanças nos Dockerfiles seguem sendo validadas na VPS.
 
 ## 3. Semear o demo (one-off)
 ```bash
