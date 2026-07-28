@@ -128,8 +128,36 @@ cat > /etc/logrotate.d/btv-backup <<'EOF'
 EOF
 ```
 
-O dump fica **na VPS**. Isso não substitui a cópia para fora dela (§6 abaixo) —
-disco que morre leva junto o backup que estava nele.
+### 6.0.1 Cópia para fora da VPS
+
+Dump que vive na mesma máquina do banco é cópia, não backup: disco que morre
+leva os dois. O item 3 do gate exige a cópia externa.
+
+Defina `BACKUP_REMOTE` (destino `rclone`) e o script copia o dump e o `.sha256`
+depois de o local estar íntegro, **conferindo o sha256 do objeto remoto**:
+
+```bash
+rclone config          # cria ~/.config/rclone/rclone.conf — credenciais FORA do repo
+BACKUP_DIR=/var/backups/btv COMPOSE_DIR=/opt/btv/buildtovalue-platform/deploy \
+  BACKUP_REMOTE=btv-s3:bucket/backups \
+  /opt/btv/buildtovalue-platform/infra/docker/backup.sh
+```
+
+Três comportamentos, todos exercitados:
+
+| Situação | Resultado |
+|---|---|
+| `BACKUP_REMOTE` ausente | **modo degradado**: backup local, `exit 0`, AVISO no log de que o gate não fecha assim |
+| destino ok | dump + `.sha256` remotos, hash conferido, `exit 0` |
+| destino inacessível | `exit 1` logado, **dump local preservado** |
+
+A cópia é **adição, nunca condição**: falha nela não pode destruir o backup que
+já funcionava. Se o remoto não calcula sha256 do lado servidor, o script baixa e
+compara — verificação de verdade, em vez de declarar sucesso porque o upload não
+deu erro.
+
+Isto é **verificação** (a cópia subiu íntegra?). A **validação** (o objeto remoto
+restaura?) é o ensaio do runbook de incidentes — é lá que vira evidência de gate.
 
 **Backup (pg_dump para fora da VPS):**
 ```bash
