@@ -85,6 +85,13 @@ export function StudioRoute() {
   // sozinho, colando o JSON exportado do editor da lib.
   const [deployingAgent, setDeployingAgent] = useState(false);
   const [importing, setImporting] = useState(false);
+  // O `diagram` do BpmnEditor é a semente, NÃO uma prop controlada ("Initial
+  // diagram. Subsequent edits flow through the command stack." — a lib semeia o
+  // DiagramProvider uma vez). Trocar o estado não recarrega o canvas: só a
+  // remontagem carrega. Este contador muda SÓ quando o diagrama vem de fora
+  // (importação) — se ele mudasse a cada `onChange`, o editor remontaria a cada
+  // edição e o histórico de desfazer morreria junto.
+  const [loadKey, setLoadKey] = useState(0);
   return (
     <section className="route studio" aria-label="Estúdio">
       <div className="doc-bar">
@@ -103,7 +110,7 @@ export function StudioRoute() {
       </div>
       <div className="studio-canvas" data-dimmed={publishing || deployingAgent || importing || undefined}>
         <Suspense fallback={<NonIdeal kind="loading" title="Carregando o designer…" />}>
-          <BpmnEditor diagram={diagram} onChange={setDiagram} />
+          <BpmnEditor key={loadKey} diagram={diagram} onChange={setDiagram} />
         </Suspense>
       </div>
       {publishing && <PublishModal diagram={diagram} onClose={() => setPublishing(false)} />}
@@ -113,6 +120,7 @@ export function StudioRoute() {
           onClose={() => setImporting(false)}
           onReplace={(next) => {
             setDiagram(next);
+            setLoadKey((k) => k + 1);
             setImporting(false);
           }}
         />
