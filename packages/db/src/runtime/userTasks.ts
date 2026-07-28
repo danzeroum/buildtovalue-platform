@@ -19,6 +19,10 @@ export interface UserTaskListItem {
   id: string;
   instance_id: string;
   element_id: string;
+  /** Rótulo humano PINADO na criação (0022). `null` = sem rótulo conhecido
+   *  (elemento sem label, definição embutida, ou tarefa anterior à migração) —
+   *  a leitura cai para `element_id`. NUNCA é preenchido depois. */
+  element_label: string | null;
   form_ref: string;
   assignee: string | null;
   candidate_roles: string[];
@@ -78,7 +82,7 @@ export async function listUserTasks(
     // filtros SQL primeiro; a visibilidade por papel é aplicada em memória
     // sobre a página (+1) — v1 com poucos papéis por tenant.
     const rows = await tx`
-      SELECT id, instance_id, element_id, form_ref, assignee, candidate_roles,
+      SELECT id, instance_id, element_id, element_label, form_ref, assignee, candidate_roles,
              status, claimed_at, created_at, is_gate,
              -- AG-3.1: só campos NÃO sensíveis do world-delta para a marca da lista.
              CASE WHEN is_gate THEN payload->>'effect' END AS gate_effect,
@@ -133,7 +137,7 @@ export async function getUserTask(
 ): Promise<UserTaskDetail | undefined> {
   return withTenant(sql, tenantId, async (tx) => {
     const [row] = await tx`
-      SELECT ut.id, ut.instance_id, ut.element_id, ut.form_ref, ut.assignee,
+      SELECT ut.id, ut.instance_id, ut.element_id, ut.element_label, ut.form_ref, ut.assignee,
              ut.candidate_roles, ut.status, ut.claimed_at, ut.created_at, ut.payload,
              ut.is_gate, i.definition_ref, i.revision
       FROM user_tasks ut JOIN instances i ON i.id = ut.instance_id

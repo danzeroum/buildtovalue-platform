@@ -218,6 +218,10 @@ body {
 .task-item-top strong { font-size: var(--ui-font-size-body); }
 .task-age { font-size: var(--ui-font-size-meta); color: var(--ui-ink-muted); }
 .task-item-meta { font-size: var(--ui-font-size-meta); color: var(--ui-ink-muted); }
+/* Rótulo humano no título; o element_id vira metadado — mesma regra do mono
+   (D25.2: identificador é mono) e do piso de 11px. Só aparece quando HÁ rótulo:
+   sem ele o id já é o título, e repeti-lo seria ruído. */
+.task-item-eid { font-size: var(--ui-font-size-meta); color: var(--ui-ink-muted); }
 .task-tags { display: flex; gap: 0.35rem; }
 .task-detail-wrap { border: 1px solid var(--ui-surface-border); border-radius: 8px; background: var(--ui-surface-card); padding: var(--ui-space-calm-gutter); min-height: 60vh; }
 .task-sub { font-size: var(--ui-font-size-meta); color: var(--ui-ink-muted); display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: center; }

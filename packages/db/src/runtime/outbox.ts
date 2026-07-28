@@ -68,6 +68,19 @@ export function historySeq(revision: number, effectIndex: number): number {
   return revision * 100_000 + effectIndex;
 }
 
+/**
+ * Rótulo humano a PINAR na tarefa (0022), lido do nó da definição pinada.
+ *
+ * Ausência tem um significado só — `null`, "não sei o nome" — e a leitura cai
+ * para `element_id`. Por isso `""` e whitespace NÃO viram rótulo: um título em
+ * branco na Tasklist seria pior que o identificador, e string vazia gravada
+ * seria indistinguível de "sem rótulo" na trilha. Nó ausente (definição
+ * embutida, sem registry) também é `null`.
+ */
+export function pinnedElementLabel(node: { label?: unknown } | undefined): string | null {
+  return typeof node?.label === 'string' && node.label.trim() !== '' ? node.label : null;
+}
+
 /** Canal do pg_notify emitido no COMMIT do avanço (payload = tenant_id). */
 export const OUTBOX_CHANNEL = 'btv_outbox';
 
@@ -259,6 +272,9 @@ async function applyEffect(
         WHERE i.id = ${row.instance_id}`;
       const node = defRow?.diagram?.nodes?.[effect.elementId!];
       const isGate = node?.properties?.btvGate === true;
+      // Rótulo humano PINADO (0022), resolvido aqui pelo MESMO caminho do
+      // is_gate: contra a definição pinada da instância, uma vez, na criação.
+      const elementLabel = pinnedElementLabel(node);
       let payload: Record<string, unknown> = (effect.payload ?? {}) as Record<string, unknown>;
       if (isGate && defRow && typeof node?.properties?.toolRef === 'string') {
         // FIO do gate (item 2): o payload da tarefa de gate É o world-delta —
@@ -291,8 +307,10 @@ async function applyEffect(
         if (inst) await recordGateProposal(tx, row.tenant_id, row.instance_id, effect.elementId!, inst.revision);
       }
       await tx`INSERT INTO user_tasks
-          (tenant_id, instance_id, element_id, wait_key, form_ref, candidate_roles, payload, is_gate)
+          (tenant_id, instance_id, element_id, element_label, wait_key, form_ref,
+           candidate_roles, payload, is_gate)
         VALUES (${row.tenant_id}, ${row.instance_id}, ${effect.elementId!},
+                ${elementLabel},
                 ${effect.waitKey!}, ${effect.formRef ?? ''},
                 ${effect.candidates ?? []},
                 ${tx.json(payload as never)},

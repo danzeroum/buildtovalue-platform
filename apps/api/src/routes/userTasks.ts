@@ -9,6 +9,10 @@ const taskSummarySchema = z.object({
   id: z.string().uuid(),
   instanceId: z.string().uuid(),
   elementId: z.string(),
+  /** Rótulo humano PINADO na criação da tarefa (0022). `null` = sem rótulo
+   *  conhecido; o cliente cai para `elementId`. É TEXTO do modelo — entrada não
+   *  confiável, renderizar sempre como texto, nunca como HTML. */
+  elementLabel: z.string().nullable(),
   formRef: z.string(),
   assignee: z.string().nullable(),
   candidateRoles: z.array(z.string()),
@@ -44,6 +48,7 @@ function summarize(row: {
   id: string;
   instance_id: string;
   element_id: string;
+  element_label: string | null;
   form_ref: string;
   assignee: string | null;
   candidate_roles: string[];
@@ -58,6 +63,7 @@ function summarize(row: {
     id: row.id,
     instanceId: row.instance_id,
     elementId: row.element_id,
+    elementLabel: row.element_label ?? null,
     formRef: row.form_ref,
     assignee: row.assignee,
     candidateRoles: row.candidate_roles,

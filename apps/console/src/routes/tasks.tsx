@@ -19,6 +19,19 @@ const FILTERS: { key: Filter; label: string }[] = [
 ];
 
 /**
+ * Título da tarefa: rótulo humano PINADO na criação (0022), caindo para o
+ * `elementId` quando não há. Decisão A da F3 aplicada onde mais importa — quem
+ * trabalha na lista lia `t1`/`xss`, identificador de modelador.
+ *
+ * O fallback não é defensivo por hábito: `elementLabel` é NULL de verdade para
+ * elemento sem rótulo, definição embutida e — para sempre — tarefa criada antes
+ * da migração. Nulo aqui significa "não sei o nome", nunca string vazia.
+ */
+function taskTitle(t: { elementLabel?: string | null; elementId: string }): string {
+  return t.elementLabel?.trim() ? t.elementLabel : t.elementId;
+}
+
+/**
  * /tasks (F3.4) — persona de negócio. Claim persistente (D21): assumir devolve
  * um claimToken ROTACIONADO que a conclusão exige (fencing); só o dono libera
  * (ou o operador, por /assignment auditado — D24). O formulário é o PINADO
@@ -44,7 +57,11 @@ export function TasksRoute() {
     const q = search.trim().toLowerCase();
     if (!q) return items;
     return items.filter(
-      (t) => t.elementId.toLowerCase().includes(q) || t.formRef.toLowerCase().includes(q) || t.instanceId.includes(q),
+      (t) =>
+        taskTitle(t).toLowerCase().includes(q) ||
+        t.elementId.toLowerCase().includes(q) ||
+        t.formRef.toLowerCase().includes(q) ||
+        t.instanceId.includes(q),
     );
   }, [items, search]);
   // AG-3.1 (P1): gates de efeito irreversível/externo SOBEM ao topo (maior aposta
@@ -71,7 +88,7 @@ export function TasksRoute() {
         )}
         <input
           className="rail-search"
-          placeholder="Buscar por elemento, formulário ou instância…"
+          placeholder="Buscar por tarefa, elemento, formulário ou instância…"
           aria-label="Buscar tarefa"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -145,9 +162,12 @@ export function TasksRoute() {
                 onClick={() => setSelected(t.id)}
               >
                 <div className="task-item-top">
-                  <strong>{t.elementId}</strong>
+                  {/* JSX interpola como TEXTO — rótulo vindo do diagrama é
+                      entrada não confiável e nunca vira HTML. */}
+                  <strong>{taskTitle(t)}</strong>
                   <span className="task-age mono">{relativeTime(t.createdAt)}</span>
                 </div>
+                {t.elementLabel && <div className="task-item-eid mono">{t.elementId}</div>}
                 <div className="task-item-meta mono">
                   {/* gate: nomeia a TOOL proponente (o world-delta carrega o tool,
                       não o id do agente — honesto ao schema congelado). */}
@@ -417,7 +437,7 @@ function TaskFormLoaded({
     <div className="task-form">
       <div className="doc-bar">
         <div>
-          <h1>{schema.title || task.elementId}</h1>
+          <h1>{schema.title || taskTitle(task)}</h1>
           <div className="task-sub mono">
             inst {shortId(task.instanceId)} · {task.elementId} · form pinado{' '}
             <span className="pin-ref">{task.formRef}</span>
