@@ -2,8 +2,12 @@
 
 > Ambiente de **teste/demo** com Postgres **dedicado**, numa VPS **compartilhada**
 > com outras aplicações. **NÃO é o ambiente de piloto** (ver §7 — o que ele NÃO
-> satisfa do Gate 8.4). Console é build **estático gerado no CI**; a VPS só faz
-> `pull`/`up`. Nada de nginx próprio — a VPS já tem o `global-ingress-gateway`.
+> satisfa do Gate 8.4). Nada de nginx de borda próprio — a VPS já tem o
+> `global-ingress-gateway`.
+>
+> **Deploy concreto, com domínio e TLS:** `deploy-plataforma-vps.md` (passo a
+> passo de `plataforma.buildtovalue.cloud`). Este documento é a referência do
+> compose e das operações de banco.
 
 ## 0. O que sobe (`deploy/docker-compose.yml`)
 
@@ -11,11 +15,12 @@
 |---|---|---|
 | `postgres` | dados, DEDICADO | **nenhuma** (só rede interna) |
 | `migrate` | one-shot, papel de migração | — (roda e sai) |
-| `api` | contrato `/v1` | **só** `127.0.0.1:${API_HOST_PORT}` |
+| `api` | contrato `/v1` | rede de borda + `127.0.0.1:${API_HOST_PORT}` (diagnóstico) |
 | `worker` | outbox/timers/jobs/ancoragem | nenhuma (metrics interno) |
+| `console` | SPA estático (nginx da imagem) | rede de borda |
 
-Tetos (VPS compartilhada): api/worker 256m · postgres 384m · 0.5 cpu cada ·
-`NODE_OPTIONS=--max-old-space-size=192` · logs json-file 10m×3.
+Tetos (VPS compartilhada): api/worker 256m · postgres 384m · console 128m ·
+0.5 cpu cada · `NODE_OPTIONS=--max-old-space-size=192` · logs json-file 10m×3.
 
 ## 1. Pré-requisitos na VPS
 - Docker + Compose v2.
@@ -44,19 +49,23 @@ docker compose --profile seed run --rm seed
 # tenant acme · admin@acme.test / demo1234 · processo Reembolso@1
 ```
 
-## 4. Console (estático, do CI)
-O `apps/console/dist` é gerado **no CI** (`pnpm -r build`) e publicado como
-artefato. Copie-o para o diretório do host que o ingress serve (ex.:
-`/var/www/buildtovalue`) e plugue o server block:
+## 4. Console e ingress
+O console sobe como **imagem própria** (`deploy/Dockerfile.console`): o builder
+compila o monorepo e o runtime é um `nginx:alpine` servindo `apps/console/dist`
+com `try_files` para as rotas do react-router. Nada é copiado do CI, e o CI não
+publica artefato de build.
 
-- Exemplo pronto: `deploy/ingress-example.conf` (proxy de `/v1 /health /ready`
-  propagando `X-Request-Id`; console SPA com `try_files`).
-- **Duas formas de plugar no `global-ingress-gateway`** (escolha quando souber
-  como o gateway é configurado):
-  - **(a) rede docker compartilhada** — adicione a `api` a uma rede externa do
-    gateway e use `proxy_pass http://api:3000;` (a api não precisa de porta no host);
-  - **(b) porta no host** — mantenha `127.0.0.1:${API_HOST_PORT}` e use
-    `proxy_pass http://127.0.0.1:${API_HOST_PORT};`.
+Plugagem no `global-ingress-gateway` pela forma **(a) rede compartilhada**: a
+`api` e o `console` entram também na rede externa `btv-prod-net`, e o gateway
+faz `proxy_pass` **por nome de container** (`btv-platform-api`,
+`btv-platform-console`). Console e API no mesmo domínio — o cliente do console
+usa baseUrl relativa, então não há CORS nem URL de API embutida no build.
+
+- Blocos prontos: **`deploy/ingress-plataforma.conf`** (ACME + TLS + roteamento
+  `/v1|/health|/ready` com `X-Request-Id`, `/metrics` barrado).
+- Passo a passo com certificado: **`deploy-plataforma-vps.md`**.
+- `deploy/ingress-example.conf` continua como referência genérica das duas
+  formas possíveis (rede compartilhada × porta no host).
 
 ## 5. Operar
 ```bash

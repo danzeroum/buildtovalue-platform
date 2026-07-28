@@ -12,4 +12,10 @@ apps/console/dist
 .env
 .env.*
 !.env.example
+# Padrões do .dockerignore NÃO são recursivos: `.env` acima só casa na raiz do
+# contexto. O deploy tem os seus, e o Dockerfile faz `COPY . .` — sem estas
+# linhas, o .env da VPS e a CHAVE DE IA REAL (deploy-vps.md §8.2) entrariam na
+# imagem. `.env.example` do deploy segue no contexto (nome diferente).
+deploy/.env
+deploy/secrets
 *.log
