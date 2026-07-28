@@ -192,6 +192,15 @@ body {
 .lint-ref { color: var(--ui-ink-muted); }
 .issues-inline { font-size: var(--ui-font-size-meta); color: var(--ui-role-warning-fg); }
 
+/* Importar .bpmn — mesmo vocabulário visual do drop/paste da Administração. */
+.import-drop { border: 1px dashed var(--ui-surface-border); border-radius: 0.5rem; padding: var(--ui-space-calm-block); text-align: center; background: var(--ui-surface-sunken); margin-top: var(--ui-space-dense-gutter); }
+.import-paste summary { cursor: pointer; color: var(--ui-role-info-fg); font-size: var(--ui-font-size-label); }
+.import-paste textarea { width: 100%; box-sizing: border-box; margin: 0.5rem 0; border: 1px solid var(--ui-surface-border); border-radius: 6px; padding: 0.5rem; }
+.import-summary { font-size: var(--ui-font-size-label); color: var(--ui-ink); margin: var(--ui-space-calm-block) 0 0.5rem; }
+/* Âmbar, não vermelho: rejeição do lint é parada honesta, não falha da pessoa. */
+.import-verdict { background: var(--ui-role-warning-bg); color: var(--ui-role-warning-fg); border-radius: 6px; padding: 0.5rem 0.7rem; font-size: var(--ui-font-size-label); }
+.import-replace-note { margin: 0 auto 0 0; align-self: center; font-size: var(--ui-font-size-meta); color: var(--ui-ink-muted); }
+
 /* ============ /tasks (F3.4) ============ */
 .route.tasks { display: grid; grid-template-columns: 220px 340px minmax(360px, 1fr); gap: var(--ui-space-calm-gutter); align-items: start; }
 .tasks-rail { display: flex; flex-direction: column; gap: var(--ui-space-calm-row); }

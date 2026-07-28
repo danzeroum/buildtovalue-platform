@@ -1,5 +1,5 @@
-import { Suspense, lazy, useEffect, useState } from 'react';
-import { createDiagram, createEdge, createNode, type BpmnDiagram } from '@buildtovalue/core';
+import { Suspense, lazy, useEffect, useState, type ChangeEvent } from 'react';
+import { BpmnXmlConverter, createDiagram, createEdge, createNode, type BpmnDiagram } from '@buildtovalue/core';
 import { api, problemMessage } from '../api/client.js';
 import { Button, NonIdeal } from '../ui/ui.js';
 
@@ -84,11 +84,15 @@ export function StudioRoute() {
   // escopo enquanto P3/squad não decide) — só o mínimo para o cliente publicar
   // sozinho, colando o JSON exportado do editor da lib.
   const [deployingAgent, setDeployingAgent] = useState(false);
+  const [importing, setImporting] = useState(false);
   return (
     <section className="route studio" aria-label="Estúdio">
       <div className="doc-bar">
         <h1>{diagram.name}</h1>
         <div className="doc-bar-actions">
+          <Button intent="neutral" onClick={() => setImporting(true)}>
+            Importar .bpmn…
+          </Button>
           <Button intent="neutral" onClick={() => setDeployingAgent(true)}>
             Publicar grafo de agente (colar JSON)…
           </Button>
@@ -97,14 +101,196 @@ export function StudioRoute() {
           </Button>
         </div>
       </div>
-      <div className="studio-canvas" data-dimmed={publishing || deployingAgent || undefined}>
+      <div className="studio-canvas" data-dimmed={publishing || deployingAgent || importing || undefined}>
         <Suspense fallback={<NonIdeal kind="loading" title="Carregando o designer…" />}>
           <BpmnEditor diagram={diagram} onChange={setDiagram} />
         </Suspense>
       </div>
       {publishing && <PublishModal diagram={diagram} onClose={() => setPublishing(false)} />}
       {deployingAgent && <AgentDeployModal onClose={() => setDeployingAgent(false)} />}
+      {importing && (
+        <ImportBpmnModal
+          onClose={() => setImporting(false)}
+          onReplace={(next) => {
+            setDiagram(next);
+            setImporting(false);
+          }}
+        />
+      )}
     </section>
+  );
+}
+
+type ImportState =
+  | { kind: 'idle' }
+  | { kind: 'parsing' }
+  | { kind: 'parseError'; message: string }
+  | { kind: 'preview'; diagram: BpmnDiagram; warnings: string[]; issues: LintIssue[] | null; lintError: string | null };
+
+/**
+ * IMPORTAR .bpmn — trazer um modelo de fora para DENTRO do designer. A
+ * capacidade já existia na biblioteca (`BpmnXmlConverter.fromXml`, bidirecional
+ * e interoperável com Camunda/bpmn.io); faltava a superfície.
+ *
+ * Decisão de desenho: o preview roda o LINT D19 na hora, e não só na hora de
+ * publicar. Modelos de documentação (`isExecutable="false"`, com pool/lanes,
+ * anotações, timers cíclicos, tarefas sem formRef) importam limpos mas são
+ * rejeitados pelo perfil governado — sem o veredicto aqui, a pessoa importa,
+ * clica "Publicar…" e leva uma parede de rejeições sem entender por quê.
+ *
+ * VER não é PUBLICAR: a substituição é permitida MESMO com rejeições. O que o
+ * lint faz é nomear o estado, não impedir a leitura do desenho. Quem bloqueia
+ * o deploy continua sendo o `PublishModal` — regra D19 em um lugar só.
+ */
+export function ImportBpmnModal({ onClose, onReplace }: { onClose: () => void; onReplace: (d: BpmnDiagram) => void }) {
+  const [state, setState] = useState<ImportState>({ kind: 'idle' });
+  const [pasted, setPasted] = useState('');
+
+  async function parse(xml: string) {
+    if (!xml.trim()) {
+      setState({ kind: 'parseError', message: 'Arquivo vazio — nada para importar.' });
+      return;
+    }
+    setState({ kind: 'parsing' });
+    let diagram: BpmnDiagram;
+    let warnings: string[];
+    try {
+      const result = new BpmnXmlConverter().fromXml(xml);
+      diagram = result.diagram;
+      warnings = result.warnings;
+    } catch (err) {
+      setState({ kind: 'parseError', message: err instanceof Error ? err.message : 'XML inválido.' });
+      return;
+    }
+    // Lint no preview. Falhar aqui NÃO invalida a importação — o desenho já foi
+    // lido; `lintError` só significa "não sei dizer se publica", nunca "0 rejeições".
+    const { data, error } = await api.POST('/v1/process-definitions/lint', {
+      body: { diagram: diagram as unknown as Record<string, never> },
+    });
+    setState({
+      kind: 'preview',
+      diagram,
+      warnings,
+      issues: error ? null : ((data?.issues as LintIssue[]) ?? []),
+      lintError: error ? problemMessage(error, 'Falha ao rodar o lint D19') : null,
+    });
+  }
+
+  function onFile(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => void parse(String(reader.result ?? ''));
+    reader.onerror = () => setState({ kind: 'parseError', message: 'Não foi possível ler o arquivo.' });
+    reader.readAsText(file);
+  }
+
+  const rejections = state.kind === 'preview' ? (state.issues ?? []).filter((i) => i.severity === 'error') : [];
+  const lintWarnings = state.kind === 'preview' ? (state.issues ?? []).filter((i) => i.severity === 'warning') : [];
+
+  return (
+    <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label="Importar modelo BPMN">
+      <div className="modal import-modal">
+        <header>
+          <h2>Importar modelo .bpmn</h2>
+          <button type="button" className="modal-close" onClick={onClose} aria-label="Fechar">
+            ✕
+          </button>
+        </header>
+        <p className="d19-note">
+          O modelo é lido para o designer — <strong>importar não publica</strong>. O lint D19 roda aqui só para dizer,
+          antes do clique, se ele cabe no escopo executável v1.
+        </p>
+
+        <div className="import-drop">
+          <input
+            type="file"
+            accept=".bpmn,.xml,application/xml,text/xml"
+            onChange={onFile}
+            aria-label="Selecionar arquivo .bpmn"
+          />
+        </div>
+        <details className="import-paste">
+          <summary>ou cole o XML — para quem copiou de um terminal</summary>
+          <textarea
+            value={pasted}
+            onChange={(e) => setPasted(e.target.value)}
+            rows={5}
+            className="mono"
+            aria-label="XML BPMN colado"
+          />
+          <Button intent="neutral" onClick={() => void parse(pasted)} disabled={!pasted.trim()}>
+            Ler XML
+          </Button>
+        </details>
+
+        {state.kind === 'idle' && (
+          <NonIdeal
+            kind="empty"
+            title="Nenhum modelo escolhido ainda."
+            detail="Escolha um arquivo .bpmn exportado do Camunda Modeler, do bpmn.io ou desta própria plataforma."
+          />
+        )}
+        {state.kind === 'parsing' && <NonIdeal kind="loading" title="Lendo o modelo e rodando o lint D19…" />}
+        {state.kind === 'parseError' && (
+          <NonIdeal
+            kind="error"
+            title="Não foi possível ler este arquivo."
+            detail="O diagrama aberto no designer não foi alterado."
+            technical={state.message}
+          />
+        )}
+        {state.kind === 'preview' && (
+          <div className="import-preview" aria-live="polite">
+            <p className="import-summary">
+              <strong>{state.diagram.name}</strong> — {Object.keys(state.diagram.nodes).length} nós ·{' '}
+              {Object.keys(state.diagram.edges).length} arestas
+            </p>
+            {state.lintError ? (
+              <NonIdeal
+                kind="error"
+                title="Não foi possível rodar o lint D19"
+                detail="O modelo foi lido e pode ser aberto — mas não dá para afirmar se ele cabe no escopo v1."
+                technical={state.lintError}
+              />
+            ) : rejections.length > 0 ? (
+              <p className="import-verdict" data-tone="warn" role="status">
+                <strong>
+                  {rejections.length} rejeição(ões) do lint D19 — este modelo pode ser aberto e navegado, mas não
+                  publicado.
+                </strong>{' '}
+                É um modelo de documentação, não de execução.
+              </p>
+            ) : (
+              <p className="lint-clean" data-tone="success" role="status">
+                <strong>0 rejeições</strong> — dentro do escopo executável v1.
+              </p>
+            )}
+            <LintIssuesList
+              rejections={rejections.map((i) => ({ ...i, ref: i.elementId ?? i.edgeId }))}
+              warnings={[
+                ...state.warnings.map((message) => ({ code: 'XML_IMPORT', severity: 'warning' as const, message })),
+                ...lintWarnings.map((i) => ({ ...i, ref: i.elementId ?? i.edgeId })),
+              ]}
+            />
+          </div>
+        )}
+
+        <footer className="modal-actions">
+          {state.kind === 'preview' && (
+            <p className="import-replace-note">O diagrama aberto no designer será substituído.</p>
+          )}
+          <Button intent="neutral" onClick={onClose}>
+            Cancelar
+          </Button>
+          {state.kind === 'preview' && (
+            <Button intent="primary" onClick={() => onReplace(state.diagram)}>
+              Substituir o diagrama aberto
+            </Button>
+          )}
+        </footer>
+      </div>
+    </div>
   );
 }
 

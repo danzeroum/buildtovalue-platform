@@ -1,0 +1,298 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+    xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+    xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+    xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+    xmlns:bpmnr="http://bpmn-react.io/schema/1.0"
+    id="Definitions_PR01"
+    targetNamespace="https://buildtovalue.io/privacidade/lgpd"
+    exporter="bpmn-react">
+  <bpmn:collaboration id="Collaboration_PR01">
+    <bpmn:participant id="Pool_PR01" name="Programa de privacidade e proteção de dados" processRef="Process_PR01"/>
+  </bpmn:collaboration>
+  <bpmn:process id="Process_PR01" name="PR-01 · Emissão de parecer técnico de privacidade" isExecutable="false">
+    <bpmn:extensionElements>
+      <bpmnr:diagram originalId="PR01" description="Triagem, emissão, homologação e encerramento de pareceres técnicos de privacidade."/>
+      <bpmnr:version versionId="ver-pr01-1-0-0" semanticVersion="1.0.0" status="draft"
+        changeSummary="Modelagem inicial a partir da especificação de processos do programa." createdBy="engenharia-privacidade" createdAt="2026-07-28T00:00:00.000Z"/>
+      <bpmnr:property name="dominio" value="&quot;privacidade&quot;"/>
+      <bpmnr:property name="baseNormativa" value="&quot;LGPD Lei 13.709/2018&quot;"/>
+      <bpmnr:property name="tabelasDMN" value="[&quot;D1&quot;, &quot;D2&quot;]"/>
+    </bpmn:extensionElements>
+    <bpmn:laneSet id="LaneSet_PR01">
+      <bpmn:lane id="Lane_PR01_solicitante" name="Solicitante / squad">
+        <bpmn:flowNodeRef>Start_PR01</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>A1_1</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>A1_9</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_PR01_engpriv" name="Engenharia de privacidade">
+        <bpmn:flowNodeRef>A1_2</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>G1_complexidade</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>A1_4</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Bnd_PR01_sla</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>A1_10</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_PR01</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_PR01_dpo" name="DPO / escritório de privacidade">
+        <bpmn:flowNodeRef>A1_5</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>A1_6</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>G2_risco</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_PR01_comite" name="Comitê de privacidade / diretoria">
+        <bpmn:flowNodeRef>A1_sla</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_PR01_sla</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>A1_8</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="Start_PR01" name="Demanda de privacidade recebida">
+      <bpmn:messageEventDefinition id="Start_PR01_def"/>
+    </bpmn:startEvent>
+    <bpmn:userTask id="A1_1" name="A1.1 Registrar nova demanda">
+      <bpmn:extensionElements>
+        <bpmnr:property name="executor" value="&quot;Solicitante / squad&quot;"/>
+        <bpmnr:property name="prazo" value="&quot;10 dias úteis antes do go-live&quot;"/>
+        <bpmnr:property name="evidencia" value="&quot;Ticket de intake com anexos&quot;"/>
+      </bpmn:extensionElements>
+    </bpmn:userTask>
+    <bpmn:userTask id="A1_2" name="A1.2 Triagem e mapeamento do tratamento">
+      <bpmn:extensionElements>
+        <bpmnr:property name="executor" value="&quot;Engenharia de privacidade&quot;"/>
+        <bpmnr:property name="prazo" value="&quot;2 dias úteis&quot;"/>
+        <bpmnr:property name="evidencia" value="&quot;Ficha de triagem e DFD versionados&quot;"/>
+      </bpmn:extensionElements>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="G1_complexidade" name="Complexidade? (DMN D1)">
+      <bpmn:extensionElements>
+        <bpmnr:property name="regra" value="&quot;D1&quot;"/>
+        <bpmnr:property name="entradas" value="&quot;tipo de dado, volume, decisão automatizada, transferência internacional&quot;"/>
+      </bpmn:extensionElements>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="A1_4" name="A1.4 Emitir o parecer técnico">
+      <bpmn:extensionElements>
+        <bpmnr:property name="executor" value="&quot;Engenharia de privacidade&quot;"/>
+        <bpmnr:property name="prazo" value="&quot;5 a 8 dias úteis&quot;"/>
+        <bpmnr:property name="evidencia" value="&quot;Parecer numerado e versionado&quot;"/>
+      </bpmn:extensionElements>
+    </bpmn:userTask>
+    <bpmn:userTask id="A1_5" name="A1.5 Escalar ao DPO">
+      <bpmn:extensionElements>
+        <bpmnr:property name="executor" value="&quot;DPO / escritório&quot;"/>
+        <bpmnr:property name="prazo" value="&quot;3 dias úteis&quot;"/>
+        <bpmnr:property name="evidencia" value="&quot;Ata da reunião de escalonamento&quot;"/>
+      </bpmn:extensionElements>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Bnd_PR01_sla" name="Prazo de parecer excedido" attachedToRef="A1_4" cancelActivity="false">
+      <bpmn:timerEventDefinition id="Bnd_PR01_sla_def">
+        <bpmn:timeCycle>R/P8D</bpmn:timeCycle>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:userTask id="A1_sla" name="A1.SLA Escalonar por estouro de prazo">
+      <bpmn:extensionElements>
+        <bpmnr:property name="executor" value="&quot;Comitê / diretoria&quot;"/>
+        <bpmnr:property name="prazo" value="&quot;imediato&quot;"/>
+        <bpmnr:property name="evidencia" value="&quot;Registro de escalonamento&quot;"/>
+      </bpmn:extensionElements>
+    </bpmn:userTask>
+    <bpmn:endEvent id="End_PR01_sla" name="Escalonamento registrado"/>
+    <bpmn:userTask id="A1_6" name="A1.6 Revisar e homologar o parecer">
+      <bpmn:extensionElements>
+        <bpmnr:property name="executor" value="&quot;DPO / escritório&quot;"/>
+        <bpmnr:property name="prazo" value="&quot;3 dias úteis&quot;"/>
+        <bpmnr:property name="evidencia" value="&quot;Registro de homologação&quot;"/>
+      </bpmn:extensionElements>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="G2_risco" name="Risco residual? (DMN D2)">
+      <bpmn:extensionElements>
+        <bpmnr:property name="regra" value="&quot;D2&quot;"/>
+        <bpmnr:property name="saidas" value="&quot;baixo, moderado, alto, crítico&quot;"/>
+      </bpmn:extensionElements>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="A1_8" name="A1.8 Deliberar sobre o risco">
+      <bpmn:extensionElements>
+        <bpmnr:property name="executor" value="&quot;Comitê de privacidade&quot;"/>
+        <bpmnr:property name="prazo" value="&quot;próxima reunião ordinária&quot;"/>
+        <bpmnr:property name="evidencia" value="&quot;Ata e termo de aceite de risco&quot;"/>
+      </bpmn:extensionElements>
+    </bpmn:userTask>
+    <bpmn:userTask id="A1_9" name="A1.9 Implementar os controles recomendados">
+      <bpmn:extensionElements>
+        <bpmnr:property name="executor" value="&quot;Solicitante / squad&quot;"/>
+        <bpmnr:property name="prazo" value="&quot;conforme condicionante&quot;"/>
+        <bpmnr:property name="evidencia" value="&quot;Evidências técnicas de cada controle&quot;"/>
+      </bpmn:extensionElements>
+    </bpmn:userTask>
+    <bpmn:userTask id="A1_10" name="A1.10 Verificar evidências e encerrar">
+      <bpmn:extensionElements>
+        <bpmnr:property name="executor" value="&quot;Engenharia de privacidade&quot;"/>
+        <bpmnr:property name="prazo" value="&quot;3 dias úteis&quot;"/>
+        <bpmnr:property name="evidencia" value="&quot;Checklist de verificação e RoPA atualizado&quot;"/>
+      </bpmn:extensionElements>
+    </bpmn:userTask>
+    <bpmn:endEvent id="End_PR01" name="Parecer encerrado com evidências"/>
+    <bpmn:textAnnotation id="Note_PR01">
+      <bpmn:text>Evidência que não comprova o controle reabre a implementação (A1.9).</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:sequenceFlow id="F01_01" sourceRef="Start_PR01" targetRef="A1_1"/>
+    <bpmn:sequenceFlow id="F01_02" sourceRef="A1_1" targetRef="A1_2"/>
+    <bpmn:sequenceFlow id="F01_03" sourceRef="A1_2" targetRef="G1_complexidade"/>
+    <bpmn:sequenceFlow id="F01_04" name="baixa ou média" sourceRef="G1_complexidade" targetRef="A1_4"/>
+    <bpmn:sequenceFlow id="F01_05" name="alta" sourceRef="G1_complexidade" targetRef="A1_5"/>
+    <bpmn:sequenceFlow id="F01_06" sourceRef="A1_4" targetRef="A1_6"/>
+    <bpmn:sequenceFlow id="F01_07" sourceRef="A1_5" targetRef="A1_6"/>
+    <bpmn:sequenceFlow id="F01_08" sourceRef="A1_6" targetRef="G2_risco"/>
+    <bpmn:sequenceFlow id="F01_09" name="alto ou crítico" sourceRef="G2_risco" targetRef="A1_8"/>
+    <bpmn:sequenceFlow id="F01_10" name="baixo ou moderado" sourceRef="G2_risco" targetRef="A1_9"/>
+    <bpmn:sequenceFlow id="F01_11" sourceRef="A1_8" targetRef="A1_9"/>
+    <bpmn:sequenceFlow id="F01_12" sourceRef="A1_9" targetRef="A1_10"/>
+    <bpmn:sequenceFlow id="F01_13" sourceRef="A1_10" targetRef="End_PR01"/>
+    <bpmn:sequenceFlow id="F01_14" sourceRef="Bnd_PR01_sla" targetRef="A1_sla"/>
+    <bpmn:sequenceFlow id="F01_15" sourceRef="A1_sla" targetRef="End_PR01_sla"/>
+    <bpmn:association id="Assoc_Note_PR01" sourceRef="A1_10" targetRef="Note_PR01"/>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_PR01">
+    <bpmndi:BPMNPlane id="BPMNPlane_PR01" bpmnElement="Collaboration_PR01">
+      <bpmndi:BPMNShape id="Shape_Pool_PR01" bpmnElement="Pool_PR01" isHorizontal="true">
+        <dc:Bounds x="160" y="80" width="2180" height="600"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Lane_PR01_solicitante" bpmnElement="Lane_PR01_solicitante" isHorizontal="true">
+        <dc:Bounds x="190" y="80" width="2150" height="150"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Lane_PR01_engpriv" bpmnElement="Lane_PR01_engpriv" isHorizontal="true">
+        <dc:Bounds x="190" y="230" width="2150" height="150"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Lane_PR01_dpo" bpmnElement="Lane_PR01_dpo" isHorizontal="true">
+        <dc:Bounds x="190" y="380" width="2150" height="150"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Lane_PR01_comite" bpmnElement="Lane_PR01_comite" isHorizontal="true">
+        <dc:Bounds x="190" y="530" width="2150" height="150"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Start_PR01" bpmnElement="Start_PR01">
+        <dc:Bounds x="277" y="137" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_A1_1" bpmnElement="A1_1">
+        <dc:Bounds x="420" y="115" width="130" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_A1_2" bpmnElement="A1_2">
+        <dc:Bounds x="610" y="265" width="130" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_G1_complexidade" bpmnElement="G1_complexidade">
+        <dc:Bounds x="840" y="280" width="50" height="50"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_A1_4" bpmnElement="A1_4">
+        <dc:Bounds x="990" y="265" width="130" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_A1_5" bpmnElement="A1_5">
+        <dc:Bounds x="990" y="415" width="130" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Bnd_PR01_sla" bpmnElement="Bnd_PR01_sla">
+        <dc:Bounds x="1066" y="327" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_A1_sla" bpmnElement="A1_sla">
+        <dc:Bounds x="1180" y="565" width="130" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_End_PR01_sla" bpmnElement="End_PR01_sla">
+        <dc:Bounds x="1417" y="587" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_A1_6" bpmnElement="A1_6">
+        <dc:Bounds x="1180" y="415" width="130" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_G2_risco" bpmnElement="G2_risco">
+        <dc:Bounds x="1410" y="430" width="50" height="50"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_A1_8" bpmnElement="A1_8">
+        <dc:Bounds x="1560" y="565" width="130" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_A1_9" bpmnElement="A1_9">
+        <dc:Bounds x="1750" y="115" width="130" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_A1_10" bpmnElement="A1_10">
+        <dc:Bounds x="1940" y="265" width="130" height="80"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_End_PR01" bpmnElement="End_PR01">
+        <dc:Bounds x="2177" y="287" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Shape_Note_PR01" bpmnElement="Note_PR01">
+        <dc:Bounds x="1835" y="720" width="340" height="60"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Edge_F01_01" bpmnElement="F01_01">
+        <di:waypoint x="313" y="155"/>
+        <di:waypoint x="420" y="155"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_F01_02" bpmnElement="F01_02">
+        <di:waypoint x="550" y="155"/>
+        <di:waypoint x="580" y="155"/>
+        <di:waypoint x="580" y="305"/>
+        <di:waypoint x="610" y="305"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_F01_03" bpmnElement="F01_03">
+        <di:waypoint x="740" y="305"/>
+        <di:waypoint x="840" y="305"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_F01_04" bpmnElement="F01_04">
+        <di:waypoint x="890" y="305"/>
+        <di:waypoint x="990" y="305"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_F01_05" bpmnElement="F01_05">
+        <di:waypoint x="890" y="305"/>
+        <di:waypoint x="940" y="305"/>
+        <di:waypoint x="940" y="455"/>
+        <di:waypoint x="990" y="455"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_F01_06" bpmnElement="F01_06">
+        <di:waypoint x="1120" y="305"/>
+        <di:waypoint x="1150" y="305"/>
+        <di:waypoint x="1150" y="455"/>
+        <di:waypoint x="1180" y="455"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_F01_07" bpmnElement="F01_07">
+        <di:waypoint x="1120" y="455"/>
+        <di:waypoint x="1180" y="455"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_F01_08" bpmnElement="F01_08">
+        <di:waypoint x="1310" y="455"/>
+        <di:waypoint x="1410" y="455"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_F01_09" bpmnElement="F01_09">
+        <di:waypoint x="1460" y="455"/>
+        <di:waypoint x="1510" y="455"/>
+        <di:waypoint x="1510" y="605"/>
+        <di:waypoint x="1560" y="605"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_F01_10" bpmnElement="F01_10">
+        <di:waypoint x="1460" y="455"/>
+        <di:waypoint x="1605" y="455"/>
+        <di:waypoint x="1605" y="155"/>
+        <di:waypoint x="1750" y="155"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_F01_11" bpmnElement="F01_11">
+        <di:waypoint x="1690" y="605"/>
+        <di:waypoint x="1720" y="605"/>
+        <di:waypoint x="1720" y="155"/>
+        <di:waypoint x="1750" y="155"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_F01_12" bpmnElement="F01_12">
+        <di:waypoint x="1880" y="155"/>
+        <di:waypoint x="1910" y="155"/>
+        <di:waypoint x="1910" y="305"/>
+        <di:waypoint x="1940" y="305"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_F01_13" bpmnElement="F01_13">
+        <di:waypoint x="2070" y="305"/>
+        <di:waypoint x="2177" y="305"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_F01_14" bpmnElement="F01_14">
+        <di:waypoint x="1084" y="363"/>
+        <di:waypoint x="1084" y="605"/>
+        <di:waypoint x="1180" y="605"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_F01_15" bpmnElement="F01_15">
+        <di:waypoint x="1310" y="605"/>
+        <di:waypoint x="1417" y="605"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Edge_Assoc_Note_PR01" bpmnElement="Assoc_Note_PR01">
+        <di:waypoint x="2005" y="345"/>
+        <di:waypoint x="2005" y="720"/>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
