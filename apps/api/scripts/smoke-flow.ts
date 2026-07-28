@@ -15,6 +15,17 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 const API = 'http://127.0.0.1:3000';
+
+// Credenciais do AMBIENTE (12-factor) — a mesma senha usada no `seed:demo`.
+// Sem default: senha literal aqui vazava para o repositório e era a que
+// autenticava o ambiente de demo exposto na internet.
+const SEED_TENANT = process.env.SEED_TENANT ?? 'acme';
+const SEED_EMAIL = process.env.SEED_EMAIL ?? 'admin@acme.test';
+const SEED_PASSWORD = process.env.SEED_PASSWORD;
+if (!SEED_PASSWORD) {
+  console.error('SEED_PASSWORD ausente — use a MESMA senha passada ao seed:demo.');
+  process.exit(1);
+}
 const children: ChildProcess[] = [];
 
 function start(name: string, entry: string): void {
@@ -63,7 +74,7 @@ async function main(): Promise<void> {
   const login = await fetch(`${API}/v1/auth/login`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ tenant: 'acme', email: 'admin@acme.test', password: 'demo1234' }),
+    body: JSON.stringify({ tenant: SEED_TENANT, email: SEED_EMAIL, password: SEED_PASSWORD }),
   });
   if (!login.ok) throw new Error(`login falhou: ${login.status} ${await login.text()}`);
   const { accessToken } = (await login.json()) as { accessToken: string };

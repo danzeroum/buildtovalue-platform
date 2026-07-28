@@ -195,6 +195,10 @@ services:
     environment:
       DATABASE_URL: postgres://app_api:app_api_dev@postgres:5432/buildtovalue
       DATABASE_MIGRATION_URL: postgres://app_migrator:${MIGRATOR_PASSWORD:?}@postgres:5432/buildtovalue
+      # Senha das personas do demo. SEM default no código (12-factor): o
+      # seed:demo falha alto sem ela. Enquanto havia default, o ambiente
+      # alcançável pela internet autenticava com a senha que estava no repo.
+      SEED_PASSWORD: ${SEED_PASSWORD:?defina no .env (>=12; openssl rand -base64 18)}
     depends_on:
       postgres: { condition: service_healthy }
       migrate: { condition: service_completed_successfully }

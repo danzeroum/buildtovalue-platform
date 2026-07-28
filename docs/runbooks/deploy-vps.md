@@ -48,7 +48,7 @@ A ordem é garantida: a `api`/`worker` só sobem após `migrate` sair com sucess
 ## 3. Semear o demo (one-off)
 ```bash
 docker compose --profile seed run --rm seed
-# tenant acme · admin@acme.test / demo1234 · processo Reembolso@1
+# tenant acme · admin@acme.test / $SEED_PASSWORD · processo Reembolso@1
 ```
 
 ## 4. Console e ingress

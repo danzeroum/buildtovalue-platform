@@ -25,7 +25,23 @@ import type { FormSchema } from '@buildtovalue/forms';
 const MIGRATION_URL =
   process.env.DATABASE_MIGRATION_URL ?? 'postgres://app_migrator:app_migrator_dev@localhost:5432/buildtovalue';
 const API_URL = process.env.DATABASE_URL ?? 'postgres://app_api:app_api_dev@localhost:5432/buildtovalue';
-const PASSWORD = process.env.SEED_PASSWORD ?? 'demo1234';
+/**
+ * SEM DEFAULT, de propósito (12-factor): senha de seed é segredo e vem do
+ * ambiente. Enquanto havia default, o valor ficava no código versionado — e o
+ * ambiente de demo na VPS, alcançável pela internet, autenticava com a senha
+ * que qualquer pessoa lia no repositório. Falhar aqui é barulhento e barato;
+ * semear com senha conhecida é silencioso e caro.
+ */
+const RAW_PASSWORD = process.env.SEED_PASSWORD;
+if (!RAW_PASSWORD || RAW_PASSWORD.length < 12) {
+  console.error(
+    'SEED_PASSWORD ausente ou curta (>= 12).\n' +
+      '  Gere uma:  export SEED_PASSWORD="$(openssl rand -base64 18)"\n' +
+      '  No compose do deploy, passe-a ao serviço `seed`.',
+  );
+  process.exit(1);
+}
+const PASSWORD: string = RAW_PASSWORD;
 
 const PERSONAS: { email: string; displayName: string; role: string }[] = [
   { email: 'ana@acme.test', displayName: 'Ana (negócio)', role: 'business' },

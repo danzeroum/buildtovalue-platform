@@ -65,6 +65,11 @@ jobs:
       DATABASE_MIGRATION_URL: postgres://app_migrator:app_migrator_dev@localhost:5432/buildtovalue
       JWT_SECRET: ci-only-jwt-secret-min-32-bytes-aaaa
       FIELD_KEY_SECRET: ci-field-key-secret-min-16
+      # Senha do seed: descartável e SÓ do CI (banco efêmero em service
+      # container, destruído com o job). Não tem default no código — o
+      # seed:demo falha alto sem ela, justamente para não existir senha
+      # conhecida em ambiente alcançável.
+      SEED_PASSWORD: ci-only-seed-password-descartavel
       API_PORT: '3000'
       API_HOST: '127.0.0.1'
     steps:
@@ -88,7 +93,7 @@ jobs:
       - name: Migra (cria app_api + tabelas + RLS)
         run: pnpm --filter @platform/db run migrate
 
-      - name: Semeia o demo (acme / admin@acme.test / demo1234)
+      - name: Semeia o demo (acme / admin@acme.test / SEED_PASSWORD do job)
         run: pnpm --filter @platform/api run seed:demo
 
       - name: Instala o Chromium do Playwright

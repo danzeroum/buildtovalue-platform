@@ -107,13 +107,96 @@ Enquanto não houver reload, o gateway segue rodando a config antiga.
 
 ## 5. Semear o demo (opcional)
 
+`SEED_PASSWORD` **não tem default** — o seed falha alto sem ela, de propósito.
+Gere e guarde no `.env` do deploy antes:
+
 ```bash
+cd /opt/btv/buildtovalue-platform/deploy
+echo "SEED_PASSWORD=$(openssl rand -base64 18)" >> .env
 docker compose --profile seed run --rm seed
-# tenant acme · admin@acme.test / demo1234 · processo Reembolso@1
+# tenant acme · personas ana|nara|olavo|admin @acme.test · processo Reembolso@1
 ```
 
-Troque a senha padrão (`SEED_PASSWORD`) se o ambiente for alcançável por
-terceiros — ele está na internet a partir do §4.
+A senha aparece no `.env` (chmod 600), nunca no repositório.
+
+### 5.1 Rotacionar a senha das personas
+
+O ambiente está na internet desde o §4. Se as personas foram semeadas alguma vez
+com senha conhecida — foi o caso enquanto `demo1234` era o default do script —,
+**rotacione**. Apagar o valor do código não revoga nada: só a troca invalida o
+que já vazou, inclusive o que ficou no histórico do git.
+
+> **Não use o seed para isso.** `seed:demo` faz `INSERT INTO tenants` sem
+> `ON CONFLICT`: rodar de novo sobre um tenant existente falha na unicidade do
+> slug. O seed é de bootstrap, não de rotação.
+
+O caminho é a capacidade da própria plataforma (A4, migração 0021):
+`POST /v1/admin/members/:id/reset-password` — motivo obrigatório, senha
+temporária devolvida UMA vez, `must_change_password` marcado, e **auditado**
+(quem rotacionou, quando, por quê). Num produto de governança, rotacionar por
+`UPDATE` no banco descartaria justamente a trilha que ele existe para produzir.
+
+```bash
+DOM=https://plataforma.buildtovalue.cloud
+BTV_BASIC='usuario:senha'          # credencial do basic auth (§5.2)
+
+# 1. login como admin, ainda com a senha comprometida
+TOKEN=$(curl -s -u "$BTV_BASIC" -X POST "$DOM/v1/auth/login" \
+  -H 'content-type: application/json' \
+  -d '{"tenant":"acme","email":"admin@acme.test","password":"SENHA_ATUAL"}' \
+  | sed -n 's/.*"accessToken":"\([^"]*\)".*/\1/p')
+
+# 2. listar os membros
+curl -s -u "$BTV_BASIC" "$DOM/v1/admin/members" -H "authorization: Bearer $TOKEN"
+
+# 3. rotacionar cada um (a senha temporária vem na resposta — ANOTE, some depois)
+curl -s -u "$BTV_BASIC" -X POST "$DOM/v1/admin/members/<ID>/reset-password" \
+  -H "authorization: Bearer $TOKEN" -H 'content-type: application/json' \
+  -d '{"reason":"rotação: senha de seed exposta no repositório"}'
+```
+
+Deixe o `admin@acme.test` por último — ao rotacionar a si próprio você perde o
+token e precisa entrar de novo com a temporária.
+
+**Prova de que fechou:**
+
+```bash
+curl -so /dev/null -w 'antiga: %{http_code}\n' -u "$BTV_BASIC" -X POST "$DOM/v1/auth/login" \
+  -H 'content-type: application/json' \
+  -d '{"tenant":"acme","email":"ana@acme.test","password":"demo1234"}'
+curl -so /dev/null -w 'nova:   %{http_code}\n' -u "$BTV_BASIC" -X POST "$DOM/v1/auth/login" \
+  -H 'content-type: application/json' \
+  -d '{"tenant":"acme","email":"ana@acme.test","password":"TEMPORARIA"}'
+```
+
+Esperado: `antiga: 401` · `nova: 200`. O `-u "$BTV_BASIC"` é obrigatório nos
+dois: sem ele o gateway devolve 401 antes de a api ver qualquer coisa, e o teste
+não prova nada sobre a senha da persona.
+
+**Ambiente ainda não semeado?** Aí não há o que rotacionar: gere a
+`SEED_PASSWORD` (§5) e semeie uma vez só — já nasce sem senha conhecida.
+
+### 5.2 Basic auth no domínio (§4.1)
+
+Enquanto isto for ambiente de demo, o domínio inteiro fica atrás de basic auth —
+mesmo padrão de `squad.buildtovalue.cloud`. Crie a credencial no `.htpasswd` que
+o gateway já monta:
+
+```bash
+htpasswd -B /opt/btv/ingress/.htpasswd btv     # -B = bcrypt; pede a senha
+docker exec btv-nginx-prod nginx -t && docker exec btv-nginx-prod nginx -s reload
+```
+
+Verificação:
+
+```bash
+curl -so /dev/null -w 'sem credencial: %{http_code}\n' https://plataforma.buildtovalue.cloud/
+curl -so /dev/null -w 'com credencial: %{http_code}\n' -u btv:SUA_SENHA https://plataforma.buildtovalue.cloud/
+```
+
+Esperado: `401` e `200`. O basic auth vale para **todas** as rotas, inclusive
+`/v1` e `/ready` — se um monitor externo precisar do `/ready` sem credencial,
+abra só aquele `location` com `auth_basic off;`, nunca o domínio.
 
 ## 6. Verificar
 

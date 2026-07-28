@@ -62,7 +62,7 @@ FIELD_KEY_SECRET=troque-este-segredo-dev-1234
 
 ## 4. Semear o demo
 
-Cria o tenant `acme`, um usuário por persona (senha `demo1234`), o formulário
+Cria o tenant `acme`, um usuário por persona (senha = `$SEED_PASSWORD`), o formulário
 `reembolso@1` e o processo `Reembolso de despesas@1` (start → user task
 `aprovar_reembolso` → fim):
 
@@ -77,7 +77,7 @@ pnpm --filter @platform/api run seed:demo
 > `validateSubmission` do servidor. Não há mais o interim só-igualdade: o que o
 > `/forms` desenha é exatamente o que o servidor aceita na conclusão.
 
-Personas (todas senha `demo1234`, organização `acme`):
+Personas (todas com a senha que você passou em `SEED_PASSWORD`, organização `acme`):
 
 | e-mail | papel | faz |
 |--------|-------|-----|
@@ -97,7 +97,7 @@ pnpm --filter @platform/console dev    # console :5173
 ## 6. O fluxo-alvo (no navegador)
 
 1. Abra `http://localhost:5173` → **Entrar**: Organização `acme`,
-   `admin@acme.test`, `demo1234`.
+   `admin@acme.test`, a senha de `SEED_PASSWORD`.
 2. **Tarefas → + Iniciar processo** → selecione *Reembolso de despesas* →
    *Iniciar instância* (o POST leva `Idempotency-Key`: clique-duplo não duplica).
 3. Em segundos a tarefa **Aprovar reembolso** aparece na lista (o worker a criou
