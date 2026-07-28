@@ -137,5 +137,9 @@ say "readiness da api (127.0.0.1:${PORTA:-3000})"
 curl -sf "http://127.0.0.1:${PORTA:-3000}/ready" && echo || die "/ready não respondeu ok"
 
 say "pronto — ${DEPOIS:0:7} no ar"
-echo "para reverter: git checkout ${ANTES:0:7} && cd deploy && docker compose up -d --build"
-echo "(o código volta; a MIGRAÇÃO não — forward-only, restauração é por backup)"
+# Só faz sentido oferecer reversão se houve avanço: em --force sem commit novo
+# ANTES == DEPOIS, e "reverter" para o commit atual não reverte nada.
+if [ "$ANTES" != "$DEPOIS" ]; then
+  echo "para reverter: git checkout ${ANTES:0:7} && cd deploy && docker compose up -d --build"
+  echo "(o código volta; a MIGRAÇÃO não — forward-only, restauração é por backup)"
+fi
