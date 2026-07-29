@@ -431,6 +431,19 @@ function reachability(diagram: BpmnDiagram): LintIssue[] {
     queue.push(...(forward.get(id) ?? []));
   }
   for (const node of nodes) {
+    // Alcançabilidade só faz sentido para NÓ DE FLUXO. Pool e lane são
+    // contêineres, textAnnotation e group são artefatos, dataObject/dataStore
+    // são dados — nenhum é alvo de sequence flow, então todos apareciam como
+    // "inalcançável" num diagrama perfeitamente conexo. No pr01.bpmn (pool + 4
+    // lanes) isso rendia 5 avisos que não diziam nada, ao lado das rejeições
+    // legítimas — ruído que treina a pessoa a ignorar a lista.
+    //
+    // O filtro é o SUPPORTED_TYPES, e não a categoria do registry da lib, por
+    // uma razão que vale mais: quem está fora dele JÁ foi reprovado acima com
+    // EXEC_UNSUPPORTED_ELEMENT. Um segundo achado sobre o mesmo elemento não
+    // acrescenta informação — só divide a atenção. Nó de fluxo de verdade
+    // (userTask órfã dentro de uma lane) continua sendo apontado.
+    if (!SUPPORTED_TYPES.has(node.type)) continue;
     if (!reached.has(node.id)) {
       issues.push({
         code: 'EXEC_GRAPH_UNREACHABLE',
