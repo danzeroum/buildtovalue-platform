@@ -3,9 +3,37 @@
 FROM node:22-slim AS builder
 RUN corepack enable && corepack prepare pnpm@10.33.0 --activate
 WORKDIR /repo
+# MANIFESTS ANTES DO CÓDIGO. É esta ordem que deixa o `pnpm install` em cache
+# quando só o fonte muda — com `COPY . .` antes do install, mexer num .md
+# refazia a instalação inteira, em toda imagem, em todo PR.
+#
+# COPY explícito por pacote de propósito: `COPY packages/*/package.json ./`
+# ACHATA a estrutura (todos virariam o mesmo arquivo de destino).
+#
+# Os 11 manifests, mesmo os que esta imagem não usa: o --frozen-lockfile valida
+# o lockfile contra os projetos que ENXERGA, e workspace incompleto faria a
+# validação divergir. Pacote novo sem entrada aqui quebra alto no build — falha
+# barulhenta no CI, não silenciosa.
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
+COPY packages/api-contracts/package.json  packages/api-contracts/
+COPY packages/auth/package.json           packages/auth/
+COPY packages/config/package.json         packages/config/
+COPY packages/db/package.json             packages/db/
+COPY packages/observability/package.json  packages/observability/
+COPY packages/shared-ui/package.json      packages/shared-ui/
+COPY apps/api/package.json                apps/api/
+COPY apps/console/package.json            apps/console/
+COPY apps/e2e/package.json                apps/e2e/
+COPY apps/worker/package.json             apps/worker/
+
+# `@platform/worker...` = worker + config, db, auth, observability (5 de 11).
+RUN pnpm install --frozen-lockfile --filter "@platform/worker..."
+
 COPY . .
-RUN pnpm install --frozen-lockfile
-RUN pnpm -r build
+# Build com o MESMO filtro do install: `pnpm -r build` tentaria construir
+# pacotes que o install filtrado não instalou. O `...` preserva a ordem
+# topológica, então as deps saem antes do alvo.
+RUN pnpm --filter "@platform/worker..." run build
 # --legacy é OBRIGATÓRIO no pnpm 10 (ver Dockerfile.api).
 RUN pnpm --filter=@platform/worker --prod deploy --legacy /prod/worker
 

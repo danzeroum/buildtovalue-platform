@@ -2,18 +2,47 @@
 # monorepo, o runtime carrega SÓ os estáticos (nenhum Node em produção).
 # Contexto de build = raiz do repo (o compose passa context: ..).
 #
-# `pnpm -r build` é obrigatório (e não `--filter @platform/console`): o build do
-# console encadeia `sdk:generate`, que precisa do dist da api — e a api, do dist
-# de db/config/auth/observability/api-contracts. A ordem topológica do -r resolve
-# isso. O `openapi:emit` roda com fakeDeps + stubs que lançam se chamados: NÃO
-# toca banco nem exige env (é o mesmo caminho do job `ci`).
+# O build do console encadeia `sdk:generate`, que precisa do dist da api — e a
+# api, do dist de db/config/auth/observability/api-contracts. Por isso o alvo é
+# `@platform/console...` COM as reticências: elas trazem as deps de workspace
+# (inclusive a api, que é devDependency do console) na ordem topológica certa.
+# Verificado: o filtro seleciona 8 dos 11 projetos, deixando de fora só e2e.
+# O `openapi:emit` roda com fakeDeps + stubs que lançam se chamados: NÃO toca
+# banco nem exige env (é o mesmo caminho do job `ci`).
 
 FROM node:22-slim AS builder
 RUN corepack enable && corepack prepare pnpm@10.33.0 --activate
 WORKDIR /repo
+
+# MANIFESTS ANTES DO CÓDIGO. É esta ordem que deixa o `pnpm install` em cache
+# quando só o fonte muda — com `COPY . .` antes do install, mexer num .md
+# refazia a instalação inteira, em toda imagem, em todo PR.
+#
+# COPY explícito por pacote de propósito: `COPY packages/*/package.json ./`
+# ACHATA a estrutura (todos virariam o mesmo arquivo de destino).
+#
+# Os 11 manifests, mesmo os que esta imagem não usa: o --frozen-lockfile valida
+# o lockfile contra os projetos que ENXERGA, e workspace incompleto faria a
+# validação divergir. Pacote novo sem entrada aqui quebra alto no build — falha
+# barulhenta no CI, não silenciosa.
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
+COPY packages/api-contracts/package.json  packages/api-contracts/
+COPY packages/auth/package.json           packages/auth/
+COPY packages/config/package.json         packages/config/
+COPY packages/db/package.json             packages/db/
+COPY packages/observability/package.json  packages/observability/
+COPY packages/shared-ui/package.json      packages/shared-ui/
+COPY apps/api/package.json                apps/api/
+COPY apps/console/package.json            apps/console/
+COPY apps/e2e/package.json                apps/e2e/
+COPY apps/worker/package.json             apps/worker/
+
+RUN pnpm install --frozen-lockfile --filter "@platform/console..."
+
 COPY . .
-RUN pnpm install --frozen-lockfile
-RUN pnpm -r build
+# Mesmo filtro do install: `pnpm -r build` tentaria construir o e2e, que o
+# install filtrado não instalou.
+RUN pnpm --filter "@platform/console..." run build
 
 FROM nginx:alpine AS runtime
 COPY --from=builder /repo/apps/console/dist /usr/share/nginx/html
