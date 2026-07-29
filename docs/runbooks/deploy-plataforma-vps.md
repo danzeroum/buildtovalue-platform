@@ -138,19 +138,20 @@ temporária devolvida UMA vez, `must_change_password` marcado, e **auditado**
 
 ```bash
 DOM=https://plataforma.buildtovalue.cloud
-BTV_BASIC='usuario:senha'          # credencial do basic auth (§5.2)
+# SEM -u aqui: /v1 não passa pelo basic auth (ver §5.2). E credencial em linha
+# de comando vai para o histórico do shell e para o `ps` de qualquer usuário.
 
 # 1. login como admin, ainda com a senha comprometida
-TOKEN=$(curl -s -u "$BTV_BASIC" -X POST "$DOM/v1/auth/login" \
+TOKEN=$(curl -s -X POST "$DOM/v1/auth/login" \
   -H 'content-type: application/json' \
   -d '{"tenant":"acme","email":"admin@acme.test","password":"SENHA_ATUAL"}' \
   | sed -n 's/.*"accessToken":"\([^"]*\)".*/\1/p')
 
 # 2. listar os membros
-curl -s -u "$BTV_BASIC" "$DOM/v1/admin/members" -H "authorization: Bearer $TOKEN"
+curl -s "$DOM/v1/admin/members" -H "authorization: Bearer $TOKEN"
 
 # 3. rotacionar cada um (a senha temporária vem na resposta — ANOTE, some depois)
-curl -s -u "$BTV_BASIC" -X POST "$DOM/v1/admin/members/<ID>/reset-password" \
+curl -s -X POST "$DOM/v1/admin/members/<ID>/reset-password" \
   -H "authorization: Bearer $TOKEN" -H 'content-type: application/json' \
   -d '{"reason":"rotação: senha de seed exposta no repositório"}'
 ```
@@ -161,17 +162,16 @@ token e precisa entrar de novo com a temporária.
 **Prova de que fechou:**
 
 ```bash
-curl -so /dev/null -w 'antiga: %{http_code}\n' -u "$BTV_BASIC" -X POST "$DOM/v1/auth/login" \
+curl -so /dev/null -w 'antiga: %{http_code}\n' -X POST "$DOM/v1/auth/login" \
   -H 'content-type: application/json' \
   -d '{"tenant":"acme","email":"ana@acme.test","password":"demo1234"}'
-curl -so /dev/null -w 'nova:   %{http_code}\n' -u "$BTV_BASIC" -X POST "$DOM/v1/auth/login" \
+curl -so /dev/null -w 'nova:   %{http_code}\n' -X POST "$DOM/v1/auth/login" \
   -H 'content-type: application/json' \
   -d '{"tenant":"acme","email":"ana@acme.test","password":"TEMPORARIA"}'
 ```
 
-Esperado: `antiga: 401` · `nova: 200`. O `-u "$BTV_BASIC"` é obrigatório nos
-dois: sem ele o gateway devolve 401 antes de a api ver qualquer coisa, e o teste
-não prova nada sobre a senha da persona.
+Esperado: `antiga: 401` · `nova: 200`. Os dois 401/200 vêm da API, não do
+gateway — `/v1` está fora do basic auth.
 
 **Ambiente ainda não semeado?** Aí não há o que rotacionar: gere a
 `SEED_PASSWORD` (§5) e semeie uma vez só — já nasce sem senha conhecida.
@@ -187,6 +187,16 @@ htpasswd -B /opt/btv/ingress/.htpasswd btv     # -B = bcrypt; pede a senha
 docker exec btv-nginx-prod nginx -t && docker exec btv-nginx-prod nginx -s reload
 ```
 
+> **Sem `-c`.** Esse `.htpasswd` é compartilhado com `squad.buildtovalue.cloud` e
+> `docker.danzeroum.com`; o `-c` TRUNCA o arquivo e apaga os outros usuários.
+>
+> Se a senha nova não valer e a antiga continuar valendo, é o bind mount de
+> arquivo único: o `htpasswd` grava com inode novo e o container segue lendo o
+> antigo. Confirme comparando `md5sum` no host e `docker exec ... md5sum` no
+> container; se divergirem, `docker compose up -d --force-recreate gateway` —
+> reload não resolve.
+
+
 Verificação:
 
 ```bash
@@ -194,9 +204,30 @@ curl -so /dev/null -w 'sem credencial: %{http_code}\n' https://plataforma.buildt
 curl -so /dev/null -w 'com credencial: %{http_code}\n' -u btv:SUA_SENHA https://plataforma.buildtovalue.cloud/
 ```
 
-Esperado: `401` e `200`. O basic auth vale para **todas** as rotas, inclusive
-`/v1` e `/ready` — se um monitor externo precisar do `/ready` sem credencial,
-abra só aquele `location` com `auth_basic off;`, nunca o domínio.
+Esperado: `401` e `200`.
+
+> **O basic auth vale para o console, NÃO para `/v1`.** Não é relaxamento: é a
+> única configuração que funciona. Basic e Bearer disputam o mesmo header
+> `Authorization`, e o console sobrescreve o do navegador em toda chamada de
+> API. Com `auth_basic` ligado em `/v1`, o nginx recebe um Bearer, devolve 401
+> com `WWW-Authenticate: Basic`, e o navegador reabre a caixinha em looping —
+> **a tela de login da plataforma nunca aparece**. O bloco do
+> `ingress-plataforma.conf` já traz o `auth_basic off;` no location da API.
+>
+> Se suspeitar disso, o teste é uma linha:
+> ```bash
+> curl -sD - -o /dev/null -H 'Authorization: Bearer x' \
+>   https://plataforma.buildtovalue.cloud/v1/user-tasks | grep -i www-authenticate
+> ```
+> Qualquer saída aqui = a colisão está de volta. Vazio = correto.
+>
+> E confirme sempre que o gate do console continua de pé:
+> ```bash
+> curl -so /dev/null -w '%{http_code}\n' https://plataforma.buildtovalue.cloud/   # 401
+> ```
+> `auth_basic off` no lugar errado (no `server` em vez do `location`) abre o
+> domínio inteiro — e o sintoma é a tela funcionar, que é indistinguível de
+> sucesso.
 
 ## 6. Verificar
 
