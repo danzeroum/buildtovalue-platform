@@ -120,10 +120,11 @@ jobs:
   # regressão real — o `--legacy` do pnpm 10 quebrou os três Dockerfiles de Node
   # e só apareceu no primeiro build na VPS, porque nada aqui construía imagem.
   #
-  # Constrói os Dockerfiles de `deploy/` — os que o `deploy/docker-compose.yml`
-  # referencia de fato. Os de `infra/docker/` são ÓRFÃOS (nenhum compose os usa)
-  # e divergiram: sem pin de pnpm e sem `--legacy`. Construí-los daria job verde
-  # sobre arquivo que ninguém implanta, que é pior que não ter job.
+  # Constrói os Dockerfiles de `deploy/` — os únicos que existem, e os que o
+  # `deploy/docker-compose.yml` referencia. Havia duplicatas órfãs em
+  # `infra/docker/` (nenhum compose as usava, sem pin de pnpm e sem `--legacy`);
+  # foram removidas justamente porque um job verde sobre arquivo que ninguém
+  # implanta é pior que não ter job.
   #
   # Sem push e sem registry: o valor está em COMPILAR, não em publicar. Nenhuma
   # credencial entra neste workflow.
