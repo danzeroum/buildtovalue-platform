@@ -1,0 +1,30 @@
+# Backup diário do Postgres da VPS (Gate 8.4 item 3).
+#
+# Instalar (como root, na VPS):
+#   crontab -l > /tmp/cron.atual 2>/dev/null; \
+#     cat /opt/btv/buildtovalue-platform/infra/docker/backup.cron >> /tmp/cron.atual; \
+#     crontab /tmp/cron.atual && crontab -l
+#
+# Conferir depois: `crontab -l` e, no dia seguinte, `tail /var/log/btv-backup.log`.
+#
+# 03:17 e não 03:00 de propósito: horário redondo é onde todo cron do mundo
+# acorda junto. O minuto quebrado tira o backup da disputa por I/O.
+#
+# >> em vez de >: o log é a evidência do item 3 do gate; truncar a cada
+# execução apagaria o histórico de sucesso que o gate pede. A rotação fica com
+# o logrotate (ver deploy-vps.md §6).
+#
+# 2>&1 leva o stderr junto: sem isso, a linha "FALHOU exit=N" — que é justamente
+# a que importa — iria para o mail do root e não para o log.
+#
+# CÓPIA EXTERNA: sem `BACKUP_REMOTE` o script roda em modo degradado —
+# backup local, exit 0, e um AVISO no log dizendo que o item 3 do gate NÃO
+# fecha assim. É deliberado: o destino definitivo depende da decisão de infra
+# do piloto, e o backup de hoje não pode ficar refém dela.
+#
+# Quando o provedor estiver decidido, acrescente à linha abaixo:
+#   BACKUP_REMOTE=btv-s3:bucket/backups
+# e configure o remote com credenciais FORA do repo:
+#   rclone config            # cria ~/.config/rclone/rclone.conf (chmod 600)
+# ou por ambiente (RCLONE_CONFIG_BTV-S3_TYPE=s3, _ACCESS_KEY_ID=…, etc.).
+17 3 * * * BACKUP_DIR=/var/backups/btv COMPOSE_DIR=/opt/btv/buildtovalue-platform/deploy RETENTION_DAYS=14 /opt/btv/buildtovalue-platform/infra/docker/backup.sh >> /var/log/btv-backup.log 2>&1

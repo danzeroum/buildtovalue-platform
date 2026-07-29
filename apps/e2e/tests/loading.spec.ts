@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { SEED_EMAIL, SEED_PASSWORD, SEED_TENANT } from './credentials.js';
 
 /**
  * ESTADO "CARREGANDO" POR MÁQUINA (auditoria AG-2.2 item (c)): o gate de UX
@@ -14,9 +15,9 @@ import { expect, test, type Page } from '@playwright/test';
 
 async function login(page: Page): Promise<void> {
   await page.goto('/');
-  await page.getByLabel('Organização').fill('acme');
-  await page.getByLabel('E-mail').fill('admin@acme.test');
-  await page.getByLabel('Senha').fill('demo1234');
+  await page.getByLabel('Organização').fill(SEED_TENANT);
+  await page.getByLabel('E-mail').fill(SEED_EMAIL);
+  await page.getByLabel('Senha').fill(SEED_PASSWORD);
   await page.getByRole('button', { name: 'Entrar' }).click();
   await expect(page.getByRole('link', { name: /Operação/ })).toBeVisible({ timeout: 20_000 });
 }

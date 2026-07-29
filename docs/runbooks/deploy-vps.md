@@ -2,8 +2,12 @@
 
 > Ambiente de **teste/demo** com Postgres **dedicado**, numa VPS **compartilhada**
 > com outras aplicações. **NÃO é o ambiente de piloto** (ver §7 — o que ele NÃO
-> satisfa do Gate 8.4). Console é build **estático gerado no CI**; a VPS só faz
-> `pull`/`up`. Nada de nginx próprio — a VPS já tem o `global-ingress-gateway`.
+> satisfa do Gate 8.4). Nada de nginx de borda próprio — a VPS já tem o
+> `global-ingress-gateway`.
+>
+> **Deploy concreto, com domínio e TLS:** `deploy-plataforma-vps.md` (passo a
+> passo de `plataforma.buildtovalue.cloud`). Este documento é a referência do
+> compose e das operações de banco.
 
 ## 0. O que sobe (`deploy/docker-compose.yml`)
 
@@ -11,11 +15,12 @@
 |---|---|---|
 | `postgres` | dados, DEDICADO | **nenhuma** (só rede interna) |
 | `migrate` | one-shot, papel de migração | — (roda e sai) |
-| `api` | contrato `/v1` | **só** `127.0.0.1:${API_HOST_PORT}` |
+| `api` | contrato `/v1` | rede de borda + `127.0.0.1:${API_HOST_PORT}` (diagnóstico) |
 | `worker` | outbox/timers/jobs/ancoragem | nenhuma (metrics interno) |
+| `console` | SPA estático (nginx da imagem) | rede de borda |
 
-Tetos (VPS compartilhada): api/worker 256m · postgres 384m · 0.5 cpu cada ·
-`NODE_OPTIONS=--max-old-space-size=192` · logs json-file 10m×3.
+Tetos (VPS compartilhada): api/worker 256m · postgres 384m · console 128m ·
+0.5 cpu cada · `NODE_OPTIONS=--max-old-space-size=192` · logs json-file 10m×3.
 
 ## 1. Pré-requisitos na VPS
 - Docker + Compose v2.
@@ -33,36 +38,57 @@ curl -sf http://127.0.0.1:${API_HOST_PORT:-3000}/ready && echo OK
 A ordem é garantida: a `api`/`worker` só sobem após `migrate` sair com sucesso
 (`service_completed_successfully`) — migração forward-only com o papel de migração.
 
-> As imagens são multi-stage e usam `pnpm --filter=… --prod deploy` (marcado
-> "experimental" pelo pnpm) para o runtime sem devDependencies. Se um build não
-> empacotar as deps de workspace, acrescente `--legacy` ao `deploy` no Dockerfile.
-> Este primeiro build é validado NA VPS (não há daemon Docker no CI).
+> As imagens são multi-stage e usam `pnpm --filter=… --prod deploy --legacy`
+> para o runtime sem devDependencies. O `--legacy` **não é opcional**: a partir
+> do pnpm 10 o `deploy` só roda sem ele em workspaces com
+> `inject-workspace-packages=true`, e sem ele o build morre com
+> `ERR_PNPM_DEPLOY_NONINJECTED_WORKSPACE`. Não há daemon Docker no CI, então
+> mudanças nos Dockerfiles seguem sendo validadas na VPS.
 
 ## 3. Semear o demo (one-off)
 ```bash
 docker compose --profile seed run --rm seed
-# tenant acme · admin@acme.test / demo1234 · processo Reembolso@1
+# tenant acme · admin@acme.test / $SEED_PASSWORD · processo Reembolso@1
 ```
 
-## 4. Console (estático, do CI)
-O `apps/console/dist` é gerado **no CI** (`pnpm -r build`) e publicado como
-artefato. Copie-o para o diretório do host que o ingress serve (ex.:
-`/var/www/buildtovalue`) e plugue o server block:
+## 4. Console e ingress
+O console sobe como **imagem própria** (`deploy/Dockerfile.console`): o builder
+compila o monorepo e o runtime é um `nginx:alpine` servindo `apps/console/dist`
+com `try_files` para as rotas do react-router. Nada é copiado do CI, e o CI não
+publica artefato de build.
 
-- Exemplo pronto: `deploy/ingress-example.conf` (proxy de `/v1 /health /ready`
-  propagando `X-Request-Id`; console SPA com `try_files`).
-- **Duas formas de plugar no `global-ingress-gateway`** (escolha quando souber
-  como o gateway é configurado):
-  - **(a) rede docker compartilhada** — adicione a `api` a uma rede externa do
-    gateway e use `proxy_pass http://api:3000;` (a api não precisa de porta no host);
-  - **(b) porta no host** — mantenha `127.0.0.1:${API_HOST_PORT}` e use
-    `proxy_pass http://127.0.0.1:${API_HOST_PORT};`.
+Plugagem no `global-ingress-gateway` pela forma **(a) rede compartilhada**: a
+`api` e o `console` entram também na rede externa `btv-prod-net`, e o gateway
+faz `proxy_pass` **por nome de container** (`btv-platform-api`,
+`btv-platform-console`). Console e API no mesmo domínio — o cliente do console
+usa baseUrl relativa, então não há CORS nem URL de API embutida no build.
+
+- Blocos prontos: **`deploy/ingress-plataforma.conf`** (ACME + TLS + roteamento
+  `/v1|/health|/ready` com `X-Request-Id`, `/metrics` barrado).
+- Passo a passo com certificado: **`deploy-plataforma-vps.md`**.
+- `deploy/ingress-example.conf` continua como referência genérica das duas
+  formas possíveis (rede compartilhada × porta no host).
 
 ## 5. Operar
+
+Atualizar é `deploy/update.sh` — puxa a branch, reconstrói e VERIFICA (código de
+saída ≠ 0 se algo não ficou healthy ou se a migração falhou). Sem commit novo ele
+nem chama o Docker:
 ```bash
-docker compose logs -f api worker         # logs (json, rotacionados 10m×3)
-docker compose pull && docker compose up -d   # atualizar versão (imagens novas)
-docker compose up -d --build api worker   # rebuild local (sem registry)
+cd /opt/btv/buildtovalue-platform
+./deploy/update.sh --check    # o que mudaria; não toca em nada
+./deploy/update.sh            # atualiza de fato
+./deploy/update.sh --force    # reconstrói mesmo sem commit novo
+```
+Ele PARA antes de mexer em qualquer coisa se houver mudança local não commitada
+(um `git merge` silencioso engoliria) ou se a branch tiver divergido do remoto
+(`--ff-only`), e AVISA quando a atualização traz migração — que é forward-only e
+não tem `down`. Nesse caso, backup antes (§6).
+
+Comandos avulsos:
+```bash
+docker compose logs -f api worker          # logs (json, rotacionados 10m×3)
+docker compose up -d --build console       # rebuild de um serviço só
 docker compose down                        # parar (mantém o volume btv_pgdata)
 ```
 
@@ -70,6 +96,68 @@ docker compose down                        # parar (mantém o volume btv_pgdata)
 
 > O item do gate é o **ENSAIO documentado**, não só o dump. Faça o dump para
 > **FORA da VPS** e restaure num banco descartável, comparando contagens.
+
+### 6.0 Backup automático (diário)
+
+`infra/docker/backup.sh` roda em dois modos; na VPS é o de Docker, porque o
+Postgres do deploy **não publica porta** — só se chega por `compose exec`.
+
+Instalar o agendamento (uma vez, como root):
+```bash
+crontab -l > /tmp/cron.atual 2>/dev/null
+cat /opt/btv/buildtovalue-platform/infra/docker/backup.cron >> /tmp/cron.atual
+crontab /tmp/cron.atual && crontab -l
+```
+
+Antes de confiar nele, rode uma vez à mão e confira que o arquivo tem tamanho:
+```bash
+BACKUP_DIR=/var/backups/btv COMPOSE_DIR=/opt/btv/buildtovalue-platform/deploy \
+  /opt/btv/buildtovalue-platform/infra/docker/backup.sh
+ls -l /var/backups/btv
+```
+
+O script escreve em `.part` e só promove no fim, com piso de 1 KB: banco fora do
+ar → `exit 1` registrado no log e **nenhum arquivo novo**. Isso importa porque a
+versão anterior escrevia direto no destino e deixava um dump de **0 byte com
+nome de dump bom** — backup que parece existir é pior que backup que não existe.
+
+Rotação do log (senão `/var/log/btv-backup.log` cresce sem fim):
+```bash
+cat > /etc/logrotate.d/btv-backup <<'EOF'
+/var/log/btv-backup.log { weekly rotate 12 compress missingok notifempty }
+EOF
+```
+
+### 6.0.1 Cópia para fora da VPS
+
+Dump que vive na mesma máquina do banco é cópia, não backup: disco que morre
+leva os dois. O item 3 do gate exige a cópia externa.
+
+Defina `BACKUP_REMOTE` (destino `rclone`) e o script copia o dump e o `.sha256`
+depois de o local estar íntegro, **conferindo o sha256 do objeto remoto**:
+
+```bash
+rclone config          # cria ~/.config/rclone/rclone.conf — credenciais FORA do repo
+BACKUP_DIR=/var/backups/btv COMPOSE_DIR=/opt/btv/buildtovalue-platform/deploy \
+  BACKUP_REMOTE=btv-s3:bucket/backups \
+  /opt/btv/buildtovalue-platform/infra/docker/backup.sh
+```
+
+Três comportamentos, todos exercitados:
+
+| Situação | Resultado |
+|---|---|
+| `BACKUP_REMOTE` ausente | **modo degradado**: backup local, `exit 0`, AVISO no log de que o gate não fecha assim |
+| destino ok | dump + `.sha256` remotos, hash conferido, `exit 0` |
+| destino inacessível | `exit 1` logado, **dump local preservado** |
+
+A cópia é **adição, nunca condição**: falha nela não pode destruir o backup que
+já funcionava. Se o remoto não calcula sha256 do lado servidor, o script baixa e
+compara — verificação de verdade, em vez de declarar sucesso porque o upload não
+deu erro.
+
+Isto é **verificação** (a cópia subiu íntegra?). A **validação** (o objeto remoto
+restaura?) é o ensaio do runbook de incidentes — é lá que vira evidência de gate.
 
 **Backup (pg_dump para fora da VPS):**
 ```bash

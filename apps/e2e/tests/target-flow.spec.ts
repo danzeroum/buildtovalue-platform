@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { SEED_EMAIL, SEED_PASSWORD, SEED_TENANT } from './credentials.js';
 
 /**
  * Fluxo-alvo da F3 pelo NAVEGADOR (o mesmo do runbook §6), como admin:
@@ -7,14 +8,14 @@ import { expect, test } from '@playwright/test';
  *
  * Pré: banco RECÉM-semeado (um processo publicado, sem instâncias), API+worker
  * no ar. Seletores batem com o console (shell.tsx / routes/tasks.tsx /
- * routes/operate.tsx). Credenciais do seed: acme / admin@acme.test / demo1234.
+ * routes/operate.tsx). Credenciais do seed: vêm do ambiente (ver ./credentials.ts).
  */
 test('fluxo-alvo: login → iniciar → assumir → concluir → Operação', async ({ page }) => {
   // 1) Entrar
   await page.goto('/');
-  await page.getByLabel('Organização').fill('acme');
-  await page.getByLabel('E-mail').fill('admin@acme.test');
-  await page.getByLabel('Senha').fill('demo1234');
+  await page.getByLabel('Organização').fill(SEED_TENANT);
+  await page.getByLabel('E-mail').fill(SEED_EMAIL);
+  await page.getByLabel('Senha').fill(SEED_PASSWORD);
   await page.getByRole('button', { name: 'Entrar' }).click();
 
   // 2) Iniciar processo (modal → definição publicada → Idempotency-Key no POST)

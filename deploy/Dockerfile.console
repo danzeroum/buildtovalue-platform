@@ -1,11 +1,19 @@
-# Migração ONE-SHOT — roda com o PAPEL DE MIGRAÇÃO (DATABASE_MIGRATION_URL) e
-# sai. A api/worker só sobem depois (service_completed_successfully).
-# O pacote @platform/db embarca `dist` + `migrations` (package.json "files").
-# migrate-cli resolve `../migrations` a partir de dist/ — forward-only.
+# Console — SPA Vite servido por nginx. Multi-stage: o builder compila o
+# monorepo, o runtime carrega SÓ os estáticos (nenhum Node em produção).
+# Contexto de build = raiz do repo (o compose passa context: ..).
+#
+# O build do console encadeia `sdk:generate`, que precisa do dist da api — e a
+# api, do dist de db/config/auth/observability/api-contracts. Por isso o alvo é
+# `@platform/console...` COM as reticências: elas trazem as deps de workspace
+# (inclusive a api, que é devDependency do console) na ordem topológica certa.
+# Verificado: o filtro seleciona 8 dos 11 projetos, deixando de fora só e2e.
+# O `openapi:emit` roda com fakeDeps + stubs que lançam se chamados: NÃO toca
+# banco nem exige env (é o mesmo caminho do job `ci`).
 
 FROM node:22-slim AS builder
 RUN corepack enable && corepack prepare pnpm@10.33.0 --activate
 WORKDIR /repo
+
 # MANIFESTS ANTES DO CÓDIGO. É esta ordem que deixa o `pnpm install` em cache
 # quando só o fonte muda — com `COPY . .` antes do install, mexer num .md
 # refazia a instalação inteira, em toda imagem, em todo PR.
@@ -29,21 +37,14 @@ COPY apps/console/package.json            apps/console/
 COPY apps/e2e/package.json                apps/e2e/
 COPY apps/worker/package.json             apps/worker/
 
-# `@platform/db...` = db + auth (2 de 11). A imagem de migração não precisa
-# de mais nada do workspace.
-RUN pnpm install --frozen-lockfile --filter "@platform/db..."
+RUN pnpm install --frozen-lockfile --filter "@platform/console..."
 
 COPY . .
-# Build com o MESMO filtro do install: `pnpm -r build` tentaria construir
-# pacotes que o install filtrado não instalou. O `...` preserva a ordem
-# topológica, então as deps saem antes do alvo.
-RUN pnpm --filter "@platform/db..." run build
-# --legacy é OBRIGATÓRIO no pnpm 10 (ver Dockerfile.api).
-RUN pnpm --filter=@platform/db --prod deploy --legacy /prod/db
+# Mesmo filtro do install: `pnpm -r build` tentaria construir o e2e, que o
+# install filtrado não instalou.
+RUN pnpm --filter "@platform/console..." run build
 
-FROM node:22-slim AS runtime
-ENV NODE_ENV=production
-WORKDIR /app
-COPY --from=builder /prod/db ./
-USER node
-CMD ["node", "dist/migrate-cli.js"]
+FROM nginx:alpine AS runtime
+COPY --from=builder /repo/apps/console/dist /usr/share/nginx/html
+COPY deploy/console-nginx.conf /etc/nginx/conf.d/default.conf
+EXPOSE 80

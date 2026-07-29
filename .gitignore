@@ -4,6 +4,10 @@ coverage/
 *.log
 .env
 .env.local
+# Segredos do deploy na VPS: o .env preenchido e o diretório de chaves reais
+# montado no worker (deploy-vps.md §8.2). Nunca versionados.
+deploy/.env
+deploy/secrets/
 .DS_Store
 openapi.json
 apps/console/src/api/generated/

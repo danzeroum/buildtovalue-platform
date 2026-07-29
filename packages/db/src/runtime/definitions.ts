@@ -77,7 +77,13 @@ const CONDITION_RE = /^\s*([A-Za-z_]\w*)\s*=\s*(true|false|-?\d+(?:\.\d+)?|"[^"]
 export const conditionEvaluator: ConditionEvaluator = {
   evaluate(expression, variables) {
     const match = CONDITION_RE.exec(expression);
-    if (!match) return { error: `condição não suportada na v1: ${expression}` };
+    if (!match)
+      return {
+        // A mensagem NOMEIA o formato aceito: sem isso quem lê o lint sabe que
+        // errou mas não como acertar (`valor > 1000` é a primeira coisa que
+        // qualquer modelador escreve, e comparação não está na v1).
+        error: `condição não suportada na v1: ${expression} — o formato aceito é 'nome = valor' (igualdade), ex.: aprovado = true, tipo = "alto", limite = 1000`,
+      };
     const [, name, raw] = match;
     const literal: unknown =
       raw === 'true' ? true : raw === 'false' ? false : raw.startsWith('"') ? raw.slice(1, -1) : Number(raw);
